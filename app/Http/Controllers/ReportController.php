@@ -6,9 +6,11 @@ use App\Models\Branch;
 use App\Models\Customer;
 use App\Models\InventoryItem;
 use App\Models\Invoice;
+use App\Models\MenuItem;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Reservation;
+use App\Models\StaffMeal;
 use App\Models\Terminal;
 use App\Support\Tenancy;
 use Illuminate\Database\Query\Builder;
@@ -36,6 +38,8 @@ class ReportController extends Controller
         'kitchen-tokens' => ['Əməliyyat', 'Token hesabatı', 'Gün üzrə token sayı və statuslar.'],
         'low-stock' => ['Anbar', 'Az qalan stok', 'Minimum həddən aşağı düşən məhsullar.'],
         'stock-movements' => ['Anbar', 'Stok hərəkətləri', 'Giriş, çıxış, israf və satış hərəkətləri.'],
+        'ready-stock' => ['Anbar', 'Hazır yemək hərəkəti', 'Hər hazır yemək üzrə hazırlanan, satılan, personala verilən, israf və qalıq porsiya.'],
+        'staff-meals' => ['Anbar', 'Personal yeməyi', 'İşçilər üzrə verilən yemək və dəyəri.'],
         'tax-summary' => ['Mühasibat', 'Vergi xülasəsi', 'Dövr üzrə toplanmış vergi və servis haqqı.'],
         'reservations' => ['Rezerv', 'Rezervlər', 'Dövr üzrə rezervlər və statusları.'],
         'sales-by-branch' => ['Filial və terminal', 'Filiallar üzrə satış', 'Hər filialın çek sayı və gəliri.'],
@@ -144,6 +148,21 @@ class ReportController extends Controller
                 Order::whereBetween('created_at', [$from, $to])->where('status', '!=', 'draft')->tap($ord)
                     ->selectRaw("DATE(created_at) d, COUNT(*) c, SUM(status = 'completed') done, SUM(status = 'cancelled') cancelled")->groupBy('d')->orderBy('d')->get()
                     ->map(fn ($r) => [$r->d, $r->c, $r->done, $r->cancelled])->all(), null],
+            'ready-stock' => [['Yemək', 'Hazırlanıb', 'Satılıb', 'Personal', 'İsraf', 'Sayım fərqi', 'Cari qalıq'],
+                MenuItem::where('track_stock', true)->orderBy('title')->get()->map(function (MenuItem $m) use ($from, $to) {
+                    // Ləğv olunan sifariş / personal yeməyi "return" kimi geri gəlir — öz mənbəyindən çıxılır
+                    $q = $m->readyStockMovements()->whereBetween('created_at', [$from, $to])
+                        ->selectRaw("CASE WHEN type = 'return' THEN IF(staff_meal_id IS NULL, 'sale', 'staff') ELSE type END t, SUM(quantity) q")
+                        ->groupBy('t')->pluck('q', 't');
+
+                    return [$m->title, qty($q['production'] ?? 0), qty(-($q['sale'] ?? 0)), qty(-($q['staff'] ?? 0)),
+                        qty(-($q['wastage'] ?? 0)), qty($q['count'] ?? 0), qty($m->stock_quantity)];
+                })->all(), null],
+            'staff-meals' => $this->grouped(
+                StaffMeal::where('status', 'active')->whereBetween('created_at', [$from, $to])
+                    ->when($this->branchId, fn ($w) => $w->where('branch_id', $this->branchId))
+                    ->selectRaw('employee_name k, COUNT(*) c, SUM(total) t')->groupBy('k')->orderByDesc('t'),
+                ['İşçi', 'Dəfə', 'Dəyər (menyu qiyməti)']),
             'low-stock' => [['Məhsul', 'Cari', 'Minimum', 'Vahid'],
                 InventoryItem::whereColumn('quantity', '<=', 'min_quantity')->orderBy('quantity')->get()
                     ->map(fn ($i) => [$i->title, rtrim(rtrim($i->quantity, '0'), '.'), rtrim(rtrim($i->min_quantity, '0'), '.'), $i->unit])->all(), null],

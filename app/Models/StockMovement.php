@@ -10,7 +10,7 @@ class StockMovement extends Model
 {
     use BelongsToTenant;
 
-    public const TYPES = ['in' => 'Giriş', 'out' => 'Çıxış', 'wastage' => 'İsraf', 'sale' => 'Satış'];
+    public const TYPES = ['in' => 'Giriş', 'out' => 'Çıxış', 'wastage' => 'İsraf', 'sale' => 'Satış', 'production' => 'Hazırlama', 'staff' => 'Personal yeməyi', 'return' => 'Qaytarma'];
 
     protected $guarded = ['id', 'tenant_id'];
 

@@ -4,12 +4,9 @@ namespace App\Services;
 
 use App\Support\Realtime;
 use App\Models\AuditLog;
-use App\Models\InventoryItem;
 use App\Models\Invoice;
 use App\Models\MenuItem;
 use App\Models\Order;
-use App\Models\RecipeItem;
-use App\Models\StockMovement;
 use App\Models\StoreTable;
 use App\Models\Tenant;
 use App\Support\PosTerminal;
@@ -148,6 +145,9 @@ class OrderService
             $deliveryType = $data['delivery_type'] ?? 'dinein';
             $tableId = $data['store_table_id'] ?? null;
             $status = $data['status'] ?? 'created';
+            if ($status !== 'draft') {
+                app(StockService::class)->assertAvailable(collect($lines)->map(fn ($l) => (object) $l));
+            }
             // Masada artıq ödənilməmiş sifariş varsa bu, əlavə sifarişdir (hesab birlikdə bağlanır)
             $isAddition = $status !== 'draft' && $deliveryType === 'dinein' && $tableId
                 && Order::where('store_table_id', $tableId)->where('payment_status', 'pending')
@@ -257,41 +257,14 @@ class OrderService
         return 'INV-'.str_pad((string) $count, 6, '0', STR_PAD_LEFT);
     }
 
-    /** Resept əsasında stokdan silir (məhsul, variant və addon reseptləri). */
+    /** Sifarişin stokunu silir: hazır porsiyalar hazır stokdan, qalanların xammalı reseptlə anbardan. */
     public function deductStock(Order $order, int $sign = -1): void
     {
         $order->loadMissing('items');
-        $recipes = RecipeItem::whereIn('menu_item_id', $order->items->pluck('menu_item_id')->filter())->get();
-        if ($recipes->isEmpty()) {
-            return;
-        }
-
-        $usage = [];
-        foreach ($order->items as $line) {
-            $addonIds = collect($line->addons)->pluck('id')->all();
-            foreach ($recipes->where('menu_item_id', $line->menu_item_id) as $recipe) {
-                $applies = match (true) {
-                    (bool) $recipe->addon_id => in_array($recipe->addon_id, $addonIds),
-                    (bool) $recipe->variant_id => $recipe->variant_id === $line->variant_id,
-                    default => true,
-                };
-                if ($applies) {
-                    $usage[$recipe->inventory_item_id] = ($usage[$recipe->inventory_item_id] ?? 0) + $recipe->quantity * $line->quantity;
-                }
-            }
-        }
-
-        foreach ($usage as $itemId => $qty) {
-            InventoryItem::whereKey($itemId)->increment('quantity', $sign * $qty);
-            StockMovement::create([
-                'inventory_item_id' => $itemId,
-                'type' => $sign < 0 ? 'sale' : 'in',
-                'quantity' => $sign * $qty,
-                'note' => ($sign < 0 ? 'Sifariş #' : 'Ləğv edilmiş sifariş #').$order->token_no,
-                'order_id' => $order->id,
-                'user_id' => app(PosTerminal::class)->effectiveId(),
-            ]);
-        }
+        app(StockService::class)->consume($order->items, $sign, 'sale', [
+            'order_id' => $order->id,
+            'note' => ($sign < 0 ? 'Sifariş #' : 'Ləğv edilmiş sifariş #').$order->token_no,
+        ]);
     }
 
     public function restoreStock(Order $order): void

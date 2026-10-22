@@ -15,7 +15,7 @@
                 <tr>
                     <td class="whitespace-nowrap text-zinc-500">{{ $m->created_at->format('d.m.Y H:i') }}</td>
                     <td class="font-bold">{{ $m->item?->title }}</td>
-                    <td><span class="{{ ['in' => 'badge-green', 'out' => 'badge-blue', 'wastage' => 'badge-red', 'sale' => 'badge-gray'][$m->type] }}">{{ \App\Models\StockMovement::TYPES[$m->type] }}</span></td>
+                    <td><span class="{{ ['in' => 'badge-green', 'out' => 'badge-blue', 'wastage' => 'badge-red', 'sale' => 'badge-gray', 'production' => 'badge-amber', 'staff' => 'badge-blue', 'return' => 'badge-green'][$m->type] ?? 'badge-gray' }}">{{ \App\Models\StockMovement::TYPES[$m->type] ?? $m->type }}</span></td>
                     <td @class(['text-right font-semibold', 'text-brand-600' => $m->quantity > 0, 'text-red-600' => $m->quantity < 0])>{{ $m->quantity > 0 ? '+' : '' }}{{ qty($m->quantity) }} {{ $m->item?->unit }}</td>
                     <td class="text-zinc-500">{{ $m->note }}</td>
                     <td>{{ $m->user?->name }}</td>

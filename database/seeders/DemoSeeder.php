@@ -11,10 +11,12 @@ use App\Models\MenuItem;
 use App\Models\PaymentType;
 use App\Models\Plan;
 use App\Models\RecipeItem;
+use App\Models\StaffMeal;
 use App\Models\StoreTable;
 use App\Models\Tax;
 use App\Models\User;
 use App\Services\OrderService;
+use App\Services\StockService;
 use App\Services\TenantProvisioner;
 use App\Support\Tenancy;
 use Illuminate\Database\Seeder;
@@ -149,5 +151,26 @@ class DemoSeeder extends Seeder
             ['menu_item_id' => $latte->id, 'variant_id' => $latte->variants()->value('id'), 'addon_ids' => [$latte->addons()->value('id')], 'quantity' => 2],
             ['menu_item_id' => $burger->id, 'quantity' => 1, 'notes' => 'Soğansız'],
         ], ['delivery_type' => 'dinein', 'store_table_id' => StoreTable::skip(1)->value('id')]);
+
+        // Hazır yemək stoku: dolma və paxlava səhər partiyası ilə bişirilir, xammal reseptlə anbardan silinir
+        $beef = InventoryItem::where('title', 'Mal əti')->first();
+        $leaf = InventoryItem::create(['title' => 'Üzüm yarpağı', 'unit' => 'pc', 'quantity' => 400, 'min_quantity' => 100]);
+        $rice = InventoryItem::create(['title' => 'Düyü', 'unit' => 'kg', 'quantity' => 20, 'min_quantity' => 5]);
+        $walnut = InventoryItem::create(['title' => 'Qoz ləpəsi', 'unit' => 'kg', 'quantity' => 3, 'min_quantity' => 1]);
+        $dolma = MenuItem::where('title', 'Dolma')->first();
+        $paxlava = MenuItem::where('title', 'Paxlava')->first();
+        foreach ([[$dolma, $beef, 0.08], [$dolma, $leaf, 10], [$dolma, $rice, 0.02], [$paxlava, $walnut, 0.025]] as [$item, $ingredient, $qty]) {
+            RecipeItem::create(['menu_item_id' => $item->id, 'inventory_item_id' => $ingredient->id, 'quantity' => $qty]);
+        }
+        $dolma->update(['track_stock' => true, 'stock_min' => 5]);
+        $paxlava->update(['track_stock' => true, 'stock_min' => 6]);
+        $stock = app(StockService::class);
+        $stock->produce($dolma, 20, 'Səhər partiyası');
+        $stock->produce($paxlava, 24, 'Səhər partiyası');
+
+        $waiter = User::where('role', 'waiter')->first();
+        $meal = StaffMeal::create(['user_id' => $waiter->id, 'employee_name' => $waiter->name, 'meal_type' => 'lunch', 'total' => $dolma->price, 'created_by' => $waiter->id]);
+        $meal->items()->create(['menu_item_id' => $dolma->id, 'title' => $dolma->title, 'quantity' => 1, 'price' => $dolma->price]);
+        $stock->consume($meal->items, -1, 'staff', ['staff_meal_id' => $meal->id, 'note' => "Personal yeməyi: {$waiter->name}"]);
     }
 }

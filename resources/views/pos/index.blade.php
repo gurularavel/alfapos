@@ -56,11 +56,12 @@
         <div class="min-h-0 flex-1 overflow-y-auto p-3">
             <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
                 <template x-for="item in filtered" :key="item.id">
-                    <button @click="open(item)" class="group relative flex flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white text-left transition hover:border-brand-300 hover:shadow-sm">
+                    <button @click="open(item)" class="group relative flex flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white text-left transition hover:border-brand-300 hover:shadow-sm" :class="stockLeft(item) <= 0 && 'opacity-60 grayscale'">
                         <div class="relative aspect-[4/3] bg-gradient-to-br from-brand-50 to-zinc-100">
                             <template x-if="item.image"><img :src="item.image" :alt="item.title" class="absolute inset-0 size-full object-cover" loading="lazy"></template>
                             <template x-if="!item.image"><span class="absolute inset-0 flex items-center justify-center text-3xl font-black text-brand-300" x-text="item.title.slice(0, 1)"></span></template>
                             <span x-show="item.category" x-text="item.category" class="absolute top-2 left-2 rounded-md bg-brand-500/90 px-2 py-0.5 text-[11px] font-bold text-white"></span>
+                            <template x-if="item.stock !== null"><span class="absolute top-2 right-2 rounded-md px-2 py-0.5 text-[11px] font-bold text-white shadow" :class="stockLeft(item) > 0 ? 'bg-zinc-900/75' : 'bg-red-600'" x-text="stockLeft(item) > 0 ? stockLeft(item) + ' porsiya' : 'Bitib'"></span></template>
                             <span class="absolute right-2 bottom-2 flex size-8 items-center justify-center rounded-full bg-brand-500 text-white shadow transition group-hover:scale-110"><x-icon name="plus" class="size-4" /></span>
                         </div>
                         <div class="flex flex-1 flex-col p-3">

@@ -294,7 +294,21 @@ export default (data) => ({
     },
 
     // ---- səbət ----
+    /** Hazır stokla izlənən yeməyin səbətdən sonra qalan porsiyası (izlənmirsə Infinity). */
+    stockLeft(item) {
+        if (item.stock === null || item.stock === undefined) return Infinity;
+        return item.stock - this.cart.filter((l) => l.menu_item_id === item.id).reduce((s, l) => s + l.quantity, 0);
+    },
+
+    hasStock(item, quantity = 1) {
+        if (this.stockLeft(item) >= quantity) return true;
+        const left = Math.max(0, this.stockLeft(item));
+        toast(left ? `${item.title}: hazır stokda cəmi ${left} porsiya qalıb` : `${item.title}: hazır stokda bitib`, 'error');
+        return false;
+    },
+
     open(item) {
+        if (!this.hasStock(item)) return;
         if (!item.variants.length && !item.addons.length) {
             this.addSound();
             return this.add(item, null, [], 1, '');
@@ -311,6 +325,7 @@ export default (data) => ({
 
     confirmPicker() {
         const p = this.picker;
+        if (!this.hasStock(p.item, p.quantity)) return;
         this.addSound();
         this.add(p.item, p.variantId, p.addonIds, p.quantity, p.notes);
         this.picker = null;
@@ -345,6 +360,8 @@ export default (data) => ({
     },
 
     inc(line) {
+        const item = this.items.find((i) => i.id === line.menu_item_id);
+        if (item && !this.hasStock(item)) return;
         this.addSound();
         line.quantity++;
     },
@@ -452,6 +469,10 @@ export default (data) => ({
             const r = await api(this.routes.store, { method: 'POST', body: this.payload(action) });
             if (action !== 'draft') this.finishDisplay(action, r.order.token_no, totalsBefore);
             // Mətbəxə ayrıca çek: hər göndərilən sifariş (əlavə sifariş də) yalnız öz məhsulları ilə çap olunur
+            for (const [id, stock] of Object.entries(r.stock ?? {})) {
+                const item = this.items.find((i) => i.id === Number(id));
+                if (item) item.stock = stock;
+            }
             if (action !== 'draft' && this.autoPrintKot) printUrl(this.routes.token.replace('__ID__', r.order.id));
             if (action === 'draft') {
                 toast(r.message);

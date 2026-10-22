@@ -16,7 +16,7 @@ class MenuItem extends Model
 
     protected function casts(): array
     {
-        return ['price' => 'decimal:2', 'is_enabled' => 'boolean'];
+        return ['price' => 'decimal:2', 'is_enabled' => 'boolean', 'track_stock' => 'boolean', 'stock_quantity' => 'decimal:2', 'stock_min' => 'decimal:2'];
     }
 
     public function category(): BelongsTo
@@ -47,5 +47,21 @@ class MenuItem extends Model
     public function imageUrl(): ?string
     {
         return $this->image ? Storage::disk('public')->url($this->image) : null;
+    }
+
+    public function readyStockMovements(): HasMany
+    {
+        return $this->hasMany(ReadyStockMovement::class);
+    }
+
+    /** Hazır stokla izlənən məhsulun vəziyyəti: in | low | out (izlənmirsə null). */
+    public function readyStockStatus(): ?string
+    {
+        return match (true) {
+            ! $this->track_stock => null,
+            $this->stock_quantity <= 0 => 'out',
+            $this->stock_quantity <= $this->stock_min => 'low',
+            default => 'in',
+        };
     }
 }

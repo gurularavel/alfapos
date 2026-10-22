@@ -29,6 +29,7 @@ class User extends Authenticatable
         'PAYMENTS' => 'Ödəniş qəbulu',
         'INVOICES' => 'Fakturalar',
         'INVENTORY' => 'Anbar',
+        'STAFF_MEALS' => 'Personal yeməyi',
         'FEEDBACK' => 'Rəylər',
         'REPORTS' => 'Hesabatlar',
         'SETTINGS' => 'Ayarlar',

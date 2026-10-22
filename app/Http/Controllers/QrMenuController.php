@@ -25,7 +25,9 @@ class QrMenuController extends Controller
             'tenant' => $tenant,
             'table' => $table,
             'categories' => Category::where('is_enabled', true)->orderBy('sort')->get(),
-            'items' => MenuItem::with('variants', 'addons')->where('is_enabled', true)->orderBy('title')->get(),
+            // Hazır stokda bitmiş yeməklər QR menyuda göstərilmir
+            'items' => MenuItem::with('variants', 'addons')->where('is_enabled', true)
+                ->where(fn ($q) => $q->where('track_stock', false)->orWhere('stock_quantity', '>', 0))->orderBy('title')->get(),
             'canOrder' => $tenant->is_qr_order_enabled && $table !== null,
         ]);
     }

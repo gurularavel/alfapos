@@ -14,9 +14,11 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PosController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\QrMenuController;
+use App\Http\Controllers\ReadyStockController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ReservationController;
 use App\Http\Controllers\Settings;
+use App\Http\Controllers\StaffMealController;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\TerminalController;
 use App\Http\Controllers\UserController;
@@ -111,6 +113,22 @@ Route::middleware('auth')->group(function () {
             Route::get('/kitchen/feed', [KitchenController::class, 'feed'])->name('kitchen.feed');
             Route::post('/kitchen/items/{item}', [KitchenController::class, 'updateItem'])->name('kitchen.item');
             Route::post('/kitchen/orders/{order}/ready', [KitchenController::class, 'markAll'])->name('kitchen.ready');
+        });
+
+        Route::prefix('ready-stock')->name('ready-stock.')->middleware('scope:KITCHEN,INVENTORY')->controller(ReadyStockController::class)->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::post('/', 'track')->name('track');
+            Route::put('/{menuItem}', 'update')->name('update');
+            Route::delete('/{menuItem}', 'untrack')->name('untrack');
+            Route::post('/{menuItem}/produce', 'produce')->name('produce');
+            Route::post('/{menuItem}/waste', 'waste')->name('waste');
+            Route::post('/{menuItem}/count', 'count')->name('count');
+        });
+
+        Route::prefix('staff-meals')->name('staff-meals.')->middleware('scope:STAFF_MEALS,KITCHEN')->controller(StaffMealController::class)->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::post('/', 'store')->name('store');
+            Route::post('/{staffMeal}/cancel', 'cancel')->name('cancel');
         });
 
         Route::middleware('scope:INVOICES')->group(function () {

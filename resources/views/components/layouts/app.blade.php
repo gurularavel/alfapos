@@ -22,6 +22,8 @@
             ['pos', 'POS', 'pos', 'POS', 'pos'],
             ['orders.index', 'Sifarişlər', 'orders', 'ORDERS', 'orders.*'],
             ['kitchen', 'Mətbəx', 'kitchen', 'KITCHEN', 'kitchen'],
+            ['ready-stock.index', 'Hazır yemək', 'chef', 'KITCHEN,INVENTORY', 'ready-stock.*'],
+            ['staff-meals.index', 'Personal yeməyi', 'utensils', 'STAFF_MEALS,KITCHEN', 'staff-meals.*'],
             ['reservations.index', 'Rezervlər', 'calendar', 'RESERVATIONS', 'reservations.*'],
             ['customers.index', 'Müştərilər', 'users', 'CUSTOMERS', 'customers.*'],
             ['invoices.index', 'Fakturalar', 'invoice', 'INVOICES', 'invoices.*'],
@@ -32,7 +34,7 @@
             ['audit-logs.index', 'Audit log', 'history', 'ADMIN', 'audit-logs.*'],
             ['settings.index', 'Ayarlar', 'settings', 'SETTINGS', 'settings.*'],
         ];
-    $nav = array_filter($nav, fn ($n) => $n[3] === null || ($n[3] === 'ADMIN' ? $user->isAdmin() : $user->hasScope($n[3])));
+    $nav = array_filter($nav, fn ($n) => $n[3] === null || ($n[3] === 'ADMIN' ? $user->isAdmin() : collect(explode(',', $n[3]))->contains(fn ($s) => $user->hasScope($s))));
 @endphp
 <body @class(['h-full bg-canvas font-sans text-ink antialiased', 'pos-full terminal-mode' => app(\App\Support\PosTerminal::class)->active()]) x-data="{ nav: false }">
 <div class="flex min-h-screen">
@@ -86,6 +88,9 @@
         <main @class(['flex-1', 'p-4 sm:p-6' => ! $compact, 'p-3' => $compact])>
             @if (session('success'))
                 <div x-data x-init="toast(@js(session('success')))"></div>
+            @endif
+            @if (session('warning'))
+                <div class="mb-4 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800"><x-icon name="alert" class="mt-0.5 size-4 shrink-0" /> {{ session('warning') }}</div>
             @endif
             @if ($errors->any() && ! $hideErrors)
                 <div class="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">

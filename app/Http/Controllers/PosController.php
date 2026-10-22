@@ -34,6 +34,7 @@ class PosController extends Controller
                 'tax_type' => $m->tax?->type ?? 'exclusive',
                 'variants' => $m->variants->map(fn ($v) => ['id' => $v->id, 'title' => $v->title, 'price' => (float) $v->price]),
                 'addons' => $m->addons->map(fn ($a) => ['id' => $a->id, 'title' => $a->title, 'price' => (float) $a->price]),
+                'stock' => $m->track_stock ? (float) $m->stock_quantity : null, // hazır porsiya (izlənmirsə null)
             ]);
 
         $busyTables = Order::active()->whereNotNull('store_table_id')->pluck('store_table_id')->unique();
@@ -133,6 +134,8 @@ class PosController extends Controller
             },
             'order' => ['id' => $order->id, 'token_no' => $order->token_no],
             'invoice_id' => $invoice?->id,
+            // Satılan hazır yeməklərin yeni qalığı (POS kartlarında yenilənir)
+            'stock' => MenuItem::whereIn('id', collect($data['cart'])->pluck('menu_item_id'))->where('track_stock', true)->pluck('stock_quantity', 'id')->map(fn ($q) => (float) $q),
         ]);
     }
 

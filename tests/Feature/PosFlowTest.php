@@ -54,7 +54,7 @@ class PosFlowTest extends TestCase
             route('dashboard'), route('pos'), route('orders.index'), route('orders.board'), route('kitchen'), route('kitchen.feed'),
             route('invoices.index'), route('invoices.receipt', $invoice), route('orders.token', Order::first()),
             route('customers.index'), route('customers.show', $customer), route('reservations.index'),
-            route('inventory.index'), route('inventory.movements'), route('feedbacks.index'),
+            route('inventory.index'), route('inventory.movements'), route('ready-stock.index'), route('staff-meals.index'), route('feedbacks.index'),
             route('users.index'), route('reports.index'), route('audit-logs.index'), route('profile'), route('subscription'),
             route('settings.index'), route('settings.store'), route('settings.print'), route('settings.tables.index'),
             route('settings.tables.qr', $table), route('settings.categories.index'), route('settings.taxes.index'),
