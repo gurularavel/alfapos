@@ -155,6 +155,37 @@
     </div>
 
     <div class="card card-pad">
+        <div class="mb-3 flex items-center justify-between">
+            <h2 class="font-extrabold">Masalar üzrə satış <span class="text-xs font-normal text-zinc-500">bu gün</span></h2>
+            <a href="{{ route('reports.show', ['sales-by-table', 'from' => today()->toDateString(), 'to' => today()->toDateString()]) }}" class="text-xs font-semibold text-brand-700 hover:underline">Hesabat →</a>
+        </div>
+        <div class="mb-3 grid grid-cols-3 gap-2 text-center">
+            <div class="rounded-xl bg-zinc-50 p-2"><p class="text-lg font-extrabold tabular-nums">{{ $tableStats->used }}<span class="text-xs font-normal text-zinc-400">/{{ $tableStats->tables }}</span></p><p class="text-[11px] text-zinc-500">satış olan masa</p></div>
+            <div class="rounded-xl bg-amber-50 p-2"><p class="text-lg font-extrabold text-amber-700 tabular-nums">{{ $tableStats->occupied }}</p><p class="text-[11px] text-zinc-500">hazırda dolu</p></div>
+            <div class="rounded-xl bg-zinc-50 p-2"><p class="text-lg font-extrabold tabular-nums">{{ $tableStats->checks ? money($tableStats->total / $tableStats->checks) : '—' }}</p><p class="text-[11px] text-zinc-500">orta masa çeki</p></div>
+        </div>
+        @php($tableMax = max(1, (float) $tableSales->max('total')))
+        @forelse ($tableSales as $row)
+            <div class="py-1.5 text-sm">
+                <div class="mb-1 flex items-center justify-between gap-2">
+                    <span class="flex min-w-0 items-center gap-1.5">
+                        <span class="truncate font-semibold">{{ $row->title }}</span>
+                        @if ($branchCount > 1 && $row->branch)<span class="shrink-0 text-xs text-zinc-400">· {{ $row->branch }}</span>@endif
+                        @if ($row->open_total !== null)<span class="badge-amber shrink-0" title="Açıq sifariş: {{ money($row->open_total) }}">dolu</span>@endif
+                    </span>
+                    <span class="shrink-0 tabular-nums"><span class="text-xs text-zinc-500">{{ $row->checks }} çek ·</span> <b>{{ money($row->total) }}</b></span>
+                </div>
+                <div class="h-1.5 rounded-full bg-zinc-100"><div class="h-1.5 rounded-full bg-teal-500" style="width: {{ $row->total / $tableMax * 100 }}%"></div></div>
+            </div>
+        @empty
+            <p class="text-sm text-zinc-500">Bu gün masalardan satış yoxdur.</p>
+        @endforelse
+        @if ($tableStats->used > $tableSales->count())
+            <p class="mt-2 text-xs text-zinc-400">Ən çox satan {{ $tableSales->count() }} masa göstərilir.</p>
+        @endif
+    </div>
+
+    <div class="card card-pad">
         <h2 class="mb-3 font-extrabold">Top məhsullar <span class="text-xs font-normal text-zinc-500">bu gün</span></h2>
         @forelse ($topItems as $i => $row)
             <div class="flex items-center gap-3 py-1.5 text-sm">

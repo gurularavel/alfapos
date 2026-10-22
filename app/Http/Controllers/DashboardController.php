@@ -93,6 +93,25 @@ class DashboardController extends Controller
 
         $staffSales = $this->staffSales($today, $tenancy->id());
 
+        // Bu gün masalar üzrə satış (hər çek bir dəfə) + hazırda dolu masalar
+        $occupied = Order::active()->whereNotNull('store_table_id') // POS masa xəritəsi ilə eyni qayda
+            ->groupBy('store_table_id')->selectRaw('store_table_id, SUM((SELECT COALESCE(SUM(oi.price * oi.quantity), 0) FROM order_items oi WHERE oi.order_id = orders.id AND oi.status != \'cancelled\')) as open_total')
+            ->pluck('open_total', 'store_table_id');
+        $tableSales = $paid($today)->withOrderInfo()
+            ->join('store_tables', 'store_tables.id', '=', 'io.store_table_id')
+            ->leftJoin('branches', 'branches.id', '=', 'store_tables.branch_id')
+            ->groupBy('store_tables.id', 'store_tables.title', 'store_tables.seating_capacity', 'branches.name')
+            ->selectRaw('store_tables.id, store_tables.title, store_tables.seating_capacity as seats, branches.name as branch, COUNT(*) as checks, SUM(invoices.total) as total')
+            ->orderByDesc('total')->get()
+            ->each(fn ($row) => $row->open_total = $occupied[$row->id] ?? null);
+        $tableStats = (object) [
+            'tables' => \App\Models\StoreTable::count(),
+            'used' => $tableSales->count(),
+            'occupied' => $occupied->count(),
+            'total' => (float) $tableSales->sum('total'),
+            'checks' => (int) $tableSales->sum('checks'),
+        ];
+
         // Saatlar üzrə: bu gün və müqayisə üçün keçən həftənin eyni günü
         $byHour = fn (Carbon $day) => $paid($day)
             ->selectRaw('HOUR(invoices.created_at) as h, COUNT(*) as checks, SUM(invoices.total) as total')
@@ -125,6 +144,8 @@ class DashboardController extends Controller
             'terminalSales' => $terminalSales,
             'branchSales' => $branchSales,
             'staffSales' => $staffSales,
+            'tableSales' => $tableSales->take(8),
+            'tableStats' => $tableStats,
             'hourly' => $hourly,
             'branchCount' => \App\Models\Branch::count(),
             'lowStock' => InventoryItem::whereColumn('quantity', '<=', 'min_quantity')->orderBy('quantity')->limit(5)->get(),

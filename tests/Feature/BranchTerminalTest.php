@@ -262,6 +262,34 @@ class BranchTerminalTest extends TestCase
             });
     }
 
+    public function test_dashboard_shows_sales_by_table(): void
+    {
+        Order::query()->delete(); // demo seed-in sifarişləri nəticəyə qarışmasın
+        Invoice::query()->delete();
+        $plov = MenuItem::where('title', 'Plov')->value('id');
+        $table = fn (string $title) => StoreTable::where('title', $title)->value('id');
+        $send = fn (int $tableId) => $this->postJson(route('pos.store'), [
+            'action' => 'kitchen', 'delivery_type' => 'dinein', 'store_table_id' => $tableId, 'cart' => [['menu_item_id' => $plov, 'quantity' => 1]],
+        ])->assertOk()->json('order.id');
+        $close = fn (array $ids) => $this->postJson(route('orders.pay'), ['order_ids' => $ids, 'payment_type_id' => PaymentType::value('id')])->assertOk();
+
+        $close([$send($table('Masa 1')), $send($table('Masa 1'))]); // əsas + əlavə sifariş, bir çek
+        $close([$send($table('Masa 1'))]);
+        $close([$send($table('Masa 2'))]);
+        $send($table('Masa 2')); // yeni qonaqlar — dolu
+        $this->postJson(route('pos.store'), ['action' => 'pay', 'delivery_type' => 'takeaway', 'cart' => [['menu_item_id' => $plov, 'quantity' => 1]], 'payment_type_id' => PaymentType::value('id')])->assertOk();
+
+        $this->get(route('dashboard'))->assertOk()->assertSee('Masalar üzrə satış')
+            ->assertViewHas('tableSales', function ($rows) {
+                [$first, $second] = [$rows[0], $rows[1]];
+
+                return $rows->count() === 2 && $first->title === 'Masa 1' && (int) $first->checks === 2
+                    && round((float) $first->total, 2) === round(3 * (float) $second->total, 2) && $first->open_total === null
+                    && $second->title === 'Masa 2' && (float) $second->open_total === 14.0;
+            })
+            ->assertViewHas('tableStats', fn ($s) => $s->used === 2 && $s->occupied === 1 && $s->checks === 3);
+    }
+
     public function test_foreign_terminal_cannot_be_bound_and_new_tenant_gets_defaults(): void
     {
         $other = app(TenantProvisioner::class)->create('Başqa', 'O', 'o@pos.test', 'password');
