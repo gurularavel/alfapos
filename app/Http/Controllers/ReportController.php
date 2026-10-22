@@ -76,13 +76,14 @@ class ReportController extends Controller
 
         return match ($report) {
             'sales-summary' => (function () use ($paid) {
-                $s = $paid()->selectRaw('COUNT(*) c, SUM(sub_total) sub, SUM(discount_total) disc, SUM(tax_total) tax, SUM(service_charge_total) svc, SUM(total) total')->first();
+                $s = $paid()->selectRaw('COUNT(*) c, SUM(sub_total) sub, SUM(discount_total) disc, SUM(tax_total) tax, SUM(service_charge_total) svc, SUM(deposit_topup) dep, SUM(total) total')->first();
                 $rows = [
                     ['Çek sayı', $s->c],
                     ['Brüt satış', money($s->sub)],
                     ['Endirimlər', money($s->disc)],
                     ['Vergi', money($s->tax)],
                     ['Servis haqqı', money($s->svc)],
+                    ['Depozit fərqləri (kabinet)', money($s->dep)],
                     ['Xalis gəlir', money($s->total)],
                     ['Orta çek', money($s->c ? $s->total / $s->c : 0)],
                 ];

@@ -57,10 +57,13 @@ class TableController extends Controller
 
     protected function validated(Request $request): array
     {
-        return $request->validate([
+        $data = $request->validate([
             'title' => ['required', 'string', 'max:60'],
             'floor' => ['nullable', 'string', 'max:60'],
             'seating_capacity' => ['required', 'integer', 'min:1', 'max:100'],
+            'deposit' => ['nullable', 'numeric', 'min:0', 'max:999999'],
         ]);
+
+        return ['deposit' => (float) ($data['deposit'] ?? 0)] + $data;
     }
 }

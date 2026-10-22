@@ -30,6 +30,8 @@ class CustomerDisplayController extends Controller
             'totals.discount' => ['numeric'],
             'totals.tax' => ['numeric'],
             'totals.service' => ['numeric'],
+            'totals.deposit' => ['numeric'],
+            'totals.topup' => ['numeric'],
             'totals.total' => ['numeric'],
             'token_no' => ['nullable', 'integer'],
             'customer' => ['nullable', 'string', 'max:120'],

@@ -14,6 +14,22 @@ class StoreTable extends Model
 
     protected $guarded = ['id', 'tenant_id'];
 
+    protected function casts(): array
+    {
+        return ['deposit' => 'decimal:2'];
+    }
+
+    public function hasDeposit(): bool
+    {
+        return (float) $this->deposit > 0;
+    }
+
+    /** Depozit qaydası: hesab depozitdən azdırsa fərq əlavə olunur. */
+    public static function depositTopup(float $total, float $deposit): float
+    {
+        return $deposit > 0 ? round(max(0, $deposit - $total), 2) : 0.0;
+    }
+
     protected static function booted(): void
     {
         static::creating(fn (StoreTable $table) => $table->qr_token ??= Str::lower(Str::random(16)));

@@ -41,6 +41,16 @@
         @if ($invoice->discount_total > 0)<tr><td>Endirim</td><td class="r">−{{ money($invoice->discount_total) }}</td></tr>@endif
         <tr><td>Vergi</td><td class="r">{{ money($invoice->tax_total) }}</td></tr>
         @if ($invoice->service_charge_total > 0)<tr><td>Servis haqqı</td><td class="r">{{ money($invoice->service_charge_total) }}</td></tr>@endif
+        @if ($invoice->deposit_amount > 0)
+            <tr><td colspan="2"><hr></td></tr>
+            <tr><td>Sifariş cəmi</td><td class="r">{{ money($invoice->total - $invoice->deposit_topup) }}</td></tr>
+            <tr><td>Kabinet depoziti (min.)</td><td class="r">{{ money($invoice->deposit_amount) }}</td></tr>
+            @if ($invoice->deposit_topup > 0)
+                <tr class="b"><td>Depozitə qədər fərq</td><td class="r">{{ money($invoice->deposit_topup) }}</td></tr>
+            @else
+                <tr><td colspan="2" class="muted">Depozit qarşılanıb</td></tr>
+            @endif
+        @endif
         <tr class="lg b"><td>CƏM</td><td class="r">{{ money($invoice->total) }}</td></tr>
         <tr><td>Ödəniş</td><td class="r">{{ $invoice->paymentType?->title }}</td></tr>
     </table>

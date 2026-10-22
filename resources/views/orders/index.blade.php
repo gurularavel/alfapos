@@ -62,6 +62,10 @@
                     </template>
                 </div>
 
+                <div class="flex items-center justify-between border-t border-amber-100 bg-amber-50 px-4 py-2 text-sm text-amber-800" x-show="g.deposit > 0 && g.unpaid_ids.length">
+                    <span x-text="'Depozit (min.) ' + money(g.deposit) + ' · sifariş ' + money(g.orders_total)"></span>
+                    <span class="font-bold" x-text="g.deposit_topup > 0 ? '+' + money(g.deposit_topup) : 'qarşılanıb'"></span>
+                </div>
                 <div class="border-t border-zinc-100 p-3" x-show="g.unpaid_ids.length && $store.terminal.canPay">
                     <button class="btn-primary w-full" @click="pay = g"><x-icon name="cash" class="size-4" /> Hesabı bağla · <span x-text="money(g.due)"></span></button>
                 </div>

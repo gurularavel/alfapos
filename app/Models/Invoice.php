@@ -20,6 +20,8 @@ class Invoice extends Model
             'discount_total' => 'decimal:2',
             'tax_total' => 'decimal:2',
             'service_charge_total' => 'decimal:2',
+            'deposit_amount' => 'decimal:2',
+            'deposit_topup' => 'decimal:2',
             'total' => 'decimal:2',
         ];
     }

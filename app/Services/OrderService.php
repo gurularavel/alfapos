@@ -10,6 +10,7 @@ use App\Models\MenuItem;
 use App\Models\Order;
 use App\Models\RecipeItem;
 use App\Models\StockMovement;
+use App\Models\StoreTable;
 use App\Models\Tenant;
 use App\Support\PosTerminal;
 use App\Support\Tenancy;
@@ -105,6 +106,18 @@ class OrderService
         ];
     }
 
+    /** Depozit yalnız zalda, eyni (depozitli) masanın sifarişləri birlikdə ödənəndə tətbiq olunur. */
+    public function depositTable(Collection $orders): ?StoreTable
+    {
+        $tableIds = $orders->pluck('store_table_id')->unique();
+        if ($tableIds->count() !== 1 || ! $tableIds->first() || $orders->contains(fn ($o) => $o->delivery_type !== 'dinein')) {
+            return null;
+        }
+        $table = StoreTable::find($tableIds->first());
+
+        return $table?->hasDeposit() ? $table : null;
+    }
+
     /** Saxlanmış sifarişin cəmləri (servis haqqı qaydası ilə). */
     public function orderTotals(Order $order, iterable $lines, Tenant $tenant): array
     {
@@ -174,6 +187,12 @@ class OrderService
                     $sum[$k] += $v;
                 }
             }
+
+            // Kabinet/VIP depoziti: hesab masanın minimum məbləğindən azdırsa fərq əlavə olunur
+            $deposit = (float) ($this->depositTable($orders)?->deposit ?? 0);
+            $sum['deposit_amount'] = $deposit;
+            $sum['deposit_topup'] = StoreTable::depositTopup($sum['total'], $deposit);
+            $sum['total'] = round($sum['total'] + $sum['deposit_topup'], 2);
 
             $invoice = Invoice::create($sum + [
                 'number' => $this->nextInvoiceNumber(),

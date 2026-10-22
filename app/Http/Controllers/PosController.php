@@ -43,7 +43,7 @@ class PosController extends Controller
                 'items' => $items,
                 'categories' => Category::where('is_enabled', true)->orderBy('sort')->get(['id', 'title']),
                 'tables' => StoreTable::orderBy('title')->get()->map(fn ($t) => [
-                    'id' => $t->id, 'label' => $t->label(), 'seats' => $t->seating_capacity, 'busy' => $busyTables->contains($t->id),
+                    'id' => $t->id, 'label' => $t->label(), 'seats' => $t->seating_capacity, 'busy' => $busyTables->contains($t->id), 'deposit' => (float) $t->deposit,
                 ]),
                 'paymentTypes' => PaymentType::where('is_active', true)->get(['id', 'title', 'icon']),
                 'service' => [

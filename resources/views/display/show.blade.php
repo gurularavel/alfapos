@@ -59,6 +59,7 @@
                 <div class="flex justify-between text-brand-300" x-show="state.totals?.discount > 0"><dt>Endirim</dt><dd class="tabular-nums" x-text="'−' + money(state.totals?.discount)"></dd></div>
                 <div class="flex justify-between text-white/70"><dt>Vergi</dt><dd class="tabular-nums" x-text="money(state.totals?.tax)"></dd></div>
                 <div class="flex justify-between text-white/70" x-show="state.totals?.service > 0"><dt>Servis haqqı</dt><dd class="tabular-nums" x-text="money(state.totals?.service)"></dd></div>
+                <div class="flex justify-between text-amber-300" x-show="state.totals?.topup > 0"><dt x-text="'Depozitə qədər fərq (min. ' + money(state.totals?.deposit) + ')'"></dt><dd class="tabular-nums" x-text="money(state.totals?.topup)"></dd></div>
             </dl>
             <div class="mt-6 border-t border-white/20 pt-6">
                 <p class="text-2xl text-white/70">Ödəniləcək</p>

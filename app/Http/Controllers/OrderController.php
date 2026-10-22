@@ -6,6 +6,7 @@ use App\Support\Realtime;
 use App\Models\AuditLog;
 use App\Models\Order;
 use App\Models\PaymentType;
+use App\Models\StoreTable;
 use App\Services\OrderService;
 use App\Support\PosTerminal;
 use App\Support\Tenancy;
@@ -37,6 +38,9 @@ class OrderController extends Controller
                 $first = $group->first();
                 $unpaid = $group->where('payment_status', 'pending');
                 $due = $unpaid->sum(fn ($o) => $service->orderTotals($o, $o->items->where('status', '!=', 'cancelled'), $tenant)['total']);
+                // Depozitli kabinet: ödəniləcək məbləğ minimum depozitdən az olmur
+                $deposit = $unpaid->isNotEmpty() ? (float) ($service->depositTable($unpaid)?->deposit ?? 0) : 0.0;
+                $topup = StoreTable::depositTopup($due, $deposit);
 
                 return [
                     'key' => $first->store_table_id ? 't'.$first->store_table_id : 'o'.$first->id,
@@ -44,7 +48,10 @@ class OrderController extends Controller
                     'floor' => $first->table?->floor,
                     'is_table' => (bool) $first->store_table_id,
                     'unpaid_ids' => $unpaid->pluck('id')->values(),
-                    'due' => round($due, 2),
+                    'orders_total' => round($due, 2),
+                    'deposit' => $deposit ?: (float) ($first->table?->deposit ?? 0),
+                    'deposit_topup' => $topup,
+                    'due' => round($due + $topup, 2),
                     'orders' => $group->map(fn (Order $o) => [
                         'id' => $o->id,
                         'token_no' => $o->token_no,

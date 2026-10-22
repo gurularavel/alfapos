@@ -93,7 +93,7 @@
                 </select>
                 <select x-model="tableId" class="input" :disabled="deliveryType !== 'dinein'">
                     <option value="">Masa seçin</option>
-                    <template x-for="t in tables" :key="t.id"><option :value="t.id" x-text="t.label + ' (' + t.seats + ' nəfər)' + (t.busy ? ' • dolu' : '')" :selected="String(t.id) === String(tableId)"></option></template>
+                    <template x-for="t in tables" :key="t.id"><option :value="t.id" x-text="t.label + ' (' + t.seats + ' nəfər)' + (t.deposit > 0 ? ' • depozit ' + money(t.deposit) : '') + (t.busy ? ' • dolu' : '')" :selected="String(t.id) === String(tableId)"></option></template>
                 </select>
             </div>
         </div>
@@ -141,6 +141,7 @@
                     </dt>
                     <dd :class="noServiceCharge && 'text-zinc-400 line-through'" x-text="money(noServiceCharge ? (totals.sub - totals.discount) * service.rate / 100 : totals.service)"></dd>
                 </div>
+                <div class="flex justify-between text-amber-700" x-show="totals.deposit > 0"><dt x-text="totals.topup > 0 ? 'Depozitə qədər fərq (min. ' + money(totals.deposit) + ')' : 'Kabinet depoziti ' + money(totals.deposit) + ' — qarşılanıb'"></dt><dd x-show="totals.topup > 0" x-text="money(totals.topup)"></dd></div>
                 <div class="flex justify-between border-t border-dashed border-zinc-200 pt-1.5 text-base font-black"><dt>Ödəniləcək</dt><dd x-text="money(totals.total)"></dd></div>
             </dl>
             <input x-model="notes" class="input mt-2 py-2" placeholder="Sifariş qeydi (istəyə bağlı)" maxlength="255">
@@ -216,6 +217,7 @@
             <div class="flex justify-between"><dt>Endirim</dt><dd x-text="'−' + money(totals.discount)"></dd></div>
             <div class="flex justify-between" x-show="taxEnabled"><dt>Vergi</dt><dd x-text="money(totals.tax)"></dd></div>
             <div class="flex justify-between" x-show="totals.service > 0"><dt>Servis haqqı</dt><dd x-text="money(totals.service)"></dd></div>
+            <div class="flex justify-between text-amber-700" x-show="totals.topup > 0"><dt x-text="'Depozitə qədər fərq (min. ' + money(totals.deposit) + ')'"></dt><dd x-text="money(totals.topup)"></dd></div>
             <div class="flex justify-between border-t border-zinc-200 pt-2 text-xl font-black"><dt>Cəm</dt><dd x-text="money(totals.total)"></dd></div>
         </dl>
         <p class="label mt-4">Ödəniş növü</p>

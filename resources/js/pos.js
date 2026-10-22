@@ -83,7 +83,7 @@ export default (data) => ({
         return {
             mode: this.cart.length ? 'cart' : 'idle',
             items: this.cart.map((l) => ({ title: l.title, subtitle: l.subtitle || null, qty: l.quantity, total: Math.round(l.price * l.quantity * 100) / 100 })),
-            totals: { sub: t.sub, discount: t.discount, tax: t.tax, service: t.service, total: t.total },
+            totals: { sub: t.sub, discount: t.discount, tax: t.tax, service: t.service, deposit: t.deposit, topup: t.topup, total: t.total },
             customer: this.customer?.name ?? null,
         };
     },
@@ -249,7 +249,15 @@ export default (data) => ({
         const dv = Number(this.discountValue) || 0;
         const discount = this.discountType === 'percentage' ? (sub * Math.min(100, dv)) / 100 : Math.min(sub, dv);
         const service = ((sub - discount) * this.serviceRate) / 100;
-        return { sub, discount, tax, service, total: sub - discount + exclusive + service };
+        // Kabinet/VIP depoziti: hesab minimum məbləğdən azdırsa fərq əlavə olunur (server ilə eyni qayda)
+        const beforeDeposit = sub - discount + exclusive + service;
+        const deposit = this.deliveryType === 'dinein' ? this.selectedTable?.deposit || 0 : 0;
+        const topup = deposit > 0 ? Math.max(0, Math.round((deposit - beforeDeposit) * 100) / 100) : 0;
+        return { sub, discount, tax, service, deposit, topup, total: beforeDeposit + topup };
+    },
+
+    get selectedTable() {
+        return this.tables.find((t) => String(t.id) === String(this.tableId)) ?? null;
     },
 
     get count() {
