@@ -1,16 +1,20 @@
 <x-layouts.app title="Anbar">
-<div x-data="{ edit: null, move: null, blank: { id: null, title: '', unit: 'pc', quantity: 0, min_quantity: 0 } }">
-    <x-page-header title="Anbar" subtitle="İnqrediyentlər və stok qalıqları. Satışda resept əsasında avtomatik silinir.">
+<div x-data="{ edit: null, move: null, blank: { id: null, title: '', unit: 'pc', quantity: 0, min_quantity: 0, cost_price: '' } }">
+    <x-page-header title="Anbar" subtitle="İnqrediyentlər, qalıqlar və alış qiymətləri. Satışda resept əsasında avtomatik silinir, maya dəyəri hesablanır.">
         <a href="{{ route('inventory.movements') }}" class="btn-secondary"><x-icon name="history" class="size-4" /> Stok hərəkətləri</a>
         <button class="btn-primary" @click="edit = { ...blank }"><x-icon name="plus" class="size-4" /> Stok məhsulu</button>
     </x-page-header>
 
-    <div class="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <div class="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         @foreach ([['', 'Bütün məhsullar', $stats['all'], 'border-l-zinc-400'], ['in', 'Kifayət qədər', $stats['in'], 'border-l-brand-500'], ['low', 'Az qalıb', $stats['low'], 'border-l-amber-500'], ['out', 'Bitib', $stats['out'], 'border-l-red-500']] as [$key, $label, $value, $border])
             <a href="{{ route('inventory.index', array_filter(['status' => $key])) }}" @class(['card card-pad border-l-4', $border, 'ring-2 ring-brand-200' => request('status', '') === $key])>
                 <p class="text-sm font-semibold text-zinc-500">{{ $label }}</p><p class="text-2xl font-black">{{ $value }}</p>
             </a>
         @endforeach
+        <div class="card card-pad border-l-4 border-l-sky-500">
+            <p class="text-sm font-semibold text-zinc-500">Anbarın dəyəri</p><p class="text-2xl font-black">{{ money($stats['value']) }}</p>
+            @if ($stats['unpriced'])<p class="text-xs text-amber-600">{{ $stats['unpriced'] }} məhsulun alış qiyməti yoxdur</p>@endif
+        </div>
     </div>
 
     <form class="card mb-4 flex gap-2 p-3">
@@ -21,7 +25,7 @@
 
     <div class="card overflow-x-auto">
         <table class="table-base">
-            <thead><tr><th>Məhsul</th><th class="text-right">Cari stok</th><th class="text-right">Minimum</th><th>Status</th><th>Yenilənib</th><th></th></tr></thead>
+            <thead><tr><th>Məhsul</th><th class="text-right">Cari stok</th><th class="text-right">Minimum</th><th class="text-right">Alış qiyməti</th><th class="text-right">Dəyər</th><th>Status</th><th>Yenilənib</th><th></th></tr></thead>
             <tbody>
             @forelse ($items as $item)
                 @php($status = $item->stockStatus())
@@ -29,16 +33,18 @@
                     <td class="font-bold">{{ $item->title }}</td>
                     <td class="text-right font-semibold">{{ qty($item->quantity) }} {{ \App\Models\InventoryItem::UNITS[$item->unit] }}</td>
                     <td class="text-right text-zinc-500">{{ qty($item->min_quantity) }} {{ \App\Models\InventoryItem::UNITS[$item->unit] }}</td>
+                    <td class="text-right whitespace-nowrap">@if ($item->cost_price !== null){{ unit_money($item->cost_price) }} <span class="text-xs text-zinc-400">/ {{ \App\Models\InventoryItem::UNITS[$item->unit] }}</span>@else<span class="text-xs text-amber-600">yazılmayıb</span>@endif</td>
+                    <td class="text-right font-semibold">{{ $item->cost_price !== null ? money(max(0, (float) $item->quantity) * (float) $item->cost_price) : '—' }}</td>
                     <td>{!! ['in' => '<span class="badge-green">Var</span>', 'low' => '<span class="badge-amber">Az qalıb</span>', 'out' => '<span class="badge-red">Bitib</span>'][$status] !!}</td>
                     <td class="text-zinc-500">{{ $item->updated_at->format('d.m.Y H:i') }}</td>
                     <td class="text-right whitespace-nowrap">
-                        <button class="btn-secondary btn-sm" @click="move = { id: {{ $item->id }}, title: @js($item->title), unit: @js(\App\Models\InventoryItem::UNITS[$item->unit]), type: 'in', quantity: '', note: '' }">± Hərəkət</button>
-                        <button class="btn-ghost btn-sm" @click="edit = @js(['id' => $item->id, 'title' => $item->title, 'unit' => $item->unit, 'quantity' => qty($item->quantity), 'min_quantity' => qty($item->min_quantity)])"><x-icon name="edit" class="size-4" /></button>
+                        <button class="btn-secondary btn-sm" @click="move = { id: {{ $item->id }}, title: @js($item->title), unit: @js(\App\Models\InventoryItem::UNITS[$item->unit]), type: 'in', quantity: '', unit_cost: @js($item->cost_price !== null ? qty($item->cost_price) : ''), note: '' }">± Hərəkət</button>
+                        <button class="btn-ghost btn-sm" @click="edit = @js(['id' => $item->id, 'title' => $item->title, 'unit' => $item->unit, 'quantity' => qty($item->quantity), 'min_quantity' => qty($item->min_quantity), 'cost_price' => $item->cost_price !== null ? qty($item->cost_price) : ''])"><x-icon name="edit" class="size-4" /></button>
                         <form method="POST" action="{{ route('inventory.destroy', $item) }}" class="inline" onsubmit="return confirm('Silinsin? Reseptlərdən də çıxarılacaq.')">@csrf @method('DELETE')<button class="btn-ghost btn-sm text-red-600"><x-icon name="trash" class="size-4" /></button></form>
                     </td>
                 </tr>
             @empty
-                <tr><td colspan="6"><x-empty icon="box" title="Stok məhsulu yoxdur">Süd, qəhvə, ət kimi inqrediyentləri əlavə edin, sonra menyu məhsulunun reseptinə bağlayın.</x-empty></td></tr>
+                <tr><td colspan="8"><x-empty icon="box" title="Stok məhsulu yoxdur">Süd, qəhvə, ət kimi inqrediyentləri əlavə edin, sonra menyu məhsulunun reseptinə bağlayın.</x-empty></td></tr>
             @endforelse
             </tbody>
         </table>
@@ -53,6 +59,8 @@
             <div><label class="label">Vahid</label><select name="unit" x-model="edit.unit" class="input">@foreach (\App\Models\InventoryItem::UNITS as $k => $v)<option value="{{ $k }}">{{ $v }}</option>@endforeach</select></div>
             <div x-show="!edit.id"><label class="label">Başlanğıc miqdar</label><input type="number" step="0.0001" min="0" name="quantity" x-model="edit.quantity" class="input"></div>
             <div><label class="label">Minimum hədd</label><input type="number" step="0.0001" min="0" name="min_quantity" x-model="edit.min_quantity" class="input"></div>
+            <div><label class="label">Alış qiyməti (1 <span x-text="@js(\App\Models\InventoryItem::UNITS)[edit.unit]"></span>, ₼)</label><input type="number" step="0.0001" min="0" name="cost_price" x-model="edit.cost_price" class="input" placeholder="Məs. 14.50"></div>
+            <p class="text-xs text-zinc-500 sm:col-span-2" x-show="edit.id">Alış qiyməti adətən mal girişində (± Hərəkət → Giriş) avtomatik orta çəkili yenilənir. Burada yalnız düzəliş üçün dəyişin.</p>
         </form></template>
         <x-slot:footer><button class="btn-secondary" @click="edit = null">Bağla</button><button class="btn-primary" form="inv-form">Saxla</button></x-slot:footer>
     </x-modal>
@@ -67,6 +75,11 @@
                 @endforeach
             </div>
             <div><label class="label">Miqdar (<span x-text="move.unit"></span>)</label><input type="number" step="0.0001" min="0.0001" name="quantity" x-model="move.quantity" class="input" required></div>
+            <div x-show="move.type === 'in'">
+                <label class="label">Alış qiyməti (1 <span x-text="move.unit"></span>, ₼)</label>
+                <input type="number" step="0.0001" min="0" name="unit_cost" x-model="move.unit_cost" class="input" :disabled="move.type !== 'in'" placeholder="Fakturadakı qiymət">
+                <p class="mt-1 text-xs text-zinc-500" x-show="move.unit_cost && move.quantity">Cəmi: <b x-text="money(move.unit_cost * move.quantity)"></b>. Maya orta çəkili yenilənəcək.</p>
+            </div>
             <div><label class="label">Qeyd</label><input name="note" x-model="move.note" class="input" placeholder="Məs. təchizatçı fakturası №"></div>
         </form></template>
         <x-slot:footer><button class="btn-secondary" @click="move = null">Bağla</button><button class="btn-primary" form="move-form">Saxla</button></x-slot:footer>

@@ -16,7 +16,7 @@ class MenuItem extends Model
 
     protected function casts(): array
     {
-        return ['price' => 'decimal:2', 'is_enabled' => 'boolean', 'track_stock' => 'boolean', 'stock_quantity' => 'decimal:2', 'stock_min' => 'decimal:2'];
+        return ['price' => 'decimal:2', 'is_enabled' => 'boolean', 'track_stock' => 'boolean', 'stock_quantity' => 'decimal:2', 'stock_min' => 'decimal:2', 'stock_cost' => 'decimal:4'];
     }
 
     public function category(): BelongsTo

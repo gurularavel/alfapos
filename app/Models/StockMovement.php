@@ -16,7 +16,7 @@ class StockMovement extends Model
 
     protected function casts(): array
     {
-        return ['quantity' => 'decimal:4'];
+        return ['quantity' => 'decimal:4', 'unit_cost' => 'decimal:4'];
     }
 
     public function item(): BelongsTo

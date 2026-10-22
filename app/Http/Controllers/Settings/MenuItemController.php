@@ -75,7 +75,7 @@ class MenuItemController extends Controller
             'item' => $item,
             'categories' => Category::orderBy('sort')->get(['id', 'title']),
             'taxes' => Tax::orderBy('title')->get(),
-            'inventory' => InventoryItem::orderBy('title')->get(['id', 'title', 'unit']),
+            'inventory' => InventoryItem::orderBy('title')->get(['id', 'title', 'unit', 'cost_price']),
         ]);
     }
 

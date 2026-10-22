@@ -19,7 +19,7 @@ class OrderItem extends Model
 
     protected function casts(): array
     {
-        return ['addons' => 'array', 'price' => 'decimal:2', 'tax_rate' => 'decimal:2'];
+        return ['addons' => 'array', 'price' => 'decimal:2', 'cost' => 'decimal:4', 'tax_rate' => 'decimal:2'];
     }
 
     public function order(): BelongsTo

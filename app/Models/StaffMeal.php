@@ -17,7 +17,7 @@ class StaffMeal extends Model
 
     protected function casts(): array
     {
-        return ['total' => 'decimal:2'];
+        return ['total' => 'decimal:2', 'cost' => 'decimal:2'];
     }
 
     public function items(): HasMany

@@ -78,8 +78,8 @@
             </form>
 
             <div class="grid grid-cols-2 gap-2">
-                @foreach ([['Qeyd', $stats->meals], ['Porsiya', $stats->portions], ['İşçi', $stats->people], ['Dəyər', money($stats->value)]] as [$label, $value])
-                    <div class="card card-pad"><p class="text-xs font-semibold text-zinc-500">{{ $label }}</p><p class="text-xl font-black">{{ $value }}</p></div>
+                @foreach ([['Qeyd', $stats->meals, null], ['Porsiya', $stats->portions, null], ['Menyu qiyməti ilə', money($stats->value), null], ['Maya dəyəri', money($stats->cost), $stats->costUnknown ? $stats->costUnknown.' qeydin mayası bilinmir' : null]] as [$label, $value, $hint])
+                    <div class="card card-pad"><p class="text-xs font-semibold text-zinc-500">{{ $label }}</p><p class="text-xl font-black">{{ $value }}</p>@if ($hint)<p class="text-[11px] text-amber-600">{{ $hint }}</p>@endif</div>
                 @endforeach
             </div>
 
@@ -87,7 +87,7 @@
                 <div class="card card-pad">
                     <h3 class="mb-2 font-extrabold">İşçilər üzrə</h3>
                     @foreach ($byEmployee as $row)
-                        <div class="flex justify-between py-1 text-sm"><span class="font-semibold">{{ $row->name }}</span><span class="text-zinc-500">{{ $row->meals }} dəfə · <b class="text-ink">{{ money($row->value) }}</b></span></div>
+                        <div class="flex justify-between py-1 text-sm"><span class="font-semibold">{{ $row->name }}</span><span class="text-zinc-500">{{ $row->meals }} dəfə · maya <b class="text-ink">{{ money($row->cost) }}</b></span></div>
                     @endforeach
                 </div>
             @endif
@@ -103,6 +103,7 @@
                             </div>
                             <div class="shrink-0 text-right">
                                 <p class="font-bold">{{ money($meal->total) }}</p>
+                                <p class="text-[11px] text-zinc-500">maya: {{ $meal->cost !== null ? money($meal->cost) : 'bilinmir' }}</p>
                                 @if ($meal->status === 'cancelled')
                                     <span class="badge-red">Ləğv</span>
                                 @else

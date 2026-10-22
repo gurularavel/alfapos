@@ -1,5 +1,5 @@
 <x-layouts.app title="Hazır yemək">
-<div x-data="{ act: null, add: false, recipes: @js($items->mapWithKeys(fn ($i) => [$i->id => $i->recipeItems->map(fn ($r) => ['title' => $r->inventoryItem->title, 'per' => (float) $r->quantity, 'have' => (float) $r->inventoryItem->quantity, 'unit' => $units[$r->inventoryItem->unit] ?? $r->inventoryItem->unit])])) }">
+<div x-data="{ act: null, add: false, recipes: @js($items->mapWithKeys(fn ($i) => [$i->id => $i->recipeItems->map(fn ($r) => ['title' => $r->inventoryItem->title, 'per' => (float) $r->quantity, 'have' => (float) $r->inventoryItem->quantity, 'price' => $r->inventoryItem->cost_price !== null ? (float) $r->inventoryItem->cost_price : null, 'unit' => $units[$r->inventoryItem->unit] ?? $r->inventoryItem->unit])])) }">
     <x-page-header title="Hazır yemək stoku" subtitle="Porsiya ilə hazırlanıb satılan yeməklər. Hazırlananda xammal anbardan silinir, satılanda porsiya hazır stokdan düşür.">
         <a href="{{ route('staff-meals.index') }}" class="btn-secondary"><x-icon name="utensils" class="size-4" /> Personal yeməyi</a>
         <button class="btn-primary" @click="add = true"><x-icon name="plus" class="size-4" /> Yemək əlavə et</button>
@@ -17,7 +17,7 @@
             <thead><tr>
                 <th>Yemək</th><th class="text-right">Hazır qalıq</th><th class="text-right">Minimum</th>
                 <th class="text-right" title="Bu gün">Hazırlanıb</th><th class="text-right">Satılıb</th><th class="text-right">Personal</th><th class="text-right">İsraf</th>
-                <th>Resept (1 porsiya)</th><th></th>
+                <th class="text-right">Maya / porsiya</th><th>Resept (1 porsiya)</th><th></th>
             </tr></thead>
             <tbody>
             @forelse ($items as $item)
@@ -35,6 +35,14 @@
                     <td class="text-right tabular-nums">{{ qty(max(0, ($t['sale'] ?? 0))) ?: '—' }}</td>
                     <td class="text-right tabular-nums">{{ qty($t['staff'] ?? 0) ?: '—' }}</td>
                     <td class="text-right tabular-nums text-red-600">{{ qty($t['wastage'] ?? 0) ?: '—' }}</td>
+                    <td class="text-right whitespace-nowrap">
+                        @if ($item->stock_cost !== null)
+                            <span class="font-semibold">{{ money($item->stock_cost) }}</span>
+                            @if ($item->price > 0)<p @class(['text-xs', 'text-red-600' => ($item->price - $item->stock_cost) / $item->price < 0.3, 'text-zinc-500' => ($item->price - $item->stock_cost) / $item->price >= 0.3])>marja {{ round(($item->price - $item->stock_cost) / $item->price * 100) }}%</p>@endif
+                        @else
+                            <span class="text-xs text-zinc-400" title="Reseptdəki bütün xammalın alış qiyməti yazılandan sonra növbəti hazırlamada hesablanır">bilinmir</span>
+                        @endif
+                    </td>
                     <td class="max-w-56 text-xs text-zinc-500">
                         @forelse ($item->recipeItems as $r)
                             {{ $r->inventoryItem->title }} {{ qty($r->quantity) }} {{ $units[$r->inventoryItem->unit] ?? '' }}@if (! $loop->last), @endif
@@ -50,7 +58,7 @@
                     </td>
                 </tr>
             @empty
-                <tr><td colspan="9"><x-empty icon="chef" title="Hazır stokla izlənən yemək yoxdur">Plov, dolma, sup kimi əvvəlcədən porsiya ilə bişirilən yeməkləri əlavə edin. Satışda porsiya sayı avtomatik azalacaq.</x-empty></td></tr>
+                <tr><td colspan="10"><x-empty icon="chef" title="Hazır stokla izlənən yemək yoxdur">Plov, dolma, sup kimi əvvəlcədən porsiya ilə bişirilən yeməkləri əlavə edin. Satışda porsiya sayı avtomatik azalacaq.</x-empty></td></tr>
             @endforelse
             </tbody>
         </table>
@@ -104,6 +112,10 @@
                             <span><span x-text="+(r.per * (act.portions || 0)).toFixed(3)"></span> <span x-text="r.unit"></span> <span class="text-xs text-zinc-400">/ var: <span x-text="+r.have.toFixed(3)"></span></span></span>
                         </div>
                     </template>
+                    <p class="mt-2 border-t border-zinc-200 pt-2 font-semibold" x-show="act.portions > 0">
+                        <template x-if="recipes[act.id].every(r => r.price !== null)"><span>Partiyanın mayası: <span x-text="money(recipes[act.id].reduce((s, r) => s + r.per * r.price, 0) * act.portions)"></span> · porsiya <span x-text="money(recipes[act.id].reduce((s, r) => s + r.per * r.price, 0))"></span></span></template>
+                        <template x-if="!recipes[act.id].every(r => r.price !== null)"><span class="text-amber-700">Bəzi xammalın alış qiyməti yoxdur — maya hesablanmayacaq</span></template>
+                    </p>
                 </div>
                 <p class="rounded-xl bg-amber-50 p-3 text-sm text-amber-800" x-show="!(recipes[act.id] || []).length">Bu yeməyin resepti yoxdur — anbardan xammal silinməyəcək. Resepti Ayarlar → Menyu bölməsində əlavə edin.</p>
                 <div><label class="label">Qeyd</label><input name="note" x-model="act.note" class="input" placeholder="Məs. səhər partiyası"></div>

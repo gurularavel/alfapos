@@ -118,10 +118,10 @@ class DemoSeeder extends Seeder
         $burger = MenuItem::where('title', 'Burger')->first();
         $burger->addons()->createMany([['title' => 'Əlavə pendir', 'price' => 1.5], ['title' => 'Bekon', 'price' => 2.5]]);
 
-        $milk = InventoryItem::create(['title' => 'Süd', 'unit' => 'ml', 'quantity' => 20000, 'min_quantity' => 3000]);
-        $coffee = InventoryItem::create(['title' => 'Qəhvə dənəsi', 'unit' => 'g', 'quantity' => 5000, 'min_quantity' => 1000]);
-        $bun = InventoryItem::create(['title' => 'Burger çörəyi', 'unit' => 'pc', 'quantity' => 8, 'min_quantity' => 10]);
-        InventoryItem::create(['title' => 'Mal əti', 'unit' => 'kg', 'quantity' => 15, 'min_quantity' => 5]);
+        $milk = InventoryItem::create(['title' => 'Süd', 'unit' => 'ml', 'quantity' => 20000, 'min_quantity' => 3000, 'cost_price' => 0.0018]);
+        $coffee = InventoryItem::create(['title' => 'Qəhvə dənəsi', 'unit' => 'g', 'quantity' => 5000, 'min_quantity' => 1000, 'cost_price' => 0.045]);
+        $bun = InventoryItem::create(['title' => 'Burger çörəyi', 'unit' => 'pc', 'quantity' => 8, 'min_quantity' => 10, 'cost_price' => 0.4]);
+        InventoryItem::create(['title' => 'Mal əti', 'unit' => 'kg', 'quantity' => 15, 'min_quantity' => 5, 'cost_price' => 16]);
         RecipeItem::create(['menu_item_id' => $latte->id, 'inventory_item_id' => $milk->id, 'quantity' => 200]);
         RecipeItem::create(['menu_item_id' => $latte->id, 'inventory_item_id' => $coffee->id, 'quantity' => 18]);
         RecipeItem::create(['menu_item_id' => $burger->id, 'inventory_item_id' => $bun->id, 'quantity' => 1]);
@@ -154,9 +154,9 @@ class DemoSeeder extends Seeder
 
         // Hazır yemək stoku: dolma və paxlava səhər partiyası ilə bişirilir, xammal reseptlə anbardan silinir
         $beef = InventoryItem::where('title', 'Mal əti')->first();
-        $leaf = InventoryItem::create(['title' => 'Üzüm yarpağı', 'unit' => 'pc', 'quantity' => 400, 'min_quantity' => 100]);
-        $rice = InventoryItem::create(['title' => 'Düyü', 'unit' => 'kg', 'quantity' => 20, 'min_quantity' => 5]);
-        $walnut = InventoryItem::create(['title' => 'Qoz ləpəsi', 'unit' => 'kg', 'quantity' => 3, 'min_quantity' => 1]);
+        $leaf = InventoryItem::create(['title' => 'Üzüm yarpağı', 'unit' => 'pc', 'quantity' => 400, 'min_quantity' => 100, 'cost_price' => 0.03]);
+        $rice = InventoryItem::create(['title' => 'Düyü', 'unit' => 'kg', 'quantity' => 20, 'min_quantity' => 5, 'cost_price' => 3.2]);
+        $walnut = InventoryItem::create(['title' => 'Qoz ləpəsi', 'unit' => 'kg', 'quantity' => 3, 'min_quantity' => 1, 'cost_price' => 18]);
         $dolma = MenuItem::where('title', 'Dolma')->first();
         $paxlava = MenuItem::where('title', 'Paxlava')->first();
         foreach ([[$dolma, $beef, 0.08], [$dolma, $leaf, 10], [$dolma, $rice, 0.02], [$paxlava, $walnut, 0.025]] as [$item, $ingredient, $qty]) {
@@ -169,7 +169,7 @@ class DemoSeeder extends Seeder
         $stock->produce($paxlava, 24, 'Səhər partiyası');
 
         $waiter = User::where('role', 'waiter')->first();
-        $meal = StaffMeal::create(['user_id' => $waiter->id, 'employee_name' => $waiter->name, 'meal_type' => 'lunch', 'total' => $dolma->price, 'created_by' => $waiter->id]);
+        $meal = StaffMeal::create(['user_id' => $waiter->id, 'employee_name' => $waiter->name, 'meal_type' => 'lunch', 'total' => $dolma->price, 'cost' => $dolma->fresh()->stock_cost, 'created_by' => $waiter->id]);
         $meal->items()->create(['menu_item_id' => $dolma->id, 'title' => $dolma->title, 'quantity' => 1, 'price' => $dolma->price]);
         $stock->consume($meal->items, -1, 'staff', ['staff_meal_id' => $meal->id, 'note' => "Personal yeməyi: {$waiter->name}"]);
     }

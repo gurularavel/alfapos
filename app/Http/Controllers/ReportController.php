@@ -31,6 +31,7 @@ class ReportController extends Controller
         'payment-summary' => ['Ödənişlər', 'Ödəniş növləri', 'Nağd, kart və digər ödəniş növləri üzrə cəm.'],
         'item-sales' => ['Menyu', 'Məhsul satışları', 'Hər məhsuldan satılan miqdar və məbləğ.'],
         'category-sales' => ['Menyu', 'Kateqoriya satışları', 'Kateqoriyalar üzrə gəlir.'],
+        'item-profit' => ['Menyu', 'Məhsullar üzrə mənfəət', 'Satış, maya dəyəri, ümumi mənfəət və marja (anbar alış qiymətləri əsasında).'],
         'variant-sales' => ['Menyu', 'Variant satışları', 'Ölçü/variant üzrə satış.'],
         'top-customers' => ['Müştərilər', 'Top müştərilər', 'Ən çox xərcləyən müştərilər.'],
         'customer-birthdays' => ['Müştərilər', 'Ad günləri', 'Bu ay ad günü olan müştərilər.'],
@@ -148,7 +149,8 @@ class ReportController extends Controller
                 Order::whereBetween('created_at', [$from, $to])->where('status', '!=', 'draft')->tap($ord)
                     ->selectRaw("DATE(created_at) d, COUNT(*) c, SUM(status = 'completed') done, SUM(status = 'cancelled') cancelled")->groupBy('d')->orderBy('d')->get()
                     ->map(fn ($r) => [$r->d, $r->c, $r->done, $r->cancelled])->all(), null],
-            'ready-stock' => [['Yemək', 'Hazırlanıb', 'Satılıb', 'Personal', 'İsraf', 'Sayım fərqi', 'Cari qalıq'],
+            'item-profit' => $this->itemProfit($items()),
+            'ready-stock' => [['Yemək', 'Hazırlanıb', 'Satılıb', 'Personal', 'İsraf', 'Sayım fərqi', 'Cari qalıq', 'Maya / porsiya'],
                 MenuItem::where('track_stock', true)->orderBy('title')->get()->map(function (MenuItem $m) use ($from, $to) {
                     // Ləğv olunan sifariş / personal yeməyi "return" kimi geri gəlir — öz mənbəyindən çıxılır
                     $q = $m->readyStockMovements()->whereBetween('created_at', [$from, $to])
@@ -156,13 +158,9 @@ class ReportController extends Controller
                         ->groupBy('t')->pluck('q', 't');
 
                     return [$m->title, qty($q['production'] ?? 0), qty(-($q['sale'] ?? 0)), qty(-($q['staff'] ?? 0)),
-                        qty(-($q['wastage'] ?? 0)), qty($q['count'] ?? 0), qty($m->stock_quantity)];
+                        qty(-($q['wastage'] ?? 0)), qty($q['count'] ?? 0), qty($m->stock_quantity), $m->stock_cost !== null ? money($m->stock_cost) : '—'];
                 })->all(), null],
-            'staff-meals' => $this->grouped(
-                StaffMeal::where('status', 'active')->whereBetween('created_at', [$from, $to])
-                    ->when($this->branchId, fn ($w) => $w->where('branch_id', $this->branchId))
-                    ->selectRaw('employee_name k, COUNT(*) c, SUM(total) t')->groupBy('k')->orderByDesc('t'),
-                ['İşçi', 'Dəfə', 'Dəyər (menyu qiyməti)']),
+            'staff-meals' => $this->staffMeals($from, $to),
             'low-stock' => [['Məhsul', 'Cari', 'Minimum', 'Vahid'],
                 InventoryItem::whereColumn('quantity', '<=', 'min_quantity')->orderBy('quantity')->get()
                     ->map(fn ($i) => [$i->title, rtrim(rtrim($i->quantity, '0'), '.'), rtrim(rtrim($i->min_quantity, '0'), '.'), $i->unit])->all(), null],
@@ -185,6 +183,54 @@ class ReportController extends Controller
     }
 
     /** k, c, t sütunlu sorğudan cədvəl + cəm sətri qurur. */
+    /**
+     * Məhsullar üzrə mənfəət: satış anında sətirdə saxlanmış maya ilə. Mayası bilinməyən sətirlər (alış qiyməti
+     * və ya resepti olmayan) mənfəətə qatılmır və ayrıca göstərilir.
+     *
+     * @return array{0: list<string>, 1: list<list<string|int|float>>, 2: list<string|int|float>}
+     */
+    protected function itemProfit($items): array
+    {
+        $data = $items->selectRaw('order_items.title k, SUM(order_items.quantity) qty, SUM(order_items.quantity * order_items.price) revenue,
+                SUM(CASE WHEN order_items.cost IS NULL THEN 0 ELSE order_items.quantity * order_items.price END) known_revenue,
+                SUM(order_items.quantity * order_items.cost) cost, SUM(CASE WHEN order_items.cost IS NULL THEN order_items.quantity ELSE 0 END) unknown_qty')
+            ->groupBy('k')->orderByDesc('revenue')->get();
+        $margin = fn ($revenue, $cost) => $revenue > 0 ? round(($revenue - $cost) / $revenue * 100).'%' : '—';
+
+        $rows = $data->map(fn ($r) => [
+            $r->k,
+            (float) $r->qty + 0,
+            money($r->revenue),
+            $r->cost !== null ? money($r->cost) : '—',
+            $r->cost !== null ? money($r->known_revenue - $r->cost) : '—',
+            $r->cost !== null ? $margin((float) $r->known_revenue, (float) $r->cost) : '—',
+            $r->unknown_qty > 0 ? ((float) $r->unknown_qty + 0).' əd' : '',
+        ])->all();
+        $knownRevenue = (float) $data->sum('known_revenue');
+        $cost = (float) $data->sum('cost');
+
+        return [
+            ['Məhsul', 'Miqdar', 'Gəlir', 'Maya dəyəri', 'Mənfəət', 'Marja', 'Mayası bilinmir'],
+            $rows,
+            ['Cəm', (float) $data->sum('qty') + 0, money($data->sum('revenue')), money($cost), money($knownRevenue - $cost), $margin($knownRevenue, $cost), ($u = (float) $data->sum('unknown_qty')) ? ($u + 0).' əd' : ''],
+        ];
+    }
+
+    /** @return array{0: list<string>, 1: list<list<string|int>>, 2: list<string|int>} */
+    protected function staffMeals(Carbon $from, Carbon $to): array
+    {
+        $data = StaffMeal::where('status', 'active')->whereBetween('created_at', [$from, $to])
+            ->when($this->branchId, fn ($w) => $w->where('branch_id', $this->branchId))
+            ->selectRaw('employee_name k, COUNT(*) c, SUM(total) t, SUM(cost) cost, SUM(cost IS NULL) unknown')
+            ->groupBy('k')->orderByDesc('t')->get();
+
+        return [
+            ['İşçi', 'Dəfə', 'Dəyər (menyu qiyməti)', 'Maya dəyəri'],
+            $data->map(fn ($r) => [$r->k, (int) $r->c, money($r->t), money($r->cost).($r->unknown ? " ({$r->unknown} bilinmir)" : '')])->all(),
+            ['Cəm', (int) $data->sum('c'), money($data->sum('t')), money($data->sum('cost'))],
+        ];
+    }
+
     protected function grouped($query, array $columns, ?callable $label = null, bool $bothMoney = false): array
     {
         $data = $query->get();

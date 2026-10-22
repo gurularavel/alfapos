@@ -16,7 +16,7 @@ class InventoryItem extends Model
 
     protected function casts(): array
     {
-        return ['quantity' => 'decimal:4', 'min_quantity' => 'decimal:4'];
+        return ['quantity' => 'decimal:4', 'min_quantity' => 'decimal:4', 'cost_price' => 'decimal:4'];
     }
 
     public function movements(): HasMany

@@ -4,8 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\InventoryItem;
 use App\Models\StockMovement;
+use App\Services\StockService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class InventoryController extends Controller
@@ -27,6 +27,8 @@ class InventoryController extends Controller
                 'in' => $all->filter(fn ($i) => $i->stockStatus() === 'in')->count(),
                 'low' => $all->filter(fn ($i) => $i->stockStatus() === 'low')->count(),
                 'out' => $all->filter(fn ($i) => $i->stockStatus() === 'out')->count(),
+                'value' => $all->sum(fn ($i) => max(0, (float) $i->quantity) * (float) $i->cost_price),
+                'unpriced' => $all->whereNull('cost_price')->count(),
             ],
         ]);
     }
@@ -44,6 +46,7 @@ class InventoryController extends Controller
             'title' => ['required', 'string', 'max:120'],
             'unit' => ['required', Rule::in(array_keys(InventoryItem::UNITS))],
             'min_quantity' => ['required', 'numeric', 'min:0'],
+            'cost_price' => ['nullable', 'numeric', 'min:0', 'max:1000000'],
         ]));
 
         return back()->with('success', 'Yeniləndi.');
@@ -56,25 +59,20 @@ class InventoryController extends Controller
         return back()->with('success', 'Silindi.');
     }
 
-    public function movement(Request $request, InventoryItem $inventoryItem)
+    public function movement(Request $request, InventoryItem $inventoryItem, StockService $stock)
     {
         $data = $request->validate([
             'type' => ['required', Rule::in(['in', 'out', 'wastage'])],
             'quantity' => ['required', 'numeric', 'gt:0'],
+            'unit_cost' => ['nullable', 'numeric', 'min:0', 'max:1000000'], // girişin alış qiyməti (1 vahid)
             'note' => ['nullable', 'string', 'max:255'],
         ]);
-        $signed = $data['type'] === 'in' ? $data['quantity'] : -$data['quantity'];
 
-        DB::transaction(function () use ($inventoryItem, $data, $signed) {
-            $inventoryItem->increment('quantity', $signed);
-            StockMovement::create([
-                'inventory_item_id' => $inventoryItem->id,
-                'type' => $data['type'],
-                'quantity' => $signed,
-                'note' => $data['note'] ?? null,
-                'user_id' => auth()->id(),
-            ]);
-        });
+        if ($data['type'] === 'in') {
+            $stock->receive($inventoryItem, (float) $data['quantity'], isset($data['unit_cost']) ? (float) $data['unit_cost'] : null, $data['note'] ?? null);
+        } else {
+            $stock->issue($inventoryItem, (float) $data['quantity'], $data['type'], $data['note'] ?? null);
+        }
 
         return back()->with('success', 'Stok hərəkəti qeydə alındı.');
     }
@@ -96,6 +94,7 @@ class InventoryController extends Controller
             'unit' => ['required', Rule::in(array_keys(InventoryItem::UNITS))],
             'quantity' => ['required', 'numeric', 'min:0'],
             'min_quantity' => ['required', 'numeric', 'min:0'],
+            'cost_price' => ['nullable', 'numeric', 'min:0', 'max:1000000'],
         ]);
     }
 }

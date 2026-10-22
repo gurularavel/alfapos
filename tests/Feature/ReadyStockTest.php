@@ -112,7 +112,7 @@ class ReadyStockTest extends TestCase
 
         $this->assertSame(19.0, $this->stock('Dolma'));
         $this->get(route('reports.show', 'ready-stock'))->assertOk()
-            ->assertViewHas('rows', fn ($rows) => collect($rows)->firstWhere(0, 'Dolma') === ['Dolma', '20', '0', '1', '0', '0', '19']);
+            ->assertViewHas('rows', fn ($rows) => collect($rows)->firstWhere(0, 'Dolma') === ['Dolma', '20', '0', '1', '0', '0', '19', money(1.644)]);
     }
 
     public function test_waste_requires_reason_and_cannot_exceed_stock(): void
@@ -181,7 +181,7 @@ class ReadyStockTest extends TestCase
 
         $this->get(route('staff-meals.index'))->assertOk()->assertSee('&lt;script&gt;alert(1)&lt;/script&gt;', false)->assertDontSee('<script>alert(1)</script>', false);
         $this->get(route('reports.show', 'staff-meals'))->assertOk()
-            ->assertViewHas('rows', fn ($rows) => collect($rows)->firstWhere(0, 'Ofisiant Nicat') == ['Ofisiant Nicat', 1, money(10)]);
+            ->assertViewHas('rows', fn ($rows) => collect($rows)->firstWhere(0, 'Ofisiant Nicat') == ['Ofisiant Nicat', 1, money(10), money(1.64)]);
     }
 
     public function test_chef_can_use_kitchen_stock_and_cashier_cannot(): void

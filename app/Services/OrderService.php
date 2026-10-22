@@ -261,10 +261,18 @@ class OrderService
     public function deductStock(Order $order, int $sign = -1): void
     {
         $order->loadMissing('items');
-        app(StockService::class)->consume($order->items, $sign, 'sale', [
+        $costs = app(StockService::class)->consume($order->items, $sign, 'sale', [
             'order_id' => $order->id,
             'note' => ($sign < 0 ? 'Sifariş #' : 'Ləğv edilmiş sifariş #').$order->token_no,
         ]);
+        // Satış anındakı maya sətirdə saxlanılır (sonradan alış qiyməti dəyişsə də mənfəət hesabatı dəyişməsin)
+        if ($sign < 0) {
+            foreach ($order->items as $key => $item) {
+                if (($costs[$key] ?? null) !== null) {
+                    $item->update(['cost' => $costs[$key]]);
+                }
+            }
+        }
     }
 
     public function restoreStock(Order $order): void

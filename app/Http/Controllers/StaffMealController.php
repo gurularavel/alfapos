@@ -37,12 +37,15 @@ class StaffMealController extends Controller
                 'meals' => $active->count(),
                 'portions' => (int) $active->sum(fn ($m) => $m->items->sum('quantity')),
                 'value' => (float) $active->sum('total'),
+                'cost' => (float) $active->sum('cost'),
+                'costUnknown' => $active->whereNull('cost')->count(),
                 'people' => $active->pluck('employee_name')->unique()->count(),
             ],
             'byEmployee' => $active->groupBy('employee_name')->map(fn ($g, $name) => (object) [
                 'name' => $name,
                 'meals' => $g->count(),
                 'value' => (float) $g->sum('total'),
+                'cost' => (float) $g->sum('cost'),
             ])->sortByDesc('value')->values(),
             'employees' => User::where('tenant_id', $tenancy->id())->where('is_active', true)->orderBy('name')->get(['id', 'name', 'role', 'designation']),
             'menu' => MenuItem::where('is_enabled', true)->orderBy('title')->get(['id', 'title', 'price', 'category_id', 'track_stock', 'stock_quantity'])
@@ -92,7 +95,9 @@ class StaffMealController extends Controller
                 'price' => $menu[$l->menu_item_id]->price,
             ])->all());
 
-            $stock->consume($meal->items, -1, 'staff', ['staff_meal_id' => $meal->id, 'note' => "Personal yeməyi: {$name}"]);
+            $costs = $stock->consume($meal->items, -1, 'staff', ['staff_meal_id' => $meal->id, 'note' => "Personal yeməyi: {$name}"]);
+            // Hər yeməyin mayası bilinirsə, qeydin mayası; biri bilinmirsə — null (natamam rəqəm göstərilmir)
+            $meal->update(['cost' => in_array(null, $costs, true) ? null : round($meal->items->sum(fn ($i, $k) => $costs[$k] * $i->quantity), 2)]);
             AuditLog::record('staff_meal.created', $meal, ['employee' => $name, 'total' => $meal->total]);
 
             return $meal;

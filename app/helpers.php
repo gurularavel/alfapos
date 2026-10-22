@@ -12,6 +12,17 @@ if (! function_exists('money')) {
     }
 }
 
+if (! function_exists('unit_money')) {
+    /** Vahid qiyməti (qram/ml qiyməti çox kiçik ola bilər): 2–4 onluq rəqəm, 0.0145 → "0.0145 ₼", 12.5 → "12.50 ₼". */
+    function unit_money(float|int|string|null $amount): string
+    {
+        $currency = app(Tenancy::class)->tenant()?->currency ?? '₼';
+        $formatted = rtrim(number_format((float) $amount, 4, '.', ' '), '0');
+
+        return (strlen(substr(strrchr($formatted, '.'), 1)) < 2 ? number_format((float) $amount, 2, '.', ' ') : $formatted).' '.$currency;
+    }
+}
+
 if (! function_exists('site')) {
     /** Saytın əlaqə/rekvizit ayarları (superadmin → Sayt), telefonların beynəlxalq formaları ilə. */
     function site(?string $key = null): mixed

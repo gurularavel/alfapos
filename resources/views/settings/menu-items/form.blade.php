@@ -21,6 +21,16 @@
             const i = list.findIndex(x => x.uid === t);
             return i < 0 ? '' : t[0] + ':' + i;
         },
+        price: @js((float) old('price', $item->price)),
+        // Əsas reseptin (variant/əlavəsiz) 1 porsiyasının mayası; qiyməti yazılmamış xammal varsa null
+        get recipeCost() {
+            const base = this.recipe.filter(r => !r.target && r.inventory_item_id && r.quantity);
+            if (!base.length || base.some(r => this.inventory[r.inventory_item_id]?.cost_price == null)) return null;
+            return base.reduce((s, r) => s + r.quantity * this.inventory[r.inventory_item_id].cost_price, 0);
+        },
+        get unpriced() {
+            return this.recipe.filter(r => !r.target && r.inventory_item_id && this.inventory[r.inventory_item_id]?.cost_price == null).map(r => this.inventory[r.inventory_item_id].title);
+        },
      }">
     <x-page-header :title="$item->exists ? $item->title : 'Yeni məhsul'">
         <a href="{{ route('settings.menu-items.index') }}" class="btn-secondary">← Menyu</a>
@@ -37,7 +47,7 @@
             <div class="card card-pad grid gap-4 sm:grid-cols-2">
                 <div class="sm:col-span-2"><label class="label">Ad *</label><input name="title" value="{{ old('title', $item->title) }}" class="input" required></div>
                 <div class="sm:col-span-2"><label class="label">Təsvir</label><textarea name="description" rows="2" class="input">{{ old('description', $item->description) }}</textarea></div>
-                <div><label class="label">Əsas qiymət *</label><input type="number" step="0.01" min="0" name="price" value="{{ old('price', $item->price) }}" class="input" required></div>
+                <div><label class="label">Əsas qiymət *</label><input type="number" step="0.01" min="0" name="price" x-model.number="price" class="input" required></div>
                 <div><label class="label">Kateqoriya</label>
                     <select name="category_id" class="input"><option value="">—</option>@foreach ($categories as $c)<option value="{{ $c->id }}" @selected(old('category_id', $item->category_id) == $c->id)>{{ $c->title }}</option>@endforeach</select>
                 </div>
@@ -73,6 +83,11 @@
                 @if ($inventory->isEmpty())
                     <p class="text-sm text-zinc-500">Əvvəlcə <a href="{{ route('inventory.index') }}" class="text-brand-600 underline">Anbar</a> bölməsində stok məhsulları yaradın.</p>
                 @endif
+                <div class="mb-3 flex flex-wrap gap-x-6 gap-y-1 rounded-xl bg-zinc-50 px-3 py-2 text-sm" x-show="recipe.some(r => !r.target && r.inventory_item_id)">
+                    <span>Maya dəyəri (1 porsiya): <b x-text="recipeCost !== null ? money(recipeCost) : '—'"></b></span>
+                    <span x-show="recipeCost !== null && price > 0">Marja: <b :class="(price - recipeCost) / price < 0.3 ? 'text-red-600' : 'text-brand-700'" x-text="money(price - recipeCost) + ' · ' + Math.round((price - recipeCost) / price * 100) + '%'"></b></span>
+                    <span x-show="unpriced.length" class="text-amber-600">Alış qiyməti yazılmayıb: <span x-text="unpriced.join(', ')"></span></span>
+                </div>
                 <template x-for="(r, i) in recipe" :key="i">
                     <div class="mb-2 grid gap-2 sm:grid-cols-[1fr_8rem_12rem_auto]">
                         <select :name="'recipe[' + i + '][inventory_item_id]'" x-model="r.inventory_item_id" class="input" required>
