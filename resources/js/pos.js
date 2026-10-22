@@ -45,6 +45,10 @@ export default (data) => ({
             if (saved?.cart?.length) Object.assign(this, saved);
         } catch {}
         this.$watch('cart', () => this.persist());
+        // Terminal kilidlənəndə səbət və açıq pəncərələr təmizlənir
+        window.addEventListener('terminal-lock', () => this.resetForLock());
+        const terminal = Alpine.store('terminal');
+        if (terminal?.active && terminal.locked) this.resetForLock();
         this.refreshQrCount();
         setInterval(() => this.refreshQrCount(), 20000);
     },
@@ -139,6 +143,11 @@ export default (data) => ({
     clear() {
         Object.assign(this, { cart: [], customer: null, tableId: '', discountValue: 0, notes: '', draftId: null, deliveryType: 'dinein' });
         this.persist();
+    },
+
+    resetForLock() {
+        this.clear();
+        Object.assign(this, { picker: null, modal: null, search: '', category: null, customerQuery: '', customerResults: [], draftReference: '' });
     },
 
     // ---- cəmlər (server ilə eyni formul) ----

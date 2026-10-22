@@ -69,6 +69,8 @@ export default (state) => ({
         this.operator = null;
         this.mode = 'saver';
         this.pin = '';
+        // POS səbəti təmizləsin: növbəti işçi əvvəlkinin yarımçıq sifarişini görməməlidir
+        window.dispatchEvent(new CustomEvent('terminal-lock'));
     },
 
     async lock() {
