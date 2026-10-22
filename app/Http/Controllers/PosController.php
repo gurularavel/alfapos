@@ -42,8 +42,8 @@ class PosController extends Controller
             'posData' => [
                 'items' => $items,
                 'categories' => Category::where('is_enabled', true)->orderBy('sort')->get(['id', 'title']),
-                'tables' => StoreTable::orderBy('title')->get()->map(fn ($t) => [
-                    'id' => $t->id, 'label' => $t->label(), 'seats' => $t->seating_capacity, 'busy' => $busyTables->contains($t->id), 'deposit' => (float) $t->deposit,
+                'tables' => StoreTable::orderBy('floor')->orderByRaw('LENGTH(title)')->orderBy('title')->get()->map(fn ($t) => [
+                    'id' => $t->id, 'title' => $t->title, 'floor' => $t->floor, 'label' => $t->label(), 'seats' => $t->seating_capacity, 'busy' => $busyTables->contains($t->id), 'deposit' => (float) $t->deposit,
                 ]),
                 'paymentTypes' => PaymentType::where('is_active', true)->get(['id', 'title', 'icon']),
                 'service' => [
@@ -70,6 +70,7 @@ class PosController extends Controller
                     'customerStore' => route('pos.customers.store'),
                     'receipt' => route('invoices.receipt', '__ID__'),
                     'token' => route('orders.token', '__ID__'),
+                    'board' => route('orders.board'),
                 ],
             ],
         ]);

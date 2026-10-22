@@ -22,7 +22,8 @@
                 <x-icon name="qr" class="size-4" /> QR sifarişlər
                 <span x-show="qrOrders.length" x-text="qrOrders.length" class="absolute -top-1.5 -right-1.5 flex size-5 items-center justify-center rounded-full bg-red-500 text-[10px] text-white"></span>
             </button>
-            <a href="{{ route('orders.index') }}" class="btn-secondary btn-sm"><x-icon name="table" class="size-4" /> Masa sifarişləri</a>
+            <button class="btn-secondary btn-sm" @click="openTables()"><x-icon name="table" class="size-4" /> Masalar</button>
+            <a href="{{ route('orders.index') }}" class="btn-secondary btn-sm"><x-icon name="orders" class="size-4" /> Sifarişlər</a>
             <button class="btn-secondary btn-sm" @click="modal = 'display'" :class="display && 'border-brand-400 text-brand-700'">
                 <x-icon name="online" class="size-4" /> <span x-text="display ? display.name : 'Müştəri ekranı'"></span>
             </button>
@@ -271,6 +272,88 @@
         <p x-show="!qrOrders.length" class="py-8 text-center text-sm text-zinc-500">Bu gün yeni QR sifariş yoxdur.</p>
         <x-slot:footer><a href="{{ route('orders.index') }}" class="btn-primary">Sifarişlər ekranına keç</a></x-slot:footer>
     </x-modal>
+
+    {{-- PIN-dən sonra: POS və ya Masalar (tam ekran, sensor üçün böyük düymələr) --}}
+    <div x-show="view === 'home'" x-cloak class="fixed inset-0 z-[60] flex flex-col bg-ink p-4 text-white [touch-action:manipulation] sm:p-8">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm font-semibold tracking-widest text-white/50 uppercase">Xoş gəldiniz</p>
+                <p class="text-3xl font-black sm:text-4xl" x-text="$store.terminal.operator?.name ?? ''"></p>
+                <p class="text-white/60" x-text="$store.terminal.operator?.role ?? ''"></p>
+            </div>
+            <button type="button" x-show="$store.terminal.active" class="flex items-center gap-2 rounded-2xl bg-white/10 px-5 py-4 text-lg font-bold active:bg-white/25" @click="$store.terminal.lock()">
+                <x-icon name="logout" class="size-6" /> Kilidlə
+            </button>
+        </div>
+        <div class="mt-6 grid min-h-0 flex-1 grid-cols-1 gap-4 sm:mt-8 sm:grid-cols-2 sm:gap-6">
+            <button type="button" class="flex flex-col items-center justify-center gap-5 rounded-3xl bg-brand-600 transition-colors select-none active:bg-brand-700" @click="view = null">
+                <x-icon name="pos" class="size-[clamp(4rem,14vh,9rem)]" />
+                <span class="text-[clamp(2rem,6vh,4rem)] leading-none font-black">POS</span>
+                <span class="text-lg text-white/70">Yeni sifariş, səbət, ödəniş</span>
+            </button>
+            <button type="button" class="flex flex-col items-center justify-center gap-5 rounded-3xl bg-white/[0.08] transition-colors select-none active:bg-white/20" @click="openTables()">
+                <x-icon name="table" class="size-[clamp(4rem,14vh,9rem)]" />
+                <span class="text-[clamp(2rem,6vh,4rem)] leading-none font-black">Masalar</span>
+                <span class="text-lg text-white/70">Zal planı — masanı seçin</span>
+            </button>
+        </div>
+    </div>
+
+    {{-- Masa planı: yuxarıdan görünüş, oturacaqlar tutuma görə; masaya toxunanda POS həmin masa ilə açılır --}}
+    <div x-show="view === 'tables'" x-cloak class="fixed inset-0 z-[60] flex flex-col bg-canvas [touch-action:manipulation]">
+        <header class="flex flex-wrap items-center gap-3 border-b border-zinc-200 bg-white px-4 py-3 sm:px-6">
+            <h2 class="text-2xl font-black">Masalar</h2>
+            <div class="flex flex-wrap gap-2">
+                <button class="chip px-5 py-2.5 text-base" :class="!mapFloor && 'active'" @click="mapFloor = null">Hamısı</button>
+                <template x-for="f in floors" :key="f">
+                    <button class="chip px-5 py-2.5 text-base" :class="mapFloor === f && 'active'" @click="mapFloor = f" x-text="f"></button>
+                </template>
+            </div>
+            <div class="ml-auto flex items-center gap-2">
+                <button type="button" class="btn-secondary px-5 py-3 text-base" @click="loadBoard()"><x-icon name="refresh" class="size-5" /></button>
+                <button type="button" x-show="$store.terminal.active" class="btn-secondary px-5 py-3 text-base" @click="$store.terminal.lock()"><x-icon name="logout" class="size-5" /> Kilidlə</button>
+                <button type="button" class="btn-primary px-6 py-3 text-base" @click="view = null"><x-icon name="pos" class="size-5" /> POS</button>
+            </div>
+        </header>
+        <div class="flex flex-wrap gap-4 px-4 pt-3 text-sm text-zinc-600 sm:px-6">
+            <span class="flex items-center gap-1.5"><span class="size-4 rounded border-2 border-zinc-300 bg-white"></span> Boş</span>
+            <span class="flex items-center gap-1.5"><span class="size-4 rounded bg-amber-400"></span> Dolu</span>
+            <span class="flex items-center gap-1.5"><span class="size-4 rounded bg-brand-500"></span> Hazır sifariş var</span>
+            <span class="flex items-center gap-1.5"><span class="badge-amber">D</span> Depozitli kabinet</span>
+        </div>
+        <div class="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
+            <div class="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4">
+                <template x-for="t in mapTables" :key="t.id">
+                    <button type="button" @click="pickTable(t)" class="relative flex flex-col items-center justify-center gap-2 rounded-3xl bg-white px-4 pt-6 pb-4 transition select-none active:scale-[0.98]"
+                            :class="String(tableId) === String(t.id) ? 'ring-4 ring-brand-400' : 'ring-1 ring-zinc-200'">
+                        <span x-show="t.deposit > 0" class="badge-amber absolute top-3 left-3" x-text="'D ' + money(t.deposit)"></span>
+                        <span x-show="tableState(t)?.ready" class="badge-green absolute top-3 right-3">Hazır</span>
+
+                        {{-- yuxarı oturacaqlar --}}
+                        <div class="flex justify-center gap-2.5">
+                            <template x-for="i in chairs(t).top"><span class="h-4 w-8 rounded-t-full" :class="tableState(t) ? 'bg-amber-500' : 'bg-zinc-300'"></span></template>
+                        </div>
+                        {{-- masa --}}
+                        <div class="flex min-h-24 flex-col items-center justify-center rounded-2xl px-3 py-3 text-center"
+                             :style="`width: ${Math.max(chairs(t).top, 2) * 42 + 16}px`"
+                             :class="tableState(t) ? (tableState(t).ready ? 'bg-brand-500 text-white' : 'bg-amber-400 text-ink') : 'border-[3px] border-zinc-300 bg-zinc-50'">
+                            <span class="text-xl leading-tight font-black" x-text="t.title"></span>
+                            <span class="text-sm font-bold" x-show="tableState(t)" x-text="money(tableState(t)?.due)"></span>
+                            <span class="text-xs text-zinc-500" x-show="!tableState(t)" x-text="t.seats + ' nəfər'"></span>
+                        </div>
+                        {{-- aşağı oturacaqlar --}}
+                        <div class="flex min-h-4 justify-center gap-2.5">
+                            <template x-for="i in chairs(t).bottom"><span class="h-4 w-8 rounded-b-full" :class="tableState(t) ? 'bg-amber-500' : 'bg-zinc-300'"></span></template>
+                        </div>
+
+                        <p class="mt-1 text-sm" :class="tableState(t) ? 'font-semibold text-zinc-700' : 'text-brand-600 font-bold'"
+                           x-text="tableState(t) ? (tableState(t).since + ' · ' + tableState(t).orders + ' sifariş' + (tableState(t).waiter ? ' · ' + tableState(t).waiter : '')) : 'Boş'"></p>
+                    </button>
+                </template>
+            </div>
+            <template x-if="!tables.length"><div><x-empty icon="table" title="Masa yoxdur">Ayarlar → Masalar bölməsində masa əlavə edin.</x-empty></div></template>
+        </div>
+    </div>
 
     {{-- Müştəri ekranı seçimi --}}
     <x-modal show="modal === 'display'" close="modal = null" title="Müştəri ekranı" width="max-w-md">

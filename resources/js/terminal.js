@@ -120,7 +120,8 @@ export default (state) => ({
             this.apply(r.state);
             this.lastActivity = this.lastPing = Date.now();
             this.mode = 'saver';
-            toast(r.message);
+            // POS ekranı PIN-dən sonra "POS / Masalar" seçimini göstərir
+            window.dispatchEvent(new CustomEvent('terminal-unlocked', { detail: r.state.operator }));
         } catch (e) {
             this.error = e.message;
             if (navigator.vibrate) navigator.vibrate(150);

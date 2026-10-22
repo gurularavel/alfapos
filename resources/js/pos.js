@@ -30,6 +30,11 @@ export default (data) => ({
     busy: false,
     full: false,
 
+    // masa planı
+    view: null,
+    board: {},
+    mapFloor: null,
+
     // müştəri ekranı (bu cihazda seçilmiş kassa ekranı)
     displayId: null,
     displayTimer: null,
@@ -58,6 +63,9 @@ export default (data) => ({
         this.$watch('cart', () => this.persist());
         // Terminal kilidlənəndə səbət və açıq pəncərələr təmizlənir
         window.addEventListener('terminal-lock', () => this.resetForLock());
+        // PIN-dən sonra "POS / Masalar" seçimi; masalar açıqdırsa siqnalla yenilənir
+        window.addEventListener('terminal-unlocked', () => (this.view = 'home'));
+        window.addEventListener('rt:order', () => this.view === 'tables' && this.loadBoard());
         const terminal = Alpine.store('terminal');
         if (terminal?.active && terminal.locked) this.resetForLock();
         this.refreshQrCount();
@@ -70,6 +78,55 @@ export default (data) => ({
                 toast(`Yeni QR sifariş #${detail.token_no}`);
             }
         });
+    },
+
+    // ---- masa planı ----
+    // view: null (POS) | 'home' (PIN-dən sonra POS/Masalar seçimi) | 'tables' (yuxarıdan görünüş)
+    openTables() {
+        this.view = 'tables';
+        this.loadBoard();
+    },
+
+    async loadBoard() {
+        try {
+            const rows = await api(this.routes.board);
+            this.board = Object.fromEntries(rows.filter((g) => g.is_table).map((g) => [g.key, g]));
+        } catch {}
+    },
+
+    get floors() {
+        return [...new Set(this.tables.map((t) => t.floor || 'Ümumi'))];
+    },
+
+    get mapTables() {
+        return this.tables.filter((t) => !this.mapFloor || (t.floor || 'Ümumi') === this.mapFloor);
+    },
+
+    /** Masanın canlı vəziyyəti (Sifarişlər lövhəsindən): dolu, məbləğ, vaxt, ofisiant. */
+    tableState(t) {
+        const g = this.board[`t${t.id}`];
+        if (!g || !g.orders.length) return null;
+        const first = g.orders[0];
+        return {
+            orders: g.orders.length,
+            due: g.due,
+            since: first.time,
+            waiter: first.waiter,
+            ready: g.orders.some((o) => o.status === 'ready'),
+        };
+    },
+
+    /** Yuxarıdan görünüş üçün oturacaqlar: yarısı yuxarıda, yarısı aşağıda (max 12 göstərilir). */
+    chairs(t) {
+        const n = Math.min(Math.max(t.seats, 1), 12);
+        return { top: Math.ceil(n / 2), bottom: Math.floor(n / 2) };
+    },
+
+    pickTable(t) {
+        this.deliveryType = 'dinein';
+        this.tableId = String(t.id);
+        this.view = null;
+        toast(`${t.label} seçildi`);
     },
 
     // ---- müştəri ekranı ----
@@ -224,7 +281,7 @@ export default (data) => ({
 
     resetForLock() {
         this.clear();
-        Object.assign(this, { picker: null, modal: null, search: '', category: null, customerQuery: '', customerResults: [], draftReference: '' });
+        Object.assign(this, { picker: null, modal: null, search: '', category: null, customerQuery: '', customerResults: [], draftReference: '', view: null });
     },
 
     /** Servis haqqı bu sifarişə aiddirmi (ayara və xidmət növünə görə) — kassir onu ləğv edə bilər. */

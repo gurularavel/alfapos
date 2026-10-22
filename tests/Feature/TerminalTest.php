@@ -70,6 +70,14 @@ class TerminalTest extends TestCase
         $this->assertSame('Ofisiant Nicat', Order::find($orderId)->creator->name);
     }
 
+    public function test_pos_has_home_and_table_map_with_table_details(): void
+    {
+        $this->get(route('pos'))->assertOk()
+            ->assertSee('Zal planı — masanı seçin')->assertSee('Yeni sifariş, səbət, ödəniş')
+            ->assertViewHas('posData', fn ($d) => $d['routes']['board'] === route('orders.board')
+                && collect($d['tables'])->every(fn ($t) => isset($t['title'], $t['seats']) && array_key_exists('floor', $t)));
+    }
+
     public function test_chef_pin_cannot_unlock_pos(): void
     {
         $this->postJson(route('pos.terminal.enter'))->assertOk();
