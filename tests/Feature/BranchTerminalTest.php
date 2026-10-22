@@ -168,6 +168,28 @@ class BranchTerminalTest extends TestCase
             });
     }
 
+    public function test_dashboard_shows_sales_by_hour_with_last_week(): void
+    {
+        // Demo seed-in bugünkü çekləri pik saatı dəyişməsin
+        Invoice::query()->delete();
+        $tz = $this->admin->tenant->timezone; // sorğular biznesin saat qurşağında işləyir
+        $this->travelTo(today($tz)->setTime(13, 20));
+        $this->onDevice($this->kassa)->order();
+        $this->onDevice($this->kassa)->order();
+        $this->travelTo(today($tz)->subWeek()->setTime(13, 5));
+        $this->onDevice($this->kassa)->order();
+        $this->travelBack();
+        $this->travelTo(today($tz)->setTime(15, 0));
+
+        $this->offDevice()->get(route('dashboard'))->assertOk()->assertSee('Saatlar üzrə satış')->assertSee('Pik saat:')->assertSee('13:00–14:00')
+            ->assertViewHas('hourly', function ($hours) {
+                $h13 = $hours->firstWhere('hour', 13);
+
+                return $h13['checks'] === 2 && $h13['last_week'] > 0 && $h13['total'] === 2 * $h13['last_week']
+                    && $hours->first()['hour'] <= 9 && $hours->last()['hour'] >= 21;
+            });
+    }
+
     public function test_foreign_terminal_cannot_be_bound_and_new_tenant_gets_defaults(): void
     {
         $other = app(TenantProvisioner::class)->create('Başqa', 'O', 'o@pos.test', 'password');

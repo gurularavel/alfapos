@@ -62,6 +62,22 @@ class DashboardController extends Controller
 
         $staffSales = $this->staffSales($today, $tenancy->id());
 
+        // Saatlar üzrə: bu gün və müqayisə üçün keçən həftənin eyni günü
+        $byHour = fn (Carbon $day) => $paid($day)
+            ->selectRaw('HOUR(invoices.created_at) as h, COUNT(*) as checks, SUM(invoices.total) as total')
+            ->groupBy('h')->get()->keyBy('h');
+        $todayHours = $byHour($today);
+        $lastWeekHours = $byHour($today->copy()->subWeek());
+        $active = $todayHours->keys()->merge($lastWeekHours->keys());
+        $from = min($active->min() ?? 9, 9);
+        $to = max($active->max() ?? 21, 21, (int) now()->format('G'));
+        $hourly = collect(range($from, $to))->map(fn ($h) => [
+            'hour' => $h,
+            'total' => (float) ($todayHours[$h]->total ?? 0),
+            'checks' => (int) ($todayHours[$h]->checks ?? 0),
+            'last_week' => (float) ($lastWeekHours[$h]->total ?? 0),
+        ]);
+
         $todayInvoices = $paid($today);
 
         return view('dashboard', [
@@ -77,6 +93,7 @@ class DashboardController extends Controller
             'terminalSales' => $terminalSales,
             'branchSales' => $branchSales,
             'staffSales' => $staffSales,
+            'hourly' => $hourly,
             'branchCount' => \App\Models\Branch::count(),
             'lowStock' => InventoryItem::whereColumn('quantity', '<=', 'min_quantity')->orderBy('quantity')->limit(5)->get(),
             'feedbacks' => Feedback::latest()->limit(3)->get(),

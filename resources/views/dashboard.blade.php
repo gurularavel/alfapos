@@ -69,6 +69,55 @@
     </div>
 </div>
 
+{{-- Saatlar üzrə satış (bu gün) — keçən həftənin eyni günü ilə müqayisə --}}
+@php
+    $hourMax = max(1, $hourly->max(fn ($h) => max($h['total'], $h['last_week'])));
+    $peak = $hourly->sortByDesc('total')->first();
+    $nowHour = (int) now()->format('G');
+    $todaySum = $hourly->sum('total');
+    $lastWeekSum = $hourly->sum('last_week');
+    $vsLastWeek = $lastWeekSum > 0 ? round(($todaySum - $lastWeekSum) / $lastWeekSum * 100, 1) : null;
+@endphp
+<div class="card card-pad mt-4">
+    <div class="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div>
+            <h2 class="font-extrabold">Saatlar üzrə satış <span class="text-xs font-normal text-zinc-500">bu gün</span></h2>
+            <p class="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-zinc-500">
+                @if ($peak && $peak['total'] > 0)
+                    <span>Pik saat: <b class="text-ink">{{ sprintf('%02d:00–%02d:00', $peak['hour'], $peak['hour'] + 1) }}</b> · {{ money($peak['total']) }} · {{ $peak['checks'] }} çek</span>
+                @endif
+                @if ($vsLastWeek !== null)
+                    <span>Keçən {{ today()->subWeek()->translatedFormat('l') }} ilə müqayisə: <b @class(['text-brand-600' => $vsLastWeek >= 0, 'text-red-600' => $vsLastWeek < 0])>{{ $vsLastWeek >= 0 ? '▲' : '▼' }} {{ abs($vsLastWeek) }}%</b></span>
+                @endif
+            </p>
+        </div>
+        <div class="flex items-center gap-4 text-xs text-zinc-500">
+            <span class="flex items-center gap-1.5"><span class="size-3 rounded-sm bg-brand-400"></span> Bu gün</span>
+            <span class="flex items-center gap-1.5"><span class="size-3 rounded-sm bg-zinc-200"></span> Keçən həftə</span>
+            <a href="{{ route('reports.show', ['sales-by-hour', 'from' => today()->toDateString(), 'to' => today()->toDateString()]) }}" class="font-semibold text-brand-700 hover:underline">Hesabat →</a>
+        </div>
+    </div>
+    <div class="flex h-48 items-end gap-1 sm:gap-1.5">
+        @foreach ($hourly as $h)
+            @php($isPeak = $peak && $peak['total'] > 0 && $h['hour'] === $peak['hour'])
+            <div class="group relative flex h-full min-w-0 flex-1 flex-col items-center justify-end"
+                 title="{{ sprintf('%02d:00', $h['hour']) }} — bu gün {{ money($h['total']) }} ({{ $h['checks'] }} çek), keçən həftə {{ money($h['last_week']) }}">
+                <span class="mb-1 hidden text-[10px] font-bold whitespace-nowrap text-zinc-600 group-hover:block">{{ number_format($h['total'], 0, '.', ' ') }}</span>
+                <div class="relative w-full max-w-10 flex-1">
+                    <div class="absolute inset-x-0 bottom-0 rounded-t-md bg-zinc-200" style="height: {{ $h['last_week'] / $hourMax * 100 }}%"></div>
+                    <div @class([
+                            'absolute inset-x-1 bottom-0 rounded-t-md',
+                            'bg-brand-600' => $isPeak,
+                            'bg-brand-400 group-hover:bg-brand-500' => ! $isPeak,
+                            'ring-2 ring-amber-400 ring-offset-1' => $h['hour'] === $nowHour,
+                        ]) style="height: {{ max($h['total'] > 0 ? 2 : 0, $h['total'] / $hourMax * 100) }}%"></div>
+                </div>
+                <span @class(['mt-1.5 text-[10px] tabular-nums sm:text-[11px]', 'font-bold text-amber-600' => $h['hour'] === $nowHour, 'text-zinc-500' => $h['hour'] !== $nowHour])>{{ sprintf('%02d', $h['hour']) }}</span>
+            </div>
+        @endforeach
+    </div>
+</div>
+
 <div class="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
     <div class="card card-pad">
         <h2 class="mb-3 font-extrabold">Top məhsullar <span class="text-xs font-normal text-zinc-500">bu gün</span></h2>
