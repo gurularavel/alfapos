@@ -5,7 +5,6 @@
     $goalPct = $goal > 0 ? min(100, round($revenueToday / $goal * 100)) : null;
     $max = max(1, $trend->max('value'));
     $mixTotal = max(1, $paymentMix->sum());
-    $typeTotal = max(1, $orderTypes->sum());
 @endphp
 
 <div class="mb-5 flex flex-wrap items-end justify-between gap-3">
@@ -251,6 +250,44 @@
     </div>
 
     <div class="card card-pad">
+        <div class="mb-3 flex items-center justify-between">
+            <h2 class="font-extrabold">Sifariş növləri üzrə satış <span class="text-xs font-normal text-zinc-500">bu gün</span></h2>
+            <a href="{{ route('reports.show', ['sales-by-order-type', 'from' => today()->toDateString(), 'to' => today()->toDateString()]) }}" class="text-xs font-semibold text-brand-700 hover:underline">Hesabat →</a>
+        </div>
+        @php($typeTotal = max(1, (float) $orderTypes->sum('total')))
+        @php($typeStyles = ['dinein' => ['bg-brand-500', 'table'], 'takeaway' => ['bg-amber-400', 'bag'], 'delivery' => ['bg-sky-500', 'truck']])
+        <div class="grid grid-cols-3 gap-2">
+            @foreach ($orderTypes as $row)
+                <div class="rounded-xl border border-zinc-100 p-3 text-center">
+                    <div class="mx-auto mb-1.5 flex size-8 items-center justify-center rounded-full {{ $typeStyles[$row->type][0] ?? 'bg-zinc-400' }} text-white"><x-icon :name="$typeStyles[$row->type][1] ?? 'receipt'" class="size-4" /></div>
+                    <p class="text-xs font-semibold text-zinc-500">{{ $row->label }}</p>
+                    <p class="font-extrabold tabular-nums">{{ money($row->total) }}</p>
+                    <p class="text-[11px] text-zinc-500">{{ round($row->total / $typeTotal * 100) }}%</p>
+                </div>
+            @endforeach
+        </div>
+        <div class="mt-3 flex h-2.5 overflow-hidden rounded-full bg-zinc-100">
+            @foreach ($orderTypes as $row)
+                <div class="{{ $typeStyles[$row->type][0] ?? 'bg-zinc-400' }} h-full" style="width: {{ $row->total / $typeTotal * 100 }}%"></div>
+            @endforeach
+        </div>
+        <table class="mt-3 w-full text-sm">
+            <thead><tr class="text-xs text-zinc-500"><th class="py-1 text-left font-semibold">Növ</th><th class="text-right font-semibold">Çek</th><th class="text-right font-semibold">Orta çek</th><th class="text-right font-semibold">Açıq</th></tr></thead>
+            <tbody>
+                @foreach ($orderTypes as $row)
+                    <tr class="border-t border-zinc-100">
+                        <td class="py-1.5 font-semibold">{{ $row->label }}</td>
+                        <td class="text-right tabular-nums">{{ $row->checks }}</td>
+                        <td class="text-right tabular-nums">{{ $row->checks ? money($row->total / $row->checks) : '—' }}</td>
+                        <td @class(['text-right tabular-nums', 'font-bold text-amber-600' => $row->open, 'text-zinc-400' => ! $row->open])>{{ $row->open }}</td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+        <p class="mt-2 text-xs text-zinc-400">"Açıq" — bu gün verilmiş, hələ ödənilməmiş sifarişlər.</p>
+    </div>
+
+    <div class="card card-pad">
         <h2 class="mb-3 font-extrabold">Ödəniş növləri</h2>
         @forelse ($paymentMix as $title => $total)
             <div class="mb-2.5 text-sm">
@@ -259,15 +296,6 @@
             </div>
         @empty
             <p class="text-sm text-zinc-500">Bu gün ödəniş yoxdur.</p>
-        @endforelse
-        <h2 class="mt-5 mb-3 font-extrabold">Sifariş tipləri</h2>
-        @forelse ($orderTypes as $type => $count)
-            <div class="mb-2.5 text-sm">
-                <div class="mb-1 flex justify-between"><span class="font-semibold">{{ \App\Models\Order::DELIVERY_TYPES[$type] ?? $type }}</span><span>{{ $count }}</span></div>
-                <div class="h-2 rounded-full bg-zinc-100"><div class="h-2 rounded-full bg-sky-500" style="width: {{ $count / $typeTotal * 100 }}%"></div></div>
-            </div>
-        @empty
-            <p class="text-sm text-zinc-500">—</p>
         @endforelse
     </div>
 

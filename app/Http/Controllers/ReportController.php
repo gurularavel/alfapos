@@ -116,13 +116,11 @@ class ReportController extends Controller
             'sales-by-day' => $this->grouped($paid()->selectRaw('DATE(created_at) k, COUNT(*) c, SUM(total) t')->groupBy('k')->orderBy('k'), ['Tarix', 'Çek', 'Gəlir']),
             'sales-by-hour' => $this->grouped($paid()->selectRaw('HOUR(created_at) k, COUNT(*) c, SUM(total) t')->groupBy('k')->orderBy('k'), ['Saat', 'Çek', 'Gəlir'], fn ($k) => sprintf('%02d:00', $k)),
             'sales-by-order-type' => $this->grouped(
-                Order::join('invoices', 'invoices.id', '=', 'orders.invoice_id')->where('invoices.status', 'paid')->whereBetween('invoices.created_at', [$from, $to])->tap($inv)
-                    ->selectRaw('orders.delivery_type k, COUNT(DISTINCT orders.id) c, SUM(invoices.total) t')->groupBy('k'),
+                $paid()->withOrderInfo()->selectRaw('io.delivery_type k, SUM(io.orders_count) c, SUM(invoices.total) t')->groupBy('k'),
                 ['Tip', 'Sifariş', 'Gəlir'], fn ($k) => Order::DELIVERY_TYPES[$k] ?? $k),
             'sales-by-table' => $this->grouped(
-                Order::join('invoices', 'invoices.id', '=', 'orders.invoice_id')->leftJoin('store_tables', 'store_tables.id', '=', 'orders.store_table_id')
-                    ->where('invoices.status', 'paid')->whereBetween('invoices.created_at', [$from, $to])->tap($inv)
-                    ->selectRaw("COALESCE(store_tables.title, 'Masasız') k, COUNT(DISTINCT orders.id) c, SUM(invoices.total) t")->groupBy('k')->orderByDesc('t'),
+                $paid()->withOrderInfo()->leftJoin('store_tables', 'store_tables.id', '=', 'io.store_table_id')
+                    ->selectRaw("COALESCE(store_tables.title, 'Masasız') k, SUM(io.orders_count) c, SUM(invoices.total) t")->groupBy('k')->orderByDesc('t'),
                 ['Masa', 'Sifariş', 'Gəlir']),
             'voids' => [['Faktura', 'Tarix', 'Səbəb', 'Məbləğ'],
                 Invoice::where('status', 'void')->whereBetween('updated_at', [$from, $to])->tap($inv)->latest()->get()

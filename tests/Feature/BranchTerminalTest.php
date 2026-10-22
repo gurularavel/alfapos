@@ -205,6 +205,35 @@ class BranchTerminalTest extends TestCase
                 && $rows[0]->title === 'Əsas yeməklər' && (float) $rows[0]->qty === 3.0 && (float) $rows[0]->amount === 38.0);
     }
 
+    public function test_sales_by_order_type_count_each_check_once(): void
+    {
+        Order::query()->delete(); // demo seed-in bugünkü sifarişləri nəticəyə qarışmasın
+        $plov = MenuItem::where('title', 'Plov')->value('id');
+        $table = StoreTable::where('title', 'Masa 1')->value('id');
+        $send = fn (string $type, ?int $tableId = null) => $this->postJson(route('pos.store'), [
+            'action' => 'kitchen', 'delivery_type' => $type, 'store_table_id' => $tableId, 'cart' => [['menu_item_id' => $plov, 'quantity' => 1]],
+        ])->assertOk()->json('order.id');
+
+        // Masaya əsas + əlavə sifariş, bir çeklə bağlanır
+        $tableOrders = [$send('dinein', $table), $send('dinein', $table)];
+        $this->postJson(route('orders.pay'), ['order_ids' => $tableOrders, 'payment_type_id' => PaymentType::value('id')])->assertOk();
+        $tableCheck = (float) Invoice::latest('id')->value('total');
+        $this->postJson(route('orders.pay'), ['order_ids' => [$send('takeaway')], 'payment_type_id' => PaymentType::value('id')])->assertOk();
+        $send('delivery'); // açıq, ödənilməyib
+
+        $this->get(route('dashboard'))->assertOk()->assertSee('Sifariş növləri üzrə satış')
+            ->assertViewHas('orderTypes', function ($rows) use ($tableCheck) {
+                $by = $rows->keyBy('type');
+
+                return $by['dinein']->checks === 1 && $by['dinein']->orders === 2 && $by['dinein']->total === $tableCheck
+                    && $by['takeaway']->checks === 1 && $by['delivery']->checks === 0 && $by['delivery']->open === 1;
+            });
+        $this->get(route('reports.show', 'sales-by-order-type'))->assertOk()
+            ->assertViewHas('rows', fn ($rows) => collect($rows)->firstWhere(0, 'Zalda') == ['Zalda', 2, money($tableCheck)]);
+        $this->get(route('reports.show', 'sales-by-table'))->assertOk()
+            ->assertViewHas('rows', fn ($rows) => collect($rows)->firstWhere(0, 'Masa 1') == ['Masa 1', 2, money($tableCheck)]);
+    }
+
     public function test_foreign_terminal_cannot_be_bound_and_new_tenant_gets_defaults(): void
     {
         $other = app(TenantProvisioner::class)->create('Başqa', 'O', 'o@pos.test', 'password');

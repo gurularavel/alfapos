@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToTenant;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -10,6 +11,19 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Invoice extends Model
 {
     use BelongsToTenant;
+
+    /**
+     * Hər çekə bir dəfə qoşulur: çekdəki sifarişlərin növü, masası və sayı (alias "io").
+     * Çekin məbləğini sifariş sətirlərinə qoşub toplamaq əlavə sifarişli masalarda onu təkrarlayardı.
+     */
+    public function scopeWithOrderInfo(Builder $query): void
+    {
+        $query->joinSub(
+            Order::query()->whereNotNull('invoice_id')->groupBy('invoice_id')
+                ->selectRaw('invoice_id, MIN(delivery_type) as delivery_type, MIN(store_table_id) as store_table_id, COUNT(*) as orders_count'),
+            'io', 'io.invoice_id', '=', 'invoices.id',
+        );
+    }
 
     protected $guarded = ['id', 'tenant_id'];
 

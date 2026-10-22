@@ -52,8 +52,20 @@ class DashboardController extends Controller
             ->selectRaw("categories.id, COALESCE(categories.title, 'Kateqoriyasız') as title, SUM(order_items.quantity) as qty, SUM(order_items.quantity * order_items.price) as amount")
             ->orderByDesc('amount')->get();
 
-        $orderTypes = Order::whereDate('created_at', $today)->where('status', '!=', 'draft')
-            ->groupBy('delivery_type')->select('delivery_type', DB::raw('COUNT(*) as total'))->pluck('total', 'delivery_type');
+        // Bu gün sifariş növləri üzrə: ödənilmiş satış (hər çek bir dəfə) + açıq (hələ ödənilməmiş) sifarişlər
+        $paidByType = $paid($today)->withOrderInfo()->groupBy('io.delivery_type')
+            ->selectRaw('io.delivery_type, COUNT(*) as checks, SUM(io.orders_count) as orders, SUM(invoices.total) as total')
+            ->get()->keyBy('delivery_type');
+        $openByType = Order::whereDate('created_at', $today)->whereNull('invoice_id')->whereNotIn('status', ['draft', 'cancelled'])
+            ->groupBy('delivery_type')->selectRaw('delivery_type, COUNT(*) as orders')->pluck('orders', 'delivery_type');
+        $orderTypes = collect(Order::DELIVERY_TYPES)->map(fn ($label, $type) => (object) [
+            'type' => $type,
+            'label' => $label,
+            'checks' => (int) ($paidByType[$type]->checks ?? 0),
+            'orders' => (int) ($paidByType[$type]->orders ?? 0),
+            'total' => (float) ($paidByType[$type]->total ?? 0),
+            'open' => (int) ($openByType[$type] ?? 0),
+        ])->values();
 
         $paymentMix = $paid($today)->join('payment_types', 'payment_types.id', '=', 'invoices.payment_type_id')
             ->groupBy('payment_types.title')->select('payment_types.title', DB::raw('SUM(invoices.total) as total'))->pluck('total', 'title');
