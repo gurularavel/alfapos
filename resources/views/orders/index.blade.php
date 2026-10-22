@@ -29,7 +29,7 @@
                                 <div class="flex items-center gap-2">
                                     <span class="flex size-8 items-center justify-center rounded-full bg-ink text-xs font-black text-white" x-text="o.token_no"></span>
                                     <div class="text-xs leading-tight">
-                                        <p class="font-bold" x-text="o.delivery_type + (o.source === 'qr' ? ' · QR' : '')"></p>
+                                        <p class="font-bold"><span x-text="o.delivery_type + (o.source === 'qr' ? ' · QR' : '')"></span> <span x-show="o.is_addition" class="badge-amber">Əlavə</span></p>
                                         <p class="text-zinc-500" x-text="o.time + (o.waiter ? ' · ' + o.waiter : '') + (o.customer ? ' · ' + o.customer : '')"></p>
                                     </div>
                                 </div>

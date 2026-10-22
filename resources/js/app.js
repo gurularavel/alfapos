@@ -4,6 +4,7 @@ import pos from './pos';
 import terminal from './terminal';
 import { startRealtime } from './echo';
 import customerDisplay from './display';
+import { planEditor } from './floorplan';
 
 Alpine.plugin(collapse);
 
@@ -97,6 +98,7 @@ Alpine.data('poller', poller);
 
 Alpine.data('pos', pos);
 Alpine.data('customerDisplay', customerDisplay);
+Alpine.data('planEditor', planEditor);
 
 // POS və Sifarişlər səhifələri terminal vəziyyətini window.TERMINAL_STATE ilə ötürür
 if (window.TERMINAL_STATE) Alpine.store('terminal', terminal(window.TERMINAL_STATE));

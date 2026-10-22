@@ -1,3 +1,5 @@
+import { chairs, floorOf, withPositions } from './floorplan';
+
 /**
  * POS ekranı. Məlumat serverdən bir dəfə (window.POS_DATA) gəlir; qiymətlər burada yalnız göstərmək üçün
  * hesablanır — server sifarişi bazadakı qiymətlərlə yenidən hesablayır.
@@ -34,6 +36,7 @@ export default (data) => ({
     view: null,
     board: {},
     mapFloor: null,
+    tableSheet: null, // { table, group, paying }
 
     // müştəri ekranı (bu cihazda seçilmiş kassa ekranı)
     displayId: null,
@@ -65,7 +68,9 @@ export default (data) => ({
         window.addEventListener('terminal-lock', () => this.resetForLock());
         // PIN-dən sonra "POS / Masalar" seçimi; masalar açıqdırsa siqnalla yenilənir
         window.addEventListener('terminal-unlocked', () => (this.view = 'home'));
-        window.addEventListener('rt:order', () => this.view === 'tables' && this.loadBoard());
+        window.addEventListener('rt:order', () => this.loadBoard());
+        this.$watch('tableId', () => this.loadBoard());
+        this.loadBoard();
         const terminal = Alpine.store('terminal');
         if (terminal?.active && terminal.locked) this.resetForLock();
         this.refreshQrCount();
@@ -81,9 +86,12 @@ export default (data) => ({
     },
 
     // ---- masa planı ----
-    // view: null (POS) | 'home' (PIN-dən sonra POS/Masalar seçimi) | 'tables' (yuxarıdan görünüş)
+    // view: null (POS) | 'home' (PIN-dən sonra POS/Masalar seçimi) | 'tables' (zal planı)
+    chairs,
+
     openTables() {
         this.view = 'tables';
+        if (!this.mapFloor || !this.floors.includes(this.mapFloor)) this.mapFloor = this.floors[0] ?? null;
         this.loadBoard();
     },
 
@@ -91,21 +99,24 @@ export default (data) => ({
         try {
             const rows = await api(this.routes.board);
             this.board = Object.fromEntries(rows.filter((g) => g.is_table).map((g) => [g.key, g]));
+            // Açıq olan masa paneli varsa onu da yeniləyirik
+            if (this.tableSheet) this.tableSheet.group = this.board[`t${this.tableSheet.table.id}`] ?? null;
         } catch {}
     },
 
     get floors() {
-        return [...new Set(this.tables.map((t) => t.floor || 'Ümumi'))];
+        return [...new Set(this.tables.map(floorOf))];
     },
 
+    /** Seçilmiş mərtəbənin masaları — Ayarlar → Zal planındakı mövqelərlə (yoxdursa avtomatik). */
     get mapTables() {
-        return this.tables.filter((t) => !this.mapFloor || (t.floor || 'Ümumi') === this.mapFloor);
+        return withPositions(this.tables.filter((t) => floorOf(t) === this.mapFloor));
     },
 
     /** Masanın canlı vəziyyəti (Sifarişlər lövhəsindən): dolu, məbləğ, vaxt, ofisiant. */
     tableState(t) {
         const g = this.board[`t${t.id}`];
-        if (!g || !g.orders.length) return null;
+        if (!g || !g.unpaid_ids.length) return null;
         const first = g.orders[0];
         return {
             orders: g.orders.length,
@@ -116,17 +127,49 @@ export default (data) => ({
         };
     },
 
-    /** Yuxarıdan görünüş üçün oturacaqlar: yarısı yuxarıda, yarısı aşağıda (max 12 göstərilir). */
-    chairs(t) {
-        const n = Math.min(Math.max(t.seats, 1), 12);
-        return { top: Math.ceil(n / 2), bottom: Math.floor(n / 2) };
+    /** Boş masa → POS; dolu masa → əməliyyat paneli (əlavə sifariş / hesab çeki / hesabı bağla). */
+    tapTable(t) {
+        const group = this.board[`t${t.id}`];
+        if (group?.unpaid_ids.length) {
+            this.tableSheet = { table: t, group, paying: false };
+            return;
+        }
+        this.pickTable(t);
     },
 
     pickTable(t) {
         this.deliveryType = 'dinein';
         this.tableId = String(t.id);
         this.view = null;
+        this.tableSheet = null;
         toast(`${t.label} seçildi`);
+    },
+
+    printBill() {
+        printUrl(`${this.routes.bill}?ids=${this.tableSheet.group.unpaid_ids.join(',')}`);
+    },
+
+    async closeBill(paymentTypeId) {
+        const sheet = this.tableSheet;
+        try {
+            const r = await api(this.routes.pay, { method: 'POST', body: { order_ids: sheet.group.unpaid_ids, payment_type_id: paymentTypeId } });
+            toast(`${sheet.table.title}: hesab bağlandı`);
+            this.tableSheet = null;
+            printUrl(this.routes.receipt.replace('__ID__', r.invoice_id));
+            const table = this.tables.find((t) => t.id === sheet.table.id);
+            if (table) table.busy = false;
+            await this.loadBoard();
+            Alpine.store('terminal')?.afterOrder();
+        } catch (e) {
+            toast(e.message, 'error');
+        }
+    },
+
+    /** Seçilmiş masada artıq ödənilməmiş sifariş varsa — yeni sifariş "əlavə" kimi gedir. */
+    get tableOpenOrders() {
+        if (this.deliveryType !== 'dinein' || !this.tableId) return null;
+        const g = this.board[`t${this.tableId}`];
+        return g?.unpaid_ids.length ? g : null;
     },
 
     // ---- müştəri ekranı ----
@@ -368,6 +411,8 @@ export default (data) => ({
             const totalsBefore = this.displayPayload.totals;
             const r = await api(this.routes.store, { method: 'POST', body: this.payload(action) });
             if (action !== 'draft') this.finishDisplay(action, r.order.token_no, totalsBefore);
+            // Mətbəxə ayrıca çek: hər göndərilən sifariş (əlavə sifariş də) yalnız öz məhsulları ilə çap olunur
+            if (action !== 'draft' && this.autoPrintKot) printUrl(this.routes.token.replace('__ID__', r.order.id));
             if (action === 'draft') {
                 toast(r.message);
                 this.modal = null;

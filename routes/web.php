@@ -80,6 +80,7 @@ Route::middleware('auth')->group(function () {
             Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
             Route::get('/orders/board', [OrderController::class, 'board'])->name('orders.board');
             Route::post('/orders/pay', [OrderController::class, 'pay'])->name('orders.pay');
+            Route::get('/orders/bill', [OrderController::class, 'bill'])->name('orders.bill');
             Route::post('/orders/{order}/status', [OrderController::class, 'status'])->name('orders.status');
             Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
             Route::get('/orders/{order}/token', [OrderController::class, 'token'])->name('orders.token');
@@ -129,6 +130,8 @@ Route::middleware('auth')->group(function () {
             Route::get('/terminal', [Settings\TerminalController::class, 'edit'])->name('terminal');
             Route::put('/terminal', [Settings\TerminalController::class, 'update'])->name('terminal.update');
             Route::delete('/terminal/images/{index}', [Settings\TerminalController::class, 'destroyImage'])->whereNumber('index')->name('terminal.images.destroy');
+            Route::get('/tables/plan', [Settings\TableController::class, 'plan'])->name('tables.plan');
+            Route::put('/tables/plan', [Settings\TableController::class, 'savePlan'])->name('tables.plan.save');
             Route::resource('tables', Settings\TableController::class)->only(['index', 'store', 'update', 'destroy']);
             Route::resource('displays', Settings\DisplayController::class)->only(['index', 'store', 'update', 'destroy']);
             Route::get('/tables/{table}/qr', [Settings\TableController::class, 'qr'])->name('tables.qr');

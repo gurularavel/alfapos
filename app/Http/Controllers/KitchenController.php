@@ -28,6 +28,7 @@ class KitchenController extends Controller
                 'title' => $o->table?->label() ?? ($o->customer?->name ?? Order::DELIVERY_TYPES[$o->delivery_type]),
                 'delivery_type' => Order::DELIVERY_TYPES[$o->delivery_type],
                 'waiter' => $o->creator?->name,
+                'is_addition' => $o->is_addition,
                 'minutes' => (int) $o->created_at->diffInMinutes(now()),
                 'notes' => $o->notes,
                 'items' => $o->items->map(fn (OrderItem $i) => [

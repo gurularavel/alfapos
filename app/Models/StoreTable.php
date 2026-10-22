@@ -16,7 +16,7 @@ class StoreTable extends Model
 
     protected function casts(): array
     {
-        return ['deposit' => 'decimal:2'];
+        return ['deposit' => 'decimal:2', 'pos_x' => 'float', 'pos_y' => 'float'];
     }
 
     public function hasDeposit(): bool

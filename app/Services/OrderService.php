@@ -144,7 +144,16 @@ class OrderService
         }
 
         return DB::transaction(function () use ($lines, $data) {
+            $deliveryType = $data['delivery_type'] ?? 'dinein';
+            $tableId = $data['store_table_id'] ?? null;
+            $status = $data['status'] ?? 'created';
+            // Masada artıq ödənilməmiş sifariş varsa bu, əlavə sifarişdir (hesab birlikdə bağlanır)
+            $isAddition = $status !== 'draft' && $deliveryType === 'dinein' && $tableId
+                && Order::where('store_table_id', $tableId)->where('payment_status', 'pending')
+                    ->whereNotIn('status', ['draft', 'cancelled'])->exists();
+
             $order = Order::create([
+                'is_addition' => $isAddition,
                 'token_no' => $this->nextToken(),
                 'delivery_type' => $data['delivery_type'] ?? 'dinein',
                 'customer_id' => $data['customer_id'] ?? null,

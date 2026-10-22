@@ -61,6 +61,7 @@ class OrderController extends Controller
                         'payment_status' => $o->payment_status,
                         'invoice_id' => $o->invoice_id,
                         'source' => $o->source,
+                        'is_addition' => $o->is_addition,
                         'delivery_type' => Order::DELIVERY_TYPES[$o->delivery_type],
                         'customer' => $o->customer?->name,
                         'waiter' => $o->creator?->name,
@@ -112,6 +113,27 @@ class OrderController extends Controller
         $service->cancel($order, $request->input('reason'));
 
         return response()->json(['message' => 'Sifariş ləğv edildi.']);
+    }
+
+    /** Hesab çeki (pre-bill): masanın ödənilməmiş sifarişləri — müştəri ödəməzdən əvvəl baxır. */
+    public function bill(Request $request, OrderService $service, Tenancy $tenancy)
+    {
+        $ids = array_filter(array_map('intval', explode(',', (string) $request->query('ids'))));
+        $orders = Order::with('items', 'table', 'creator', 'customer')->whereIn('id', $ids)
+            ->where('payment_status', 'pending')->where('status', '!=', 'cancelled')->orderBy('created_at')->get();
+        abort_if($orders->isEmpty(), 404);
+
+        $tenant = $tenancy->tenant();
+        $totals = ['sub_total' => 0, 'discount_total' => 0, 'tax_total' => 0, 'service_charge_total' => 0, 'total' => 0];
+        foreach ($orders as $order) {
+            foreach ($service->orderTotals($order, $order->items->where('status', '!=', 'cancelled'), $tenant) as $k => $v) {
+                $totals[$k] += $v;
+            }
+        }
+        $deposit = (float) ($service->depositTable($orders)?->deposit ?? 0);
+        $topup = StoreTable::depositTopup($totals['total'], $deposit);
+
+        return view('print.bill', compact('orders', 'tenant', 'totals', 'deposit', 'topup'));
     }
 
     /** Mətbəx üçün token / KOT çapı. */

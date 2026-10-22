@@ -2,6 +2,11 @@
     <div class="c">
         <div class="b">{{ $tenant->name }}</div>
         <div class="muted">MƏTBƏX ÇEKİ (KOT)</div>
+        @if ($order->is_addition)
+            <div class="lg b" style="border:2px solid #000;margin:4px 0;padding:2px">ƏLAVƏ SİFARİŞ</div>
+            @php($previous = \App\Models\Order::where('store_table_id', $order->store_table_id)->where('payment_status', 'pending')->whereNotIn('status', ['draft', 'cancelled'])->where('id', '<', $order->id)->pluck('token_no'))
+            @if ($previous->isNotEmpty())<div class="muted">Əvvəlki: {{ $previous->map(fn ($t) => '#'.$t)->implode(', ') }}</div>@endif
+        @endif
         <div class="big">#{{ $order->token_no }}</div>
         <div>{{ \App\Models\Order::DELIVERY_TYPES[$order->delivery_type] }}@if ($order->table) · {{ $order->table->label() }}@endif</div>
         <div class="muted">{{ $order->created_at->format('d.m.Y H:i') }}@if ($order->creator) · {{ $order->creator->name }}@endif</div>

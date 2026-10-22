@@ -43,6 +43,36 @@ class TableController extends Controller
         return back()->with('success', 'Masa silindi.');
     }
 
+    /** Zal planı redaktoru: masaları sürüşdürüb yerləşdirmək. */
+    public function plan()
+    {
+        return view('settings.tables-plan', [
+            'tables' => StoreTable::orderBy('floor')->orderByRaw('LENGTH(title)')->orderBy('title')->get()
+                ->map(fn (StoreTable $t) => [
+                    'id' => $t->id, 'title' => $t->title, 'floor' => $t->floor ?: 'Ümumi', 'seats' => $t->seating_capacity,
+                    'deposit' => (float) $t->deposit, 'x' => $t->pos_x, 'y' => $t->pos_y,
+                ]),
+        ]);
+    }
+
+    public function savePlan(Request $request)
+    {
+        $data = $request->validate([
+            'positions' => ['required', 'array'],
+            'positions.*.id' => ['required', 'integer'],
+            'positions.*.x' => ['nullable', 'numeric', 'between:0,100'],
+            'positions.*.y' => ['nullable', 'numeric', 'between:0,100'],
+        ]);
+
+        // Yalnız bu biznesin masaları (global scope) yenilənir
+        $tables = StoreTable::whereIn('id', collect($data['positions'])->pluck('id'))->get()->keyBy('id');
+        foreach ($data['positions'] as $p) {
+            $tables->get($p['id'])?->update(['pos_x' => $p['x'], 'pos_y' => $p['y']]);
+        }
+
+        return response()->json(['message' => 'Zal planı yadda saxlanıldı.']);
+    }
+
     /** Masanın üstünə qoymaq üçün çap ediləcək QR kart. */
     public function qr(StoreTable $table, Tenancy $tenancy)
     {

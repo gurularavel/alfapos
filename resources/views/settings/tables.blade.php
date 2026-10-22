@@ -2,6 +2,7 @@
 <div x-data="{ edit: null }">
     <x-page-header title="Masalar" subtitle="Hər masanın öz QR kodu var — çap edib masaya qoyun.">
         <a href="{{ route('settings.index') }}" class="btn-secondary">← Ayarlar</a>
+        <a href="{{ route('settings.tables.plan') }}" class="btn-secondary"><x-icon name="table" class="size-4" /> Zal planı</a>
         <button class="btn-primary" @click="edit = { id: null, title: '', floor: '', seating_capacity: 4, deposit: 0 }"><x-icon name="plus" class="size-4" /> Yeni masa</button>
     </x-page-header>
 

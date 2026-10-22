@@ -99,6 +99,10 @@
             </div>
         </div>
 
+        <div x-show="tableOpenOrders" x-cloak class="border-b border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-900">
+            <p class="font-bold" x-text="'Bu masada açıq hesab var: ' + (tableOpenOrders?.orders.length ?? 0) + ' sifariş, ' + money(tableOpenOrders?.due)"></p>
+            <p>Yeni sifariş <b>əlavə</b> kimi gedəcək: mətbəxə ayrıca çek çıxır, hesab birlikdə bağlanır. Hesabı bağlamaq üçün: <button type="button" class="font-bold underline" @click="openTables()">Masalar</button> → masa → <b>Hesabı bağla</b>.</p>
+        </div>
         <div class="min-h-0 flex-1 overflow-y-auto">
             <template x-for="line in cart" :key="line.key">
                 <div class="flex gap-3 border-b border-zinc-100 px-3 py-2.5">
@@ -304,7 +308,6 @@
         <header class="flex flex-wrap items-center gap-3 border-b border-zinc-200 bg-white px-4 py-3 sm:px-6">
             <h2 class="text-2xl font-black">Masalar</h2>
             <div class="flex flex-wrap gap-2">
-                <button class="chip px-5 py-2.5 text-base" :class="!mapFloor && 'active'" @click="mapFloor = null">Hamısı</button>
                 <template x-for="f in floors" :key="f">
                     <button class="chip px-5 py-2.5 text-base" :class="mapFloor === f && 'active'" @click="mapFloor = f" x-text="f"></button>
                 </template>
@@ -321,40 +324,67 @@
             <span class="flex items-center gap-1.5"><span class="size-4 rounded bg-brand-500"></span> Hazır sifariş var</span>
             <span class="flex items-center gap-1.5"><span class="badge-amber">D</span> Depozitli kabinet</span>
         </div>
-        <div class="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
-            <div class="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4">
+        {{-- Zal planı (Ayarlar → Masalar → Zal planı). Boş masa → POS; dolu masa → əməliyyat paneli --}}
+        <div class="relative min-h-0 flex-1 p-3 sm:p-5">
+            <div class="relative h-full w-full overflow-hidden rounded-3xl bg-white ring-1 ring-zinc-200">
                 <template x-for="t in mapTables" :key="t.id">
-                    <button type="button" @click="pickTable(t)" class="relative flex flex-col items-center justify-center gap-2 rounded-3xl bg-white px-4 pt-6 pb-4 transition select-none active:scale-[0.98]"
-                            :class="String(tableId) === String(t.id) ? 'ring-4 ring-brand-400' : 'ring-1 ring-zinc-200'">
-                        <span x-show="t.deposit > 0" class="badge-amber absolute top-3 left-3" x-text="'D ' + money(t.deposit)"></span>
-                        <span x-show="tableState(t)?.ready" class="badge-green absolute top-3 right-3">Hazır</span>
-
-                        {{-- yuxarı oturacaqlar --}}
-                        <div class="flex justify-center gap-2.5">
-                            <template x-for="i in chairs(t).top"><span class="h-4 w-8 rounded-t-full" :class="tableState(t) ? 'bg-amber-500' : 'bg-zinc-300'"></span></template>
-                        </div>
-                        {{-- masa --}}
-                        <div class="flex min-h-24 flex-col items-center justify-center rounded-2xl px-3 py-3 text-center"
-                             :style="`width: ${Math.max(chairs(t).top, 2) * 42 + 16}px`"
-                             :class="tableState(t) ? (tableState(t).ready ? 'bg-brand-500 text-white' : 'bg-amber-400 text-ink') : 'border-[3px] border-zinc-300 bg-zinc-50'">
-                            <span class="text-xl leading-tight font-black" x-text="t.title"></span>
-                            <span class="text-sm font-bold" x-show="tableState(t)" x-text="money(tableState(t)?.due)"></span>
-                            <span class="text-xs text-zinc-500" x-show="!tableState(t)" x-text="t.seats + ' nəfər'"></span>
-                        </div>
-                        {{-- aşağı oturacaqlar --}}
-                        <div class="flex min-h-4 justify-center gap-2.5">
-                            <template x-for="i in chairs(t).bottom"><span class="h-4 w-8 rounded-b-full" :class="tableState(t) ? 'bg-amber-500' : 'bg-zinc-300'"></span></template>
-                        </div>
-
-                        <p class="mt-1 text-sm" :class="tableState(t) ? 'font-semibold text-zinc-700' : 'text-brand-600 font-bold'"
-                           x-text="tableState(t) ? (tableState(t).since + ' · ' + tableState(t).orders + ' sifariş' + (tableState(t).waiter ? ' · ' + tableState(t).waiter : '')) : 'Boş'"></p>
+                    <button type="button" @click="tapTable(t)" class="absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center rounded-2xl p-2 transition select-none active:scale-95"
+                            :class="String(tableId) === String(t.id) && deliveryType === 'dinein' ? 'bg-brand-50 ring-4 ring-brand-400' : ''"
+                            :style="`left: ${t.x}%; top: ${t.y}%`">
+                        <span x-show="t.deposit > 0" class="badge-amber absolute -top-1 -left-1" x-text="'D ' + money(t.deposit)"></span>
+                        <span x-show="tableState(t)?.ready" class="badge-green absolute -top-1 -right-1">Hazır</span>
+                        <x-table-tile state="tableState(t)" />
+                        <p class="mt-1 max-w-48 truncate text-xs" :class="tableState(t) ? 'font-semibold text-zinc-700' : 'font-bold text-brand-600'"
+                           x-text="tableState(t) ? (tableState(t).since + ' · ' + tableState(t).orders + ' sif.' + (tableState(t).waiter ? ' · ' + tableState(t).waiter : '')) : 'Boş'"></p>
                     </button>
                 </template>
+                <template x-if="!tables.length"><div class="absolute inset-0 flex items-center justify-center"><x-empty icon="table" title="Masa yoxdur">Ayarlar → Masalar bölməsində masa əlavə edin.</x-empty></div></template>
             </div>
-            <template x-if="!tables.length"><div><x-empty icon="table" title="Masa yoxdur">Ayarlar → Masalar bölməsində masa əlavə edin.</x-empty></div></template>
+        </div>
+
+        {{-- Dolu masa: əlavə sifariş, hesab çeki, hesabı bağla --}}
+        <div x-show="tableSheet" x-cloak class="absolute inset-0 z-10 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-6" @click.self="tableSheet = null">
+            <template x-if="tableSheet">
+                <div class="flex max-h-[92vh] w-full max-w-xl flex-col overflow-hidden rounded-t-3xl bg-white sm:rounded-3xl">
+                    <div class="flex items-start justify-between border-b border-zinc-100 px-6 py-5">
+                        <div>
+                            <p class="text-2xl font-black" x-text="tableSheet.table.label"></p>
+                            <p class="text-sm text-zinc-500" x-text="tableSheet.group.orders.length + ' sifariş · ' + tableSheet.group.orders[0].time + '-dən' + (tableSheet.group.orders[0].waiter ? ' · ' + tableSheet.group.orders[0].waiter : '')"></p>
+                        </div>
+                        <button type="button" class="btn-ghost" @click="tableSheet = null"><x-icon name="x" class="size-6" /></button>
+                    </div>
+                    <div class="min-h-0 flex-1 overflow-y-auto px-6 py-4">
+                        <template x-for="o in tableSheet.group.orders" :key="o.id">
+                            <div class="mb-3">
+                                <p class="mb-1 text-xs font-bold tracking-wide text-zinc-400 uppercase" x-text="'Token #' + o.token_no + ' · ' + o.time + ' · ' + o.status_label"></p>
+                                <template x-for="i in o.items"><p class="flex justify-between text-base" :class="i.status === 'cancelled' && 'line-through text-zinc-400'"><span x-text="i.qty + ' × ' + i.title + (i.variant ? ' (' + i.variant + ')' : '')"></span></p></template>
+                            </div>
+                        </template>
+                        <div class="mt-2 rounded-2xl bg-zinc-50 p-4">
+                            <p class="flex justify-between text-sm text-zinc-600" x-show="tableSheet.group.deposit > 0"><span x-text="'Sifariş cəmi · depozit ' + money(tableSheet.group.deposit)"></span><span x-text="money(tableSheet.group.orders_total)"></span></p>
+                            <p class="flex justify-between text-sm text-amber-700" x-show="tableSheet.group.deposit_topup > 0"><span>Depozitə qədər fərq</span><span x-text="money(tableSheet.group.deposit_topup)"></span></p>
+                            <p class="flex justify-between text-2xl font-black"><span>Ödəniləcək</span><span x-text="money(tableSheet.group.due)"></span></p>
+                        </div>
+                    </div>
+                    <div x-show="!tableSheet.paying" class="grid grid-cols-2 gap-3 border-t border-zinc-100 p-4">
+                        <button type="button" class="btn-secondary py-4 text-base" @click="pickTable(tableSheet.table)"><x-icon name="plus" class="size-5" /> Əlavə sifariş</button>
+                        <button type="button" class="btn-secondary py-4 text-base" @click="printBill()"><x-icon name="printer" class="size-5" /> Hesab çeki</button>
+                        <button type="button" x-show="$store.terminal.canPay" class="btn-primary col-span-2 py-5 text-lg" @click="tableSheet.paying = true"><x-icon name="cash" class="size-6" /> Hesabı bağla · <span x-text="money(tableSheet.group.due)"></span></button>
+                        <p x-show="!$store.terminal.canPay" class="col-span-2 text-center text-sm text-zinc-500">Hesabı kassir bağlayır — "Hesab çeki"ni müştəriyə aparın.</p>
+                    </div>
+                    <div x-show="tableSheet.paying" class="border-t border-zinc-100 p-4">
+                        <p class="mb-3 text-center font-bold">Ödəniş növü</p>
+                        <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                            <template x-for="p in paymentTypes" :key="p.id">
+                                <button type="button" class="rounded-2xl bg-brand-500 py-5 text-lg font-black text-white active:bg-brand-700" @click="closeBill(p.id)" x-text="p.title"></button>
+                            </template>
+                        </div>
+                        <button type="button" class="btn-ghost mt-3 w-full" @click="tableSheet.paying = false">← Geri</button>
+                    </div>
+                </div>
+            </template>
         </div>
     </div>
-
     {{-- Müştəri ekranı seçimi --}}
     <x-modal show="modal === 'display'" close="modal = null" title="Müştəri ekranı" width="max-w-md">
         <p class="mb-3 text-sm text-zinc-500">Bu kassanın müştəriyə baxan ekranını seçin. Səbət dəyişdikcə müştəri məhsulları və cəmi canlı görəcək. Seçim bu cihazda yadda qalır.</p>
