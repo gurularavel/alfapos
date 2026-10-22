@@ -92,7 +92,8 @@ export default (data) => ({
 
     openTables() {
         this.view = 'tables';
-        if (!this.mapFloor || !this.floors.includes(this.mapFloor)) this.mapFloor = this.floors[0] ?? null;
+        // Default: "Bütün masalar" (mapFloor = null); seçilmiş mərtəbə silinibsə ona qayıdırıq
+        if (this.mapFloor && !this.floors.includes(this.mapFloor)) this.mapFloor = null;
         this.loadBoard();
     },
 
@@ -107,6 +108,11 @@ export default (data) => ({
 
     get floors() {
         return [...new Set(this.tables.map(floorOf))];
+    },
+
+    /** "Bütün masalar" görünüşü: mərtəbələr üzrə qruplar (zal planı mövqeləri olmadan). */
+    get tablesByFloor() {
+        return this.floors.map((floor) => ({ floor, tables: this.tables.filter((t) => floorOf(t) === floor) }));
     },
 
     /** Seçilmiş mərtəbənin masaları — Ayarlar → Zal planındakı mövqelərlə (yoxdursa avtomatik). */
@@ -186,6 +192,14 @@ export default (data) => ({
         } catch (e) {
             toast(e.message, 'error');
         }
+    },
+
+    /** Əvvəlki sifarişlər + yeni səbət; depozit (varsa) ümumi məbləğə tətbiq olunur — server ilə eyni qayda. */
+    get tableTotalWithNew() {
+        const g = this.tableOpenOrders;
+        if (!g) return this.totals.total;
+        const sum = g.orders_total + this.totals.total;
+        return Math.max(sum, g.deposit || 0);
     },
 
     /** Seçilmiş masada artıq ödənilməmiş sifariş varsa — yeni sifariş "əlavə" kimi gedir. */
@@ -374,7 +388,8 @@ export default (data) => ({
         const service = ((sub - discount) * this.serviceRate) / 100;
         // Kabinet/VIP depoziti: hesab minimum məbləğdən azdırsa fərq əlavə olunur (server ilə eyni qayda)
         const beforeDeposit = sub - discount + exclusive + service;
-        const deposit = this.deliveryType === 'dinein' ? this.selectedTable?.deposit || 0 : 0;
+        // Açıq hesabı olan masaya əlavə sifarişdə depozit ayrıca yox, masanın ümumi hesabına tətbiq olunur
+        const deposit = this.deliveryType === 'dinein' && !this.tableOpenOrders ? this.selectedTable?.deposit || 0 : 0;
         const topup = deposit > 0 ? Math.max(0, Math.round((deposit - beforeDeposit) * 100) / 100) : 0;
         return { sub, discount, tax, service, deposit, topup, total: beforeDeposit + topup };
     },

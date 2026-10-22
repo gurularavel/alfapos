@@ -99,11 +99,29 @@
             </div>
         </div>
 
-        <div x-show="tableOpenOrders" x-cloak class="border-b border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-900">
-            <p class="font-bold" x-text="'Bu masada açıq hesab var: ' + (tableOpenOrders?.orders.length ?? 0) + ' sifariş, ' + money(tableOpenOrders?.due)"></p>
-            <p>Yeni sifariş <b>əlavə</b> kimi gedəcək: mətbəxə ayrıca çek çıxır, hesab birlikdə bağlanır. Hesabı bağlamaq üçün: <button type="button" class="font-bold underline" @click="openTables()">Masalar</button> → masa → <b>Hesabı bağla</b>.</p>
-        </div>
         <div class="min-h-0 flex-1 overflow-y-auto">
+            {{-- Əlavə sifariş: masanın əvvəlki (artıq mətbəxə getmiş) sifarişləri fərqli rənglə, yalnız baxış üçün --}}
+            <template x-if="tableOpenOrders">
+                <div class="border-b-4 border-amber-200 bg-amber-50 text-amber-900">
+                    <div class="flex items-center justify-between px-3 pt-2.5 pb-1">
+                        <p class="text-xs font-bold tracking-wide uppercase">Əvvəlki sifarişlər · <span x-text="tableOpenOrders.orders.length"></span></p>
+                        <button type="button" class="text-xs font-bold underline" @click="openTables()">Hesabı bağla →</button>
+                    </div>
+                    <template x-for="o in tableOpenOrders.orders" :key="o.id">
+                        <div class="px-3 pb-2">
+                            <p class="text-[11px] font-semibold text-amber-700" x-text="'#' + o.token_no + ' · ' + o.time + ' · ' + o.status_label + (o.waiter ? ' · ' + o.waiter : '')"></p>
+                            <template x-for="i in o.items">
+                                <div class="flex justify-between gap-2 text-sm" :class="i.status === 'cancelled' && 'line-through opacity-50'">
+                                    <span class="min-w-0"><span x-text="i.qty + ' × ' + i.title"></span><span class="text-amber-700" x-show="i.variant" x-text="' (' + i.variant + ')'"></span></span>
+                                    <span class="shrink-0 tabular-nums" x-text="money(i.total)"></span>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+                    <p class="flex justify-between border-t border-amber-200 px-3 py-2 text-sm font-bold"><span>Əvvəlki cəm</span><span x-text="money(tableOpenOrders.orders_total)"></span></p>
+                </div>
+            </template>
+            <p x-show="tableOpenOrders" class="bg-brand-500 px-3 py-1.5 text-xs font-bold tracking-wide text-white uppercase">Yeni sifariş (əlavə) — mətbəxə ayrıca çek gedəcək</p>
             <template x-for="line in cart" :key="line.key">
                 <div class="flex gap-3 border-b border-zinc-100 px-3 py-2.5">
                     <div class="min-w-0 flex-1">
@@ -121,7 +139,8 @@
                     </div>
                 </div>
             </template>
-            <div x-show="!cart.length" class="flex h-full flex-col items-center justify-center p-8 text-center text-sm text-zinc-400">
+            <div x-show="!cart.length && tableOpenOrders" class="p-5 text-center text-sm text-zinc-400">Əlavə etmək üçün menyudan məhsul seçin.</div>
+            <div x-show="!cart.length && !tableOpenOrders" class="flex h-full flex-col items-center justify-center p-8 text-center text-sm text-zinc-400">
                 <x-icon name="pos" class="mb-2 size-10" /> Səbət boşdur. Menyudan məhsul seçin.
             </div>
         </div>
@@ -147,7 +166,8 @@
                     <dd :class="noServiceCharge && 'text-zinc-400 line-through'" x-text="money(noServiceCharge ? (totals.sub - totals.discount) * service.rate / 100 : totals.service)"></dd>
                 </div>
                 <div class="flex justify-between text-amber-700" x-show="totals.deposit > 0"><dt x-text="totals.topup > 0 ? 'Depozitə qədər fərq (min. ' + money(totals.deposit) + ')' : 'Kabinet depoziti ' + money(totals.deposit) + ' — qarşılanıb'"></dt><dd x-show="totals.topup > 0" x-text="money(totals.topup)"></dd></div>
-                <div class="flex justify-between border-t border-dashed border-zinc-200 pt-1.5 text-base font-black"><dt>Ödəniləcək</dt><dd x-text="money(totals.total)"></dd></div>
+                <div class="flex justify-between border-t border-dashed border-zinc-200 pt-1.5 text-base font-black"><dt x-text="tableOpenOrders ? 'Yeni sifariş' : 'Ödəniləcək'"></dt><dd x-text="money(totals.total)"></dd></div>
+                <div class="flex justify-between rounded-lg bg-amber-50 px-2 py-1.5 font-bold text-amber-900" x-show="tableOpenOrders"><dt>Masanın ümumi hesabı</dt><dd x-text="money(tableTotalWithNew)"></dd></div>
             </dl>
             <input x-model="notes" class="input mt-2 py-2" placeholder="Sifariş qeydi (istəyə bağlı)" maxlength="255">
         </div>
@@ -308,6 +328,7 @@
         <header class="flex flex-wrap items-center gap-3 border-b border-zinc-200 bg-white px-4 py-3 sm:px-6">
             <h2 class="text-2xl font-black">Masalar</h2>
             <div class="flex flex-wrap gap-2">
+                <button class="chip px-5 py-2.5 text-base" :class="!mapFloor && 'active'" @click="mapFloor = null">Bütün masalar</button>
                 <template x-for="f in floors" :key="f">
                     <button class="chip px-5 py-2.5 text-base" :class="mapFloor === f && 'active'" @click="mapFloor = f" x-text="f"></button>
                 </template>
@@ -329,7 +350,29 @@
             <button type="button" class="rounded-xl bg-white/15 px-5 py-3 font-bold active:bg-white/30" @click="transferFrom = null">Ləğv et</button>
         </div>
         {{-- Zal planı (Ayarlar → Masalar → Zal planı). Boş masa → POS; dolu masa → əməliyyat paneli --}}
-        <div class="relative min-h-0 flex-1 p-3 sm:p-5">
+        {{-- "Bütün masalar": bütün mərtəbələr, başlıqlarla, siyahı kimi (default görünüş) --}}
+        <div x-show="!mapFloor" class="min-h-0 flex-1 overflow-y-auto p-3 sm:p-5">
+            <template x-for="group in tablesByFloor" :key="group.floor">
+                <section class="mb-6">
+                    <h3 class="mb-3 text-lg font-extrabold text-zinc-600" x-text="group.floor"></h3>
+                    <div class="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-3">
+                        <template x-for="t in group.tables" :key="t.id">
+                            <button type="button" @click="tapTable(t)" class="relative flex flex-col items-center rounded-3xl bg-white px-3 pt-5 pb-3 transition select-none active:scale-[0.98]"
+                                    :class="transferFrom?.id === t.id ? 'opacity-50 ring-4 ring-zinc-400' : (String(tableId) === String(t.id) && deliveryType === 'dinein' ? 'ring-4 ring-brand-400' : 'ring-1 ring-zinc-200')">
+                                <span x-show="t.deposit > 0" class="badge-amber absolute top-2 left-2" x-text="'D ' + money(t.deposit)"></span>
+                                <span x-show="tableState(t)?.ready" class="badge-green absolute top-2 right-2">Hazır</span>
+                                <x-table-tile state="tableState(t)" />
+                                <p class="mt-1 max-w-full truncate text-xs" :class="tableState(t) ? 'font-semibold text-zinc-700' : 'font-bold text-brand-600'"
+                                   x-text="tableState(t) ? (tableState(t).since + ' · ' + tableState(t).orders + ' sif.' + (tableState(t).waiter ? ' · ' + tableState(t).waiter : '')) : 'Boş'"></p>
+                            </button>
+                        </template>
+                    </div>
+                </section>
+            </template>
+            <template x-if="!tables.length"><div><x-empty icon="table" title="Masa yoxdur">Ayarlar → Masalar bölməsində masa əlavə edin.</x-empty></div></template>
+        </div>
+
+        <div x-show="mapFloor" class="relative min-h-0 flex-1 p-3 sm:p-5">
             <div class="relative h-full w-full overflow-hidden rounded-3xl bg-white ring-1 ring-zinc-200">
                 <template x-for="t in mapTables" :key="t.id">
                     <button type="button" @click="tapTable(t)" class="absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center rounded-2xl p-2 transition select-none active:scale-95"

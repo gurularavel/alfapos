@@ -69,7 +69,7 @@ class OrderController extends Controller
                         'waiter' => $o->creator?->name,
                         'notes' => $o->notes,
                         'items' => $o->items->map(fn ($i) => [
-                            'title' => $i->title, 'variant' => $i->variant_title, 'qty' => $i->quantity,
+                            'title' => $i->title, 'variant' => $i->variant_title, 'qty' => $i->quantity, 'total' => $i->lineTotal(),
                             'addons' => collect($i->addons)->pluck('title')->implode(', '), 'status' => $i->status, 'notes' => $i->notes,
                         ]),
                     ])->values(),
