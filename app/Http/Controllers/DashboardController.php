@@ -67,8 +67,14 @@ class DashboardController extends Controller
             'open' => (int) ($openByType[$type] ?? 0),
         ])->values();
 
-        $paymentMix = $paid($today)->join('payment_types', 'payment_types.id', '=', 'invoices.payment_type_id')
-            ->groupBy('payment_types.title')->select('payment_types.title', DB::raw('SUM(invoices.total) as total'))->pluck('total', 'title');
+        // Bu gün ödəniş növləri üzrə (Hesabatlar → Ödəniş növləri ilə eyni qayda) + dünənlə müqayisə
+        $byPayment = fn (Carbon $day) => $paid($day)->leftJoin('payment_types', 'payment_types.id', '=', 'invoices.payment_type_id')
+            ->groupBy('invoices.payment_type_id', 'payment_types.title', 'payment_types.icon')
+            ->selectRaw("invoices.payment_type_id, COALESCE(payment_types.title, 'Digər') as title, COALESCE(payment_types.icon, 'other') as icon, COUNT(*) as checks, SUM(invoices.total) as total")
+            ->get();
+        $paymentYesterday = $byPayment($today->copy()->subDay())->pluck('total', 'payment_type_id');
+        $paymentMix = $byPayment($today)->sortByDesc('total')->values()
+            ->each(fn ($row) => $row->change = $this->change((float) $row->total, (float) ($paymentYesterday[$row->payment_type_id] ?? 0)));
 
         // Bu gün terminallar üzrə satış (Hesabatlar → Terminallar üzrə satış ilə eyni qayda)
         $terminalSales = $paid($today)

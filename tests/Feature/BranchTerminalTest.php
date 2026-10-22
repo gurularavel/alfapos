@@ -234,6 +234,34 @@ class BranchTerminalTest extends TestCase
             ->assertViewHas('rows', fn ($rows) => collect($rows)->firstWhere(0, 'Masa 1') == ['Masa 1', 2, money($tableCheck)]);
     }
 
+    public function test_dashboard_shows_sales_by_payment_type_with_yesterday(): void
+    {
+        Invoice::query()->delete(); // demo seed-in çekləri nəticəyə qarışmasın
+        $plov = MenuItem::where('title', 'Plov')->value('id');
+        $pay = fn (string $title) => $this->postJson(route('pos.store'), [
+            'action' => 'pay', 'delivery_type' => 'takeaway', 'cart' => [['menu_item_id' => $plov, 'quantity' => 1]],
+            'payment_type_id' => PaymentType::where('title', $title)->value('id'),
+        ])->assertOk();
+
+        $tz = $this->admin->tenant->timezone; // sorğular biznesin saat qurşağında işləyir
+        $day = today($tz);
+        $this->travelTo($day->copy()->subDay()->setTime(12, 0));
+        $pay('Nağd');
+        $this->travelTo($day->copy()->setTime(12, 0));
+        $pay('Nağd');
+        $pay('Nağd');
+        $pay('Kart');
+
+        $this->get(route('dashboard'))->assertOk()->assertSee('Ödəniş növləri üzrə satış')
+            ->assertViewHas('paymentMix', function ($rows) {
+                $cash = $rows->firstWhere('title', 'Nağd');
+                $card = $rows->firstWhere('title', 'Kart');
+
+                return $rows->first() === $cash && (int) $cash->checks === 2 && $cash->change === 100.0
+                    && (int) $card->checks === 1 && $card->change === null && $rows->count() === 2;
+            });
+    }
+
     public function test_foreign_terminal_cannot_be_bound_and_new_tenant_gets_defaults(): void
     {
         $other = app(TenantProvisioner::class)->create('Başqa', 'O', 'o@pos.test', 'password');

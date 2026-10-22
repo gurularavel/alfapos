@@ -4,7 +4,6 @@
     $greeting = $hour < 12 ? 'Sabahınız xeyir' : ($hour < 18 ? 'Günortanız xeyir' : 'Axşamınız xeyir');
     $goalPct = $goal > 0 ? min(100, round($revenueToday / $goal * 100)) : null;
     $max = max(1, $trend->max('value'));
-    $mixTotal = max(1, $paymentMix->sum());
 @endphp
 
 <div class="mb-5 flex flex-wrap items-end justify-between gap-3">
@@ -288,15 +287,39 @@
     </div>
 
     <div class="card card-pad">
-        <h2 class="mb-3 font-extrabold">Ödəniş növləri</h2>
-        @forelse ($paymentMix as $title => $total)
-            <div class="mb-2.5 text-sm">
-                <div class="mb-1 flex justify-between"><span class="font-semibold">{{ $title }}</span><span>{{ money($total) }}</span></div>
-                <div class="h-2 rounded-full bg-zinc-100"><div class="h-2 rounded-full bg-brand-500" style="width: {{ $total / $mixTotal * 100 }}%"></div></div>
+        <div class="mb-3 flex items-center justify-between">
+            <h2 class="font-extrabold">Ödəniş növləri üzrə satış <span class="text-xs font-normal text-zinc-500">bu gün</span></h2>
+            <a href="{{ route('reports.show', ['payment-summary', 'from' => today()->toDateString(), 'to' => today()->toDateString()]) }}" class="text-xs font-semibold text-brand-700 hover:underline">Hesabat →</a>
+        </div>
+        @php($mixTotal = max(1, (float) $paymentMix->sum('total')))
+        @php($payColors = ['cash' => 'bg-brand-500', 'card' => 'bg-sky-500', 'online' => 'bg-violet-500', 'other' => 'bg-amber-400'])
+        @if ($paymentMix->isNotEmpty())
+            <div class="mb-4 flex h-3 overflow-hidden rounded-full bg-zinc-100">
+                @foreach ($paymentMix as $row)
+                    <div class="{{ $payColors[$row->icon] ?? 'bg-zinc-400' }} h-full" style="width: {{ $row->total / $mixTotal * 100 }}%" title="{{ $row->title }} — {{ money($row->total) }}"></div>
+                @endforeach
+            </div>
+        @endif
+        @forelse ($paymentMix as $row)
+            <div class="flex items-center gap-3 py-1.5 text-sm">
+                <span class="flex size-8 shrink-0 items-center justify-center rounded-lg {{ $payColors[$row->icon] ?? 'bg-zinc-400' }} text-white"><x-icon :name="$row->icon" class="size-4" /></span>
+                <span class="min-w-0 flex-1">
+                    <span class="block truncate font-semibold">{{ $row->title }}</span>
+                    <span class="text-xs text-zinc-500">{{ $row->checks }} çek · orta {{ money($row->total / max(1, $row->checks)) }} · {{ round($row->total / $mixTotal * 100) }}%</span>
+                </span>
+                <span class="shrink-0 text-right">
+                    <span class="block font-bold tabular-nums">{{ money($row->total) }}</span>
+                    @if ($row->change !== null)
+                        <span @class(['text-[11px] font-semibold', 'text-brand-600' => $row->change >= 0, 'text-red-600' => $row->change < 0])>{{ $row->change >= 0 ? '▲' : '▼' }} {{ abs($row->change) }}%</span>
+                    @endif
+                </span>
             </div>
         @empty
             <p class="text-sm text-zinc-500">Bu gün ödəniş yoxdur.</p>
         @endforelse
+        @if ($paymentMix->contains(fn ($r) => $r->change !== null))
+            <p class="mt-2 text-xs text-zinc-400">▲▼ — dünənin eyni ödəniş növü ilə müqayisə.</p>
+        @endif
     </div>
 
     <div class="space-y-4">
