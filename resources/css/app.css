@@ -1,0 +1,67 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+
+@theme {
+    --font-sans: 'Nunito', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+
+    --color-brand-50: #f0f7ee;
+    --color-brand-100: #dcefd6;
+    --color-brand-200: #bbdfb0;
+    --color-brand-300: #91c983;
+    --color-brand-400: #6db35c;
+    --color-brand-500: #4f9a3f;
+    --color-brand-600: #3d7c30;
+    --color-brand-700: #326228;
+    --color-brand-800: #2b4f24;
+    --color-brand-900: #1e3a1a;
+    --color-ink: #1f2a1d;
+    --color-canvas: #f5f6f3;
+}
+
+[x-cloak] { display: none !important; }
+
+@utility card { @apply rounded-2xl border border-zinc-200/80 bg-white; }
+@utility card-pad { @apply p-5; }
+@utility btn { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-1; }
+@utility badge { @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold; }
+
+@layer components {
+    .btn-primary { @apply btn bg-brand-500 text-white hover:bg-brand-600; }
+    .btn-secondary { @apply btn border border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50; }
+    .btn-danger { @apply btn bg-red-500 text-white hover:bg-red-600; }
+    .btn-ghost { @apply btn px-2.5 text-zinc-600 hover:bg-zinc-100; }
+    .btn-sm { @apply px-3 py-1.5 text-xs rounded-lg; }
+
+    .input { @apply block w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3.5 py-2.5 text-sm text-ink placeholder:text-zinc-400 focus:border-brand-400 focus:bg-white focus:ring-2 focus:ring-brand-100 focus:outline-none; }
+    .label { @apply mb-1.5 block text-sm font-semibold text-zinc-700; }
+    .field-error { @apply mt-1 text-xs text-red-600; }
+
+    .badge-green { @apply badge bg-brand-100 text-brand-700; }
+    .badge-amber { @apply badge bg-amber-100 text-amber-700; }
+    .badge-red { @apply badge bg-red-100 text-red-700; }
+    .badge-blue { @apply badge bg-sky-100 text-sky-700; }
+    .badge-gray { @apply badge bg-zinc-100 text-zinc-600; }
+
+    .table-base { @apply w-full text-left text-sm; }
+    .table-base thead th { @apply border-b border-zinc-100 px-4 py-3 text-xs font-bold tracking-wide text-zinc-500 uppercase; }
+    .table-base tbody td { @apply border-b border-zinc-100 px-4 py-3 align-middle; }
+    .table-base tbody tr:hover { @apply bg-zinc-50/70; }
+
+    .nav-link { @apply flex items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] font-semibold text-zinc-600 transition hover:bg-brand-50 hover:text-brand-700; }
+    .nav-link.active { @apply bg-brand-100 text-brand-800; }
+
+    .chip { @apply shrink-0 rounded-full border border-zinc-200 bg-white px-4 py-1.5 text-sm font-semibold text-zinc-600 transition hover:border-brand-300; }
+    .chip.active { @apply border-brand-500 bg-brand-500 text-white; }
+}
+
+/* POS ekranı: normal və tam ekran rejimində hündürlük */
+.pos-screen { height: calc(100dvh - 5.5rem); }
+body.pos-full [data-shell] { display: none !important; }
+body.pos-full [data-shell-content] { padding-left: 0 !important; }
+body.pos-full .pos-screen { height: calc(100dvh - 1.5rem); }
+
+@media print {
+    .no-print { display: none !important; }
+}

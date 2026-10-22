@@ -1,0 +1,66 @@
+<?php
+
+namespace App\Http\Controllers\Settings;
+
+use App\Http\Controllers\Controller;
+use App\Models\StoreTable;
+use App\Support\Tenancy;
+use Illuminate\Http\Request;
+
+class TableController extends Controller
+{
+    public function index(Tenancy $tenancy)
+    {
+        return view('settings.tables', [
+            'tables' => StoreTable::orderBy('floor')->orderBy('title')->get(),
+            'tenant' => $tenancy->tenant(),
+        ]);
+    }
+
+    public function store(Request $request, Tenancy $tenancy)
+    {
+        $limit = $tenancy->tenant()->plan?->max_tables;
+        if ($limit && StoreTable::count() >= $limit) {
+            return back()->withErrors(['title' => "Planınız maksimum {$limit} masaya icazə verir."]);
+        }
+
+        StoreTable::create($this->validated($request));
+
+        return back()->with('success', 'Masa əlavə edildi.');
+    }
+
+    public function update(Request $request, StoreTable $table)
+    {
+        $table->update($this->validated($request));
+
+        return back()->with('success', 'Masa yeniləndi.');
+    }
+
+    public function destroy(StoreTable $table)
+    {
+        $table->delete();
+
+        return back()->with('success', 'Masa silindi.');
+    }
+
+    /** Masanın üstünə qoymaq üçün çap ediləcək QR kart. */
+    public function qr(StoreTable $table, Tenancy $tenancy)
+    {
+        $tenant = $tenancy->tenant();
+
+        return view('print.table-qr', [
+            'table' => $table,
+            'tenant' => $tenant,
+            'url' => route('qr.show', ['code' => $tenant->qr_code, 't' => $table->qr_token]),
+        ]);
+    }
+
+    protected function validated(Request $request): array
+    {
+        return $request->validate([
+            'title' => ['required', 'string', 'max:60'],
+            'floor' => ['nullable', 'string', 'max:60'],
+            'seating_capacity' => ['required', 'integer', 'min:1', 'max:100'],
+        ]);
+    }
+}
