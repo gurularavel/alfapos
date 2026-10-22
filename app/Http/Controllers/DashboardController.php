@@ -53,6 +53,13 @@ class DashboardController extends Controller
             ->selectRaw("invoices.terminal_id, COALESCE(terminals.name, 'Terminalsız (panel)') as name, branches.name as branch, COUNT(*) as checks, SUM(invoices.total) as total")
             ->orderByDesc('total')->get();
 
+        // Bu gün filiallar üzrə satış (Hesabatlar → Filiallar üzrə satış ilə eyni qayda)
+        $branchSales = $paid($today)
+            ->leftJoin('branches', 'branches.id', '=', 'invoices.branch_id')
+            ->groupBy('invoices.branch_id', 'branches.name')
+            ->selectRaw("invoices.branch_id, COALESCE(branches.name, 'Filialsız') as name, COUNT(*) as checks, SUM(invoices.total) as total")
+            ->orderByDesc('total')->get();
+
         $todayInvoices = $paid($today);
 
         return view('dashboard', [
@@ -66,6 +73,7 @@ class DashboardController extends Controller
             'orderTypes' => $orderTypes,
             'paymentMix' => $paymentMix,
             'terminalSales' => $terminalSales,
+            'branchSales' => $branchSales,
             'branchCount' => \App\Models\Branch::count(),
             'lowStock' => InventoryItem::whereColumn('quantity', '<=', 'min_quantity')->orderBy('quantity')->limit(5)->get(),
             'feedbacks' => Feedback::latest()->limit(3)->get(),

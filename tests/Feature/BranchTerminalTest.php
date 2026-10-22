@@ -132,6 +132,18 @@ class BranchTerminalTest extends TestCase
             ->assertViewHas('invoices', fn ($p) => $p->total() === 1 + Invoice::where('terminal_id', $this->kassa->id)->count() - 1);
     }
 
+    public function test_dashboard_shows_sales_by_branch(): void
+    {
+        $second = Branch::create(['name' => '28 May filialı']);
+        $remote = Terminal::create(['branch_id' => $second->id, 'name' => 'Kassa A']);
+        $this->onDevice($this->kassa)->order();
+        $this->onDevice($remote)->order();
+        $this->onDevice($remote)->order();
+
+        $this->offDevice()->get(route('dashboard'))->assertOk()->assertSee('Filiallar üzrə satış')->assertSee('28 May filialı')
+            ->assertViewHas('branchSales', fn ($rows) => $rows->firstWhere('name', '28 May filialı')?->checks === 2 && $rows->firstWhere('name', 'Əsas filial')?->checks >= 1);
+    }
+
     public function test_foreign_terminal_cannot_be_bound_and_new_tenant_gets_defaults(): void
     {
         $other = app(TenantProvisioner::class)->create('Başqa', 'O', 'o@pos.test', 'password');

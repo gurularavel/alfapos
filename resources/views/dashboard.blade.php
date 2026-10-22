@@ -69,7 +69,7 @@
     </div>
 </div>
 
-<div class="mt-4 grid gap-4 md:grid-cols-2 2xl:grid-cols-4">
+<div class="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
     <div class="card card-pad">
         <h2 class="mb-3 font-extrabold">Top məhsullar <span class="text-xs font-normal text-zinc-500">bu gün</span></h2>
         @forelse ($topItems as $i => $row)
@@ -81,6 +81,29 @@
         @empty
             <p class="text-sm text-zinc-500">Bu gün satış yoxdur.</p>
         @endforelse
+    </div>
+
+    <div class="card card-pad">
+        <div class="mb-3 flex items-center justify-between">
+            <h2 class="font-extrabold">Filiallar üzrə satış <span class="text-xs font-normal text-zinc-500">bu gün</span></h2>
+            <a href="{{ route('reports.show', ['sales-by-branch', 'from' => today()->toDateString(), 'to' => today()->toDateString()]) }}" class="text-xs font-semibold text-brand-700 hover:underline">Hesabat →</a>
+        </div>
+        @php($branchTotal = max(1, (float) $branchSales->sum('total')))
+        @forelse ($branchSales as $row)
+            <div class="mb-3 text-sm">
+                <div class="mb-1 flex justify-between gap-2">
+                    <span @class(['truncate font-semibold', 'text-zinc-500' => ! $row->branch_id])>{{ $row->name }}</span>
+                    <span class="shrink-0 font-bold tabular-nums">{{ money($row->total) }}</span>
+                </div>
+                <div class="h-2 rounded-full bg-zinc-100"><div class="h-2 rounded-full {{ $row->branch_id ? 'bg-sky-500' : 'bg-zinc-300' }}" style="width: {{ $row->total / $branchTotal * 100 }}%"></div></div>
+                <p class="mt-1 text-xs text-zinc-500">{{ $row->checks }} çek · orta çek {{ money($row->total / max(1, $row->checks)) }} · {{ round($row->total / $branchTotal * 100) }}%</p>
+            </div>
+        @empty
+            <p class="text-sm text-zinc-500">Bu gün satış yoxdur.</p>
+        @endforelse
+        @if ($branchCount === 1 && auth()->user()->hasScope('SETTINGS'))
+            <p class="mt-2 text-xs text-zinc-400">Bir filialınız var. Yeni filial: <a href="{{ route('settings.branches.index') }}" class="text-brand-700 hover:underline">Ayarlar → Filiallar</a></p>
+        @endif
     </div>
 
     <div class="card card-pad">
