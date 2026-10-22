@@ -32,7 +32,7 @@
         ];
     $nav = array_filter($nav, fn ($n) => $n[3] === null || ($n[3] === 'ADMIN' ? $user->isAdmin() : $user->hasScope($n[3])));
 @endphp
-<body class="h-full bg-canvas font-sans text-ink antialiased" x-data="{ nav: false }">
+<body @class(['h-full bg-canvas font-sans text-ink antialiased', 'pos-full terminal-mode' => app(\App\Support\PosTerminal::class)->active()]) x-data="{ nav: false }">
 <div class="flex min-h-screen">
     {{-- Sidebar --}}
     <aside data-shell class="no-print fixed inset-y-0 left-0 z-40 flex w-64 -translate-x-full flex-col border-r border-zinc-200/70 bg-[#e9eee6] transition-transform lg:translate-x-0"
@@ -44,7 +44,7 @@
             <div class="flex size-10 items-center justify-center rounded-full bg-brand-500 text-sm font-bold text-white">{{ mb_strtoupper(mb_substr($user->name, 0, 1)) }}</div>
             <div class="min-w-0">
                 <p class="truncate text-sm font-bold">{{ $user->name }}</p>
-                <p class="truncate text-xs font-semibold tracking-wide text-zinc-500 uppercase">{{ $user->isSuperAdmin() ? 'Superadmin' : ($user->isAdmin() ? 'Admin' : ($user->designation ?: 'İşçi')) }}</p>
+                <p class="truncate text-xs font-semibold tracking-wide text-zinc-500 uppercase">{{ $user->roleLabel() }}</p>
             </div>
         </div>
         <nav class="flex-1 space-y-0.5 overflow-y-auto px-4 pb-4">

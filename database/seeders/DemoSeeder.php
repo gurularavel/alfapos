@@ -16,6 +16,7 @@ use App\Services\OrderService;
 use App\Services\TenantProvisioner;
 use App\Support\Tenancy;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 /**
  * Demo biznes + istifadəçilər. Lokalda emaillər @pos.test, parollar "password".
@@ -28,7 +29,19 @@ class DemoSeeder extends Seeder
     /** @var array<string, string> açar (super|demo|kassir|metbex) => parol */
     public static array $passwords = [];
 
+    /** @var array<string, string> açar => 4 rəqəmli PIN */
+    public static array $pins = [];
+
+    /** Panelə email/parol ilə daxil olanlar. */
     public const USERS = ['super' => 'Superadmin', 'demo' => 'Biznes admini', 'kassir' => 'Kassir', 'metbex' => 'Aşpaz (mətbəx)'];
+
+    /** POS terminalında PIN ilə işləyənlər (lokal default PIN-lər). */
+    public const PIN_USERS = ['demo' => '1234', 'kassir' => '1111', 'ofisiant' => '2222', 'metbex' => '3333'];
+
+    protected function pin(string $key): string
+    {
+        return static::$pins[$key] ?? self::PIN_USERS[$key];
+    }
 
     protected function email(string $key): string
     {
@@ -52,18 +65,27 @@ class DemoSeeder extends Seeder
 
         $admin = app(TenantProvisioner::class)->create('Demo Restoran', 'Demo Admin', $this->email('demo'), $this->password('demo'), '+994501234567');
         $tenant = $admin->tenant;
-        $tenant->update(['address' => 'Bakı, Nizami küç. 10', 'service_charge' => 5, 'daily_sales_goal' => 1000, 'is_qr_order_enabled' => true]);
+        $tenant->update(['plan_id' => \App\Models\Plan::where('slug', 'pro')->value('id') ?? $tenant->plan_id, 'address' => 'Bakı, Nizami küç. 10', 'service_charge' => 5, 'daily_sales_goal' => 1000, 'is_qr_order_enabled' => true]);
         app(Tenancy::class)->set($tenant);
         auth()->setUser($admin);
 
-        User::create([
-            'tenant_id' => $tenant->id, 'name' => 'Kassir Aynur', 'email' => $this->email('kassir'), 'password' => $this->password('kassir'),
-            'role' => 'user', 'designation' => 'Kassir', 'scopes' => ['POS', 'ORDERS', 'INVOICES', 'CUSTOMERS'],
-        ]);
-        User::create([
-            'tenant_id' => $tenant->id, 'name' => 'Aşpaz Rauf', 'email' => $this->email('metbex'), 'password' => $this->password('metbex'),
-            'role' => 'user', 'designation' => 'Aşpaz', 'scopes' => ['KITCHEN'],
-        ]);
+        $admin->setPin($this->pin('demo'));
+        $admin->save();
+        foreach ([
+            ['kassir', 'Kassir Aynur', 'cashier', true],
+            ['ofisiant', 'Ofisiant Nicat', 'waiter', false],
+            ['metbex', 'Aşpaz Rauf', 'chef', true],
+        ] as [$key, $name, $role, $hasLogin]) {
+            $user = new User([
+                'tenant_id' => $tenant->id, 'name' => $name, 'role' => $role, 'scopes' => User::ROLES[$role][1],
+                'designation' => User::ROLES[$role][0],
+                // Ofisiant panelə daxil olmur, yalnız terminalda PIN ilə işləyir
+                'email' => $hasLogin ? $this->email($key) : null,
+                'password' => $hasLogin ? $this->password($key) : Str::random(40),
+            ]);
+            $user->setPin($this->pin($key));
+            $user->save();
+        }
 
         $vat = Tax::first();
         $cats = Category::pluck('id', 'title');

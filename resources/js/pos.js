@@ -64,7 +64,8 @@ export default (data) => ({
 
     setFull(value) {
         this.full = value;
-        document.body.classList.toggle('pos-full', value);
+        // Terminal rejimində menyu həmişə gizli qalır
+        document.body.classList.toggle('pos-full', value || document.body.classList.contains('terminal-mode'));
         try {
             localStorage.setItem('pos-full', value ? '1' : '0');
         } catch {}
@@ -215,6 +216,9 @@ export default (data) => ({
             const table = this.tables.find((t) => t.id === Number(this.tableId));
             if (table && action !== 'draft') table.busy = true;
             this.clear();
+            if (action !== 'draft') {
+                Alpine.store('terminal')?.afterOrder();
+            }
         } catch (e) {
             toast(e.message, 'error');
         } finally {

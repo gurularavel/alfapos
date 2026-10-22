@@ -3,6 +3,7 @@
 use App\Http\Middleware\EnsureSubscriptionActive;
 use App\Http\Middleware\IdentifyTenant;
 use App\Http\Middleware\RequireScope;
+use App\Http\Middleware\TerminalGuard;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -15,7 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->appendToGroup('web', IdentifyTenant::class);
+        $middleware->appendToGroup('web', [IdentifyTenant::class, TerminalGuard::class]);
         // Tenant scope route model binding-dən əvvəl aktiv olmalıdır, yoxsa başqa tenant-ın ID-si ilə model açılar.
         $middleware->prependToPriorityList(
             before: \Illuminate\Routing\Middleware\SubstituteBindings::class,

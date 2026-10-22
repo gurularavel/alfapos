@@ -27,7 +27,7 @@ class InvoiceController extends Controller
     public function receipt(Invoice $invoice, Tenancy $tenancy)
     {
         return view('print.receipt', [
-            'invoice' => $invoice->load('orders.items', 'orders.table', 'customer', 'paymentType', 'creator'),
+            'invoice' => $invoice->load('orders.items', 'orders.table', 'orders.creator', 'customer', 'paymentType', 'creator'),
             'tenant' => $tenancy->tenant(),
         ]);
     }

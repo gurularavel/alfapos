@@ -23,11 +23,25 @@
                 <span x-show="qrOrders.length" x-text="qrOrders.length" class="absolute -top-1.5 -right-1.5 flex size-5 items-center justify-center rounded-full bg-red-500 text-[10px] text-white"></span>
             </button>
             <a href="{{ route('orders.index') }}" class="btn-secondary btn-sm"><x-icon name="table" class="size-4" /> Masa sifarişləri</a>
-            <button class="btn-secondary btn-sm ml-auto" @click="toggleFull()" :title="full ? 'Tam ekrandan çıx (F9)' : 'Tam ekran (F9)'">
-                <x-icon name="maximize" class="size-4" x-show="!full" />
-                <x-icon name="minimize" class="size-4" x-show="full" x-cloak />
-                <span x-text="full ? 'Çıx' : 'Tam ekran'"></span>
-            </button>
+            <div class="ml-auto flex flex-wrap items-center gap-1.5">
+                <template x-if="$store.terminal.active && $store.terminal.operator">
+                    <div class="flex items-center gap-1.5">
+                        <span class="badge-green py-1.5 text-sm"><x-icon name="users" class="size-4" /> <span x-text="$store.terminal.operator.name + ' · ' + $store.terminal.operator.role"></span></span>
+                        <span class="text-xs text-zinc-400 tabular-nums" x-text="$store.terminal.idleLeft + ' san'" title="Hərəkətsiz qalsa kilidlənəcək"></span>
+                        <button class="btn-secondary btn-sm" @click="$store.terminal.lock()"><x-icon name="logout" class="size-4" /> Kilidlə</button>
+                    </div>
+                </template>
+                @if (auth()->user()->isAdmin() || auth()->user()->hasScope('SETTINGS'))
+                    <button x-show="!$store.terminal.active" class="btn-secondary btn-sm" @click="$store.terminal.enter()" title="Cihazı PIN ilə işləyən POS terminalına çevir">
+                        <x-icon name="qr" class="size-4" /> Terminal rejimi
+                    </button>
+                @endif
+                <button class="btn-secondary btn-sm" @click="toggleFull()" :title="full ? 'Tam ekrandan çıx (F9)' : 'Tam ekran (F9)'">
+                    <x-icon name="maximize" class="size-4" x-show="!full" />
+                    <x-icon name="minimize" class="size-4" x-show="full" x-cloak />
+                    <span x-text="full ? 'Çıx' : 'Tam ekran'"></span>
+                </button>
+            </div>
         </div>
 
         <div class="min-h-0 flex-1 overflow-y-auto p-3">
@@ -119,8 +133,8 @@
 
         <div class="grid grid-cols-[auto_1fr] gap-2 border-t border-zinc-100 p-3">
             <button class="btn-secondary" :disabled="!cart.length || busy" @click="modal = 'draft'"><x-icon name="drafts" class="size-4" /> Qaralama</button>
-            <button class="btn-secondary" :disabled="!cart.length || busy" @click="submit('kitchen')"><x-icon name="chef" class="size-4" /> Mətbəxə göndər</button>
-            <button class="btn-primary col-span-2 py-3 text-base" :disabled="!cart.length || busy" @click="modal = 'pay'">
+            <button :class="$store.terminal.canPay ? 'btn-secondary' : 'btn-primary py-3 text-base'" :disabled="!cart.length || busy" @click="submit('kitchen')"><x-icon name="chef" class="size-4" /> Mətbəxə göndər</button>
+            <button x-show="$store.terminal.canPay" class="btn-primary col-span-2 py-3 text-base" :disabled="!cart.length || busy" @click="modal = 'pay'">
                 <x-icon name="cash" class="size-5" /> Ödəniş al · <span x-text="money(totals.total)"></span>
             </button>
         </div>
@@ -273,4 +287,5 @@
         </x-slot:footer>
     </x-modal>
 </div>
+<x-terminal-lock :state="$posData['terminal']" />
 </x-layouts.app>

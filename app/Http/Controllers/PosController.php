@@ -9,13 +9,14 @@ use App\Models\Order;
 use App\Models\PaymentType;
 use App\Models\StoreTable;
 use App\Services\OrderService;
+use App\Support\PosTerminal;
 use App\Support\Tenancy;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 class PosController extends Controller
 {
-    public function index(Tenancy $tenancy)
+    public function index(Tenancy $tenancy, PosTerminal $terminal)
     {
         $tenant = $tenancy->tenant();
 
@@ -47,6 +48,7 @@ class PosController extends Controller
                 'serviceCharge' => (float) $tenant->service_charge,
                 'currency' => $tenant->currency,
                 'deliveryTypes' => Order::DELIVERY_TYPES,
+                'terminal' => $terminal->state(),
                 'routes' => [
                     'store' => route('pos.store'),
                     'drafts' => route('pos.drafts'),
@@ -66,7 +68,7 @@ class PosController extends Controller
      *  - kitchen: sifariş mətbəxə göndərilir, ödəniş sonra (Orders ekranından)
      *  - pay: sifariş yaradılır, faktura kəsilir və mətbəxə göndərilir
      */
-    public function store(Request $request, OrderService $service)
+    public function store(Request $request, OrderService $service, PosTerminal $terminal)
     {
         $data = $request->validate([
             'action' => ['required', Rule::in(['draft', 'kitchen', 'pay'])],
@@ -86,6 +88,8 @@ class PosController extends Controller
             'draft_id' => ['nullable', 'integer'],
             'payment_type_id' => ['required_if:action,pay', 'nullable', Rule::exists('payment_types', 'id')->where('tenant_id', app(Tenancy::class)->id())],
         ]);
+
+        abort_if($data['action'] === 'pay' && ! $terminal->effectiveUser()?->hasScope('PAYMENTS'), 403, 'Ödəniş qəbul etmək icazəniz yoxdur. Sifarişi mətbəxə göndərin.');
 
         // Qaralamadan davam edilirsə, köhnə qaralamanı silirik
         if (! empty($data['draft_id'])) {

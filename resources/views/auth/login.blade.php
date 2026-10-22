@@ -24,6 +24,6 @@
         <a href="{{ route('register') }}" class="btn-secondary w-full py-3">Yeni biznes hesabı yarat</a>
     </div>
     @if (app()->isLocal())
-        <p class="mt-4 text-center text-xs text-zinc-500">Demo: demo@pos.test · kassir@pos.test · metbex@pos.test · super@pos.test — parol: <code>password</code></p>
+        <p class="mt-4 text-center text-xs text-zinc-500">Demo: demo@pos.test · kassir@pos.test · metbex@pos.test · super@pos.test — parol: <code>password</code><br>POS PIN: admin 1234 · kassir 1111 · ofisiant 2222 · aşpaz 3333</p>
     @endif
 </x-layouts.guest>

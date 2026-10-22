@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\PosTerminal;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -11,7 +12,8 @@ class RequireScope
 {
     public function handle(Request $request, Closure $next, string ...$scopes): Response
     {
-        $user = $request->user();
+        // Terminalda PIN ilə açmış işçinin icazələri keçərlidir; kilidli ekranda isə cihazın hesabı (yalnız baxış)
+        $user = app(PosTerminal::class)->effectiveUser() ?? $request->user();
 
         if ($scopes === ['ADMIN']) {
             abort_unless($user?->isAdmin(), 403, 'Bu bölmə yalnız admin üçündür.');

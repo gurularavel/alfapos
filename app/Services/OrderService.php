@@ -10,6 +10,7 @@ use App\Models\Order;
 use App\Models\RecipeItem;
 use App\Models\StockMovement;
 use App\Models\Tenant;
+use App\Support\PosTerminal;
 use App\Support\Tenancy;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -130,7 +131,7 @@ class OrderService
                 'discount_type' => $data['discount_type'] ?? null,
                 'discount_value' => $data['discount_value'] ?? 0,
                 'notes' => $data['notes'] ?? null,
-                'created_by' => auth()->id(),
+                'created_by' => app(PosTerminal::class)->effectiveId(),
             ]);
             $order->items()->createMany($lines);
 
@@ -163,7 +164,7 @@ class OrderService
                 'customer_id' => $customerId ?? $orders->first()->customer_id,
                 'payment_type_id' => $paymentTypeId,
                 'status' => 'paid',
-                'created_by' => auth()->id(),
+                'created_by' => app(PosTerminal::class)->effectiveId(),
             ]);
 
             foreach ($orders as $order) {
@@ -235,7 +236,7 @@ class OrderService
                 'quantity' => $sign * $qty,
                 'note' => ($sign < 0 ? 'Sifariş #' : 'Ləğv edilmiş sifariş #').$order->token_no,
                 'order_id' => $order->id,
-                'user_id' => auth()->id(),
+                'user_id' => app(PosTerminal::class)->effectiveId(),
             ]);
         }
     }

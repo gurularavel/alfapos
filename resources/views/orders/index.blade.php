@@ -1,6 +1,8 @@
 <x-layouts.app title="Sifarişlər">
 <div x-data="{ ...poller(@js(route('orders.board')), 8000), pay: null, paymentTypeId: @js($paymentTypes->first()?->id) }">
     <x-page-header title="Sifarişlər" subtitle="Aktiv və ödənilməmiş sifarişlər. Hər 8 saniyədən bir yenilənir.">
+        <template x-if="$store.terminal.active && $store.terminal.operator"><span class="badge-green py-1.5 text-sm" x-text="$store.terminal.operator.name + ' · ' + $store.terminal.operator.role"></span></template>
+        <a href="{{ route('pos') }}" class="btn-secondary"><x-icon name="pos" class="size-4" /> POS</a>
         <button class="btn-secondary" @click="load()"><x-icon name="refresh" class="size-4" /> Yenilə</button>
     </x-page-header>
 
@@ -27,7 +29,7 @@
                                     <span class="flex size-8 items-center justify-center rounded-full bg-ink text-xs font-black text-white" x-text="o.token_no"></span>
                                     <div class="text-xs leading-tight">
                                         <p class="font-bold" x-text="o.delivery_type + (o.source === 'qr' ? ' · QR' : '')"></p>
-                                        <p class="text-zinc-500" x-text="o.time + (o.customer ? ' · ' + o.customer : '')"></p>
+                                        <p class="text-zinc-500" x-text="o.time + (o.waiter ? ' · ' + o.waiter : '') + (o.customer ? ' · ' + o.customer : '')"></p>
                                     </div>
                                 </div>
                                 <div class="flex flex-col items-end gap-1">
@@ -59,7 +61,7 @@
                     </template>
                 </div>
 
-                <div class="border-t border-zinc-100 p-3" x-show="g.unpaid_ids.length">
+                <div class="border-t border-zinc-100 p-3" x-show="g.unpaid_ids.length && $store.terminal.canPay">
                     <button class="btn-primary w-full" @click="pay = g"><x-icon name="cash" class="size-4" /> Hesabı bağla · <span x-text="money(g.due)"></span></button>
                 </div>
             </div>
@@ -77,8 +79,9 @@
         </div>
         <x-slot:footer>
             <button class="btn-secondary" @click="pay = null">Bağla</button>
-            <button class="btn-primary" @click="post(@js(route('orders.pay')), { order_ids: pay.unpaid_ids, payment_type_id: paymentTypeId }).then(r => { if (r) { pay = null; printUrl(@js(route('invoices.receipt', '__ID__')).replace('__ID__', r.invoice_id)) } })">Ödənişi təsdiqlə</button>
+            <button class="btn-primary" @click="post(@js(route('orders.pay')), { order_ids: pay.unpaid_ids, payment_type_id: paymentTypeId }).then(r => { if (r) { pay = null; $store.terminal.afterOrder(); printUrl(@js(route('invoices.receipt', '__ID__')).replace('__ID__', r.invoice_id)) } })">Ödənişi təsdiqlə</button>
         </x-slot:footer>
     </x-modal>
 </div>
+<x-terminal-lock :state="$terminal" />
 </x-layouts.app>

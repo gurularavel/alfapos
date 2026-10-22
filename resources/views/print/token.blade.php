@@ -4,7 +4,7 @@
         <div class="muted">MƏTBƏX ÇEKİ (KOT)</div>
         <div class="big">#{{ $order->token_no }}</div>
         <div>{{ \App\Models\Order::DELIVERY_TYPES[$order->delivery_type] }}@if ($order->table) · {{ $order->table->label() }}@endif</div>
-        <div class="muted">{{ $order->created_at->format('d.m.Y H:i') }}</div>
+        <div class="muted">{{ $order->created_at->format('d.m.Y H:i') }}@if ($order->creator) · {{ $order->creator->name }}@endif</div>
     </div>
     <hr>
     <table>

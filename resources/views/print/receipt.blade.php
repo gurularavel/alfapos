@@ -14,6 +14,7 @@
         <tr><td>Tarix:</td><td class="r">{{ $invoice->created_at->format('d.m.Y H:i') }}</td></tr>
         <tr><td>Token:</td><td class="r">{{ $invoice->orders->pluck('token_no')->map(fn ($t) => '#'.$t)->implode(', ') }}</td></tr>
         @if ($table = $invoice->orders->first()?->table)<tr><td>Masa:</td><td class="r">{{ $table->label() }}</td></tr>@endif
+        @if ($waiter = $invoice->orders->first()?->creator)<tr><td>Ofisiant:</td><td class="r">{{ $waiter->name }}</td></tr>@endif
         @if ($invoice->creator)<tr><td>Kassir:</td><td class="r">{{ $invoice->creator->name }}</td></tr>@endif
         @if ($invoice->customer && $tenant->printSetting('show_customer_details', true))
             <tr><td>Müştəri:</td><td class="r">{{ $invoice->customer->name }}<br>{{ $invoice->customer->phone }}</td></tr>

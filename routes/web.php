@@ -17,6 +17,7 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ReservationController;
 use App\Http\Controllers\Settings;
 use App\Http\Controllers\SubscriptionController;
+use App\Http\Controllers\TerminalController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -58,6 +59,14 @@ Route::middleware('auth')->group(function () {
             Route::get('/pos/qr-orders', [PosController::class, 'qrOrders'])->name('pos.qr');
             Route::get('/pos/customers', [PosController::class, 'searchCustomers'])->name('pos.customers');
             Route::post('/pos/customers', [PosController::class, 'storeCustomer'])->name('pos.customers.store');
+        });
+
+        Route::prefix('pos/terminal')->name('pos.terminal.')->middleware('scope:POS,ORDERS')->group(function () {
+            Route::post('/enter', [TerminalController::class, 'enter'])->name('enter');
+            Route::post('/exit', [TerminalController::class, 'exit'])->middleware('throttle:10,1')->name('exit');
+            Route::post('/unlock', [TerminalController::class, 'unlock'])->middleware('throttle:15,1')->name('unlock');
+            Route::post('/lock', [TerminalController::class, 'lock'])->name('lock');
+            Route::get('/ping', [TerminalController::class, 'ping'])->name('ping');
         });
 
         Route::middleware('scope:ORDERS,POS')->group(function () {
@@ -110,6 +119,9 @@ Route::middleware('auth')->group(function () {
             Route::put('/store', [Settings\StoreController::class, 'update'])->name('store.update');
             Route::get('/print', [Settings\StoreController::class, 'editPrint'])->name('print');
             Route::put('/print', [Settings\StoreController::class, 'updatePrint'])->name('print.update');
+            Route::get('/terminal', [Settings\TerminalController::class, 'edit'])->name('terminal');
+            Route::put('/terminal', [Settings\TerminalController::class, 'update'])->name('terminal.update');
+            Route::delete('/terminal/images/{index}', [Settings\TerminalController::class, 'destroyImage'])->whereNumber('index')->name('terminal.images.destroy');
             Route::resource('tables', Settings\TableController::class)->only(['index', 'store', 'update', 'destroy']);
             Route::get('/tables/{table}/qr', [Settings\TableController::class, 'qr'])->name('tables.qr');
             Route::resource('categories', Settings\CategoryController::class)->only(['index', 'store', 'update', 'destroy']);

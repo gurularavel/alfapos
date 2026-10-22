@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToTenant;
+use App\Support\PosTerminal;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
@@ -21,7 +22,7 @@ class AuditLog extends Model
     public static function record(string $action, ?Model $subject = null, array $data = []): self
     {
         return static::create([
-            'user_id' => auth()->id(),
+            'user_id' => app(PosTerminal::class)->effectiveId(),
             'action' => $action,
             'subject_type' => $subject?->getMorphClass(),
             'subject_id' => $subject?->getKey(),

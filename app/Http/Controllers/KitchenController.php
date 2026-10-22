@@ -16,7 +16,7 @@ class KitchenController extends Controller
 
     public function feed()
     {
-        return Order::with(['items' => fn ($q) => $q->whereIn('status', ['created', 'preparing', 'ready']), 'table', 'customer:id,name'])
+        return Order::with(['items' => fn ($q) => $q->whereIn('status', ['created', 'preparing', 'ready']), 'table', 'customer:id,name', 'creator:id,name'])
             ->whereIn('status', ['created', 'preparing'])
             ->whereHas('items', fn ($q) => $q->whereIn('status', ['created', 'preparing']))
             ->orderBy('created_at')->get()
@@ -25,6 +25,7 @@ class KitchenController extends Controller
                 'token_no' => $o->token_no,
                 'title' => $o->table?->label() ?? ($o->customer?->name ?? Order::DELIVERY_TYPES[$o->delivery_type]),
                 'delivery_type' => Order::DELIVERY_TYPES[$o->delivery_type],
+                'waiter' => $o->creator?->name,
                 'minutes' => (int) $o->created_at->diffInMinutes(now()),
                 'notes' => $o->notes,
                 'items' => $o->items->map(fn (OrderItem $i) => [

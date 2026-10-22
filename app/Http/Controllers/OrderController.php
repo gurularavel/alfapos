@@ -6,16 +6,18 @@ use App\Models\AuditLog;
 use App\Models\Order;
 use App\Models\PaymentType;
 use App\Services\OrderService;
+use App\Support\PosTerminal;
 use App\Support\Tenancy;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 class OrderController extends Controller
 {
-    public function index()
+    public function index(PosTerminal $terminal)
     {
         return view('orders.index', [
             'paymentTypes' => PaymentType::where('is_active', true)->get(['id', 'title']),
+            'terminal' => $terminal->state(),
         ]);
     }
 
@@ -24,7 +26,7 @@ class OrderController extends Controller
     {
         $tenant = $tenancy->tenant();
 
-        $orders = Order::with(['items', 'table', 'customer:id,name,phone'])
+        $orders = Order::with(['items', 'table', 'customer:id,name,phone', 'creator:id,name'])
             ->where(fn ($q) => $q->active()->orWhere(fn ($w) => $w->where('payment_status', 'pending')->where('status', 'completed')))
             ->where('status', '!=', 'cancelled')
             ->orderBy('created_at')->get();
@@ -53,6 +55,7 @@ class OrderController extends Controller
                         'source' => $o->source,
                         'delivery_type' => Order::DELIVERY_TYPES[$o->delivery_type],
                         'customer' => $o->customer?->name,
+                        'waiter' => $o->creator?->name,
                         'notes' => $o->notes,
                         'items' => $o->items->map(fn ($i) => [
                             'title' => $i->title, 'variant' => $i->variant_title, 'qty' => $i->quantity,
@@ -63,13 +66,14 @@ class OrderController extends Controller
             })->values();
     }
 
-    public function pay(Request $request, OrderService $service)
+    public function pay(Request $request, OrderService $service, PosTerminal $terminal)
     {
         $data = $request->validate([
             'order_ids' => ['required', 'array', 'min:1'],
             'order_ids.*' => ['integer'],
             'payment_type_id' => ['required', Rule::exists('payment_types', 'id')->where('tenant_id', app(Tenancy::class)->id())],
         ]);
+        abort_unless($terminal->effectiveUser()?->hasScope('PAYMENTS'), 403, 'Ödəniş qəbul etmək icazəniz yoxdur.');
 
         $orders = Order::with('items')->whereIn('id', $data['order_ids'])->where('payment_status', 'pending')
             ->where('status', '!=', 'cancelled')->get();
@@ -104,6 +108,6 @@ class OrderController extends Controller
     /** Mətbəx üçün token / KOT çapı. */
     public function token(Order $order, Tenancy $tenancy)
     {
-        return view('print.token', ['order' => $order->load('items', 'table'), 'tenant' => $tenancy->tenant()]);
+        return view('print.token', ['order' => $order->load('items', 'table', 'creator'), 'tenant' => $tenancy->tenant()]);
     }
 }

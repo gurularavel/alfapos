@@ -1,6 +1,7 @@
 import Alpine from 'alpinejs';
 import collapse from '@alpinejs/collapse';
 import pos from './pos';
+import terminal from './terminal';
 
 Alpine.plugin(collapse);
 
@@ -19,6 +20,7 @@ window.api = async (url, { method = 'GET', body } = {}) => {
         body: body ? JSON.stringify(body) : undefined,
     });
     if (res.status === 204) return null;
+    if (res.status === 423) window.dispatchEvent(new CustomEvent('terminal-locked'));
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
         const first = data.errors ? Object.values(data.errors)[0][0] : null;
@@ -75,6 +77,9 @@ window.poller = poller;
 Alpine.data('poller', poller);
 
 Alpine.data('pos', pos);
+
+// POS və Sifarişlər səhifələri terminal vəziyyətini window.TERMINAL_STATE ilə ötürür
+if (window.TERMINAL_STATE) Alpine.store('terminal', terminal(window.TERMINAL_STATE));
 
 window.Alpine = Alpine;
 Alpine.start();

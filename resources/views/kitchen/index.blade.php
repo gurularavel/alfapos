@@ -12,7 +12,7 @@
                 <div class="flex items-center justify-between bg-zinc-50 px-4 py-3">
                     <div>
                         <p class="font-extrabold" x-text="o.title"></p>
-                        <p class="text-xs text-zinc-500" x-text="o.delivery_type"></p>
+                        <p class="text-xs text-zinc-500" x-text="o.delivery_type + (o.waiter ? ' · ' + o.waiter : '')"></p>
                     </div>
                     <div class="text-right">
                         <p class="text-lg font-black" x-text="'#' + o.token_no"></p>
