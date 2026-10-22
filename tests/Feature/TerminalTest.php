@@ -78,6 +78,23 @@ class TerminalTest extends TestCase
                 && collect($d['tables'])->every(fn ($t) => isset($t['title'], $t['seats']) && array_key_exists('floor', $t)));
     }
 
+    public function test_print_settings_preview_uses_unsaved_values_and_writes_nothing(): void
+    {
+        $orders = \App\Models\Order::count();
+        $invoices = \App\Models\Invoice::count();
+
+        $this->get(route('settings.print'))->assertOk()->assertSee('Nümunəni çap et');
+        $this->get(route('settings.print.preview', ['type' => 'receipt', 'paper_width' => 58, 'header' => 'TEST BAŞLIQ', 'footer' => 'Sağ olun', 'show_store_details' => 1, 'show_customer_details' => 1, 'show_notes' => 1]))
+            ->assertOk()->assertSee('TEST BAŞLIQ')->assertSee('Sağ olun')->assertSee('58mm')->assertSee('Elvin Məmmədov')
+            ->assertSee('NÜMUNƏ-0001')->assertDontSee('window.print(), 300');
+        $this->get(route('settings.print.preview', ['type' => 'kot', 'paper_width' => 80, 'kot_show_prices' => 0]))
+            ->assertOk()->assertSee('MƏTBƏX ÇEKİ')->assertSee('#27')->assertSee('Şəkərsiz');
+        $this->get(route('settings.print.preview', ['type' => 'receipt', 'print' => 1]))->assertOk()->assertSee('window.print(), 300', false);
+
+        $this->assertSame([$orders, $invoices], [\App\Models\Order::count(), \App\Models\Invoice::count()]);
+        $this->assertNotSame('TEST BAŞLIQ', $this->admin->tenant->fresh()->printSetting('header'));
+    }
+
     public function test_chef_pin_cannot_unlock_pos(): void
     {
         $this->postJson(route('pos.terminal.enter'))->assertOk();

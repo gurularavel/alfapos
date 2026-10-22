@@ -1,4 +1,4 @@
-<x-layouts.print :title="'Qəbz '.$invoice->number" :width="$tenant->printSetting('paper_width', 80)">
+<x-layouts.print :title="'Qəbz '.$invoice->number" :width="$tenant->printSetting('paper_width', 80)" :preview="$preview ?? false" :autoprint="! ($preview ?? false)">
     @if ($tenant->printSetting('show_store_details', true))
         <div class="c">
             @if ($tenant->logo)<img src="{{ Storage::disk('public')->url($tenant->logo) }}" alt="" style="max-height:40px"><br>@endif

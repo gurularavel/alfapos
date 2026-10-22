@@ -1,4 +1,4 @@
-<x-layouts.print :title="'Token #'.$order->token_no" :width="$tenant->printSetting('paper_width', 80)">
+<x-layouts.print :title="'Token #'.$order->token_no" :width="$tenant->printSetting('paper_width', 80)" :preview="$preview ?? false" :autoprint="! ($preview ?? false)">
     <div class="c">
         <div class="b">{{ $tenant->name }}</div>
         <div class="muted">MƏTBƏX ÇEKİ (KOT)</div>

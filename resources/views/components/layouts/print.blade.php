@@ -1,4 +1,4 @@
-@props(['title' => 'Çap', 'width' => 80])
+@props(['title' => 'Çap', 'width' => 80, 'autoprint' => true, 'preview' => false])
 <!DOCTYPE html>
 <html lang="az">
 <head>
@@ -21,8 +21,8 @@
     </style>
 </head>
 <body>
-<div class="actions"><button onclick="window.print()">Çap et</button> <button onclick="window.close()" style="background:#777">Bağla</button></div>
+@unless ($preview)<div class="actions"><button onclick="window.print()">Çap et</button> <button onclick="window.close()" style="background:#777">Bağla</button></div>@endunless
 <div class="paper">{{ $slot }}</div>
-<script>window.addEventListener('load', () => setTimeout(() => window.print(), 300));</script>
+@if ($autoprint && ! request()->boolean('noprint'))<script>window.addEventListener('load', () => setTimeout(() => window.print(), 300));</script>@endif
 </body>
 </html>
