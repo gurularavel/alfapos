@@ -69,7 +69,7 @@
     </div>
 </div>
 
-<div class="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+<div class="mt-4 grid gap-4 md:grid-cols-2 2xl:grid-cols-4">
     <div class="card card-pad">
         <h2 class="mb-3 font-extrabold">Top məhsullar <span class="text-xs font-normal text-zinc-500">bu gün</span></h2>
         @forelse ($topItems as $i => $row)
@@ -77,6 +77,28 @@
                 <span class="flex size-6 items-center justify-center rounded-full bg-brand-50 text-xs font-bold text-brand-700">{{ $i + 1 }}</span>
                 <span class="flex-1 truncate font-semibold">{{ $row->title }}</span>
                 <span class="text-zinc-500">{{ $row->qty }} əd.</span>
+            </div>
+        @empty
+            <p class="text-sm text-zinc-500">Bu gün satış yoxdur.</p>
+        @endforelse
+    </div>
+
+    <div class="card card-pad">
+        <div class="mb-3 flex items-center justify-between">
+            <h2 class="font-extrabold">Terminallar üzrə satış <span class="text-xs font-normal text-zinc-500">bu gün</span></h2>
+            <a href="{{ route('reports.show', ['sales-by-terminal', 'from' => today()->toDateString(), 'to' => today()->toDateString()]) }}" class="text-xs font-semibold text-brand-700 hover:underline">Hesabat →</a>
+        </div>
+        @php($terminalTotal = max(1, (float) $terminalSales->sum('total')))
+        @forelse ($terminalSales as $row)
+            <div class="mb-2.5 text-sm">
+                <div class="mb-1 flex justify-between gap-2">
+                    <span class="truncate">
+                        <span @class(['font-semibold', 'text-zinc-500' => ! $row->terminal_id])>{{ $row->name }}</span>
+                        @if ($branchCount > 1 && $row->branch)<span class="text-xs text-zinc-400">· {{ $row->branch }}</span>@endif
+                    </span>
+                    <span class="shrink-0 tabular-nums"><span class="text-xs text-zinc-500">{{ $row->checks }} çek ·</span> {{ money($row->total) }}</span>
+                </div>
+                <div class="h-2 rounded-full bg-zinc-100"><div class="h-2 rounded-full {{ $row->terminal_id ? 'bg-violet-500' : 'bg-zinc-300' }}" style="width: {{ $row->total / $terminalTotal * 100 }}%"></div></div>
             </div>
         @empty
             <p class="text-sm text-zinc-500">Bu gün satış yoxdur.</p>

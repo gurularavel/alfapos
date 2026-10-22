@@ -125,6 +125,8 @@ class BranchTerminalTest extends TestCase
         $this->get(route('reports.show', ['sales-summary', 'terminal_id' => $this->bar->id]))->assertOk()
             ->assertViewHas('rows', fn ($rows) => $rows[0] === ['Çek sayı', 2]);
         $this->get(route('reports.show', 'sales-by-branch'))->assertOk()->assertSee('Əsas filial');
+        $this->get(route('dashboard'))->assertOk()->assertSee('Terminallar üzrə satış')
+            ->assertViewHas('terminalSales', fn ($rows) => $rows->firstWhere('name', 'Bar')?->checks === 2 && $rows->firstWhere('name', 'Kassa 1')?->checks === 1);
         $this->get(route('reports.show', 'staff-by-terminal'))->assertOk()->assertSee('Demo Admin · Bar');
         $this->get(route('invoices.index', ['terminal_id' => $this->kassa->id]))->assertOk()
             ->assertViewHas('invoices', fn ($p) => $p->total() === 1 + Invoice::where('terminal_id', $this->kassa->id)->count() - 1);

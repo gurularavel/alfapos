@@ -45,6 +45,14 @@ class DashboardController extends Controller
         $paymentMix = $paid($today)->join('payment_types', 'payment_types.id', '=', 'invoices.payment_type_id')
             ->groupBy('payment_types.title')->select('payment_types.title', DB::raw('SUM(invoices.total) as total'))->pluck('total', 'title');
 
+        // Bu gün terminallar üzrə satış (Hesabatlar → Terminallar üzrə satış ilə eyni qayda)
+        $terminalSales = $paid($today)
+            ->leftJoin('terminals', 'terminals.id', '=', 'invoices.terminal_id')
+            ->leftJoin('branches', 'branches.id', '=', 'invoices.branch_id')
+            ->groupBy('invoices.terminal_id', 'terminals.name', 'branches.name')
+            ->selectRaw("invoices.terminal_id, COALESCE(terminals.name, 'Terminalsız (panel)') as name, branches.name as branch, COUNT(*) as checks, SUM(invoices.total) as total")
+            ->orderByDesc('total')->get();
+
         $todayInvoices = $paid($today);
 
         return view('dashboard', [
@@ -57,6 +65,8 @@ class DashboardController extends Controller
             'topItems' => $topItems,
             'orderTypes' => $orderTypes,
             'paymentMix' => $paymentMix,
+            'terminalSales' => $terminalSales,
+            'branchCount' => \App\Models\Branch::count(),
             'lowStock' => InventoryItem::whereColumn('quantity', '<=', 'min_quantity')->orderBy('quantity')->limit(5)->get(),
             'feedbacks' => Feedback::latest()->limit(3)->get(),
             'reservations' => Reservation::with('table')->whereDate('reserved_at', $today)->where('status', 'booked')->orderBy('reserved_at')->get(),
