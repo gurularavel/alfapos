@@ -37,6 +37,7 @@ export default (data) => ({
     board: {},
     mapFloor: null,
     tableSheet: null, // { table, group, paying }
+    transferFrom: null, // köçürülən masa (zal planında hədəf seçilir)
 
     // müştəri ekranı (bu cihazda seçilmiş kassa ekranı)
     displayId: null,
@@ -129,6 +130,7 @@ export default (data) => ({
 
     /** Boş masa → POS; dolu masa → əməliyyat paneli (əlavə sifariş / hesab çeki / hesabı bağla). */
     tapTable(t) {
+        if (this.transferFrom) return this.transferTo(t);
         const group = this.board[`t${t.id}`];
         if (group?.unpaid_ids.length) {
             this.tableSheet = { table: t, group, paying: false };
@@ -143,6 +145,27 @@ export default (data) => ({
         this.view = null;
         this.tableSheet = null;
         toast(`${t.label} seçildi`);
+    },
+
+    /** Masanı köçür: panel bağlanır, zal planında hədəf masa seçilir (dolu masa → hesablar birləşir). */
+    startTransfer() {
+        this.transferFrom = this.tableSheet.table;
+        this.tableSheet = null;
+    },
+
+    async transferTo(t) {
+        const from = this.transferFrom;
+        if (t.id === from.id) return;
+        if (this.tableState(t) && !confirm(`${t.title} masasında açıq hesab var. Hesablar birləşdirilsin?`)) return;
+        try {
+            const r = await api(this.routes.transfer, { method: 'POST', body: { from_table_id: from.id, to_table_id: t.id } });
+            toast(r.message);
+            this.transferFrom = null;
+            if (String(this.tableId) === String(from.id)) this.tableId = String(t.id);
+            await this.loadBoard();
+        } catch (e) {
+            toast(e.message, 'error');
+        }
     },
 
     printBill() {
@@ -324,7 +347,7 @@ export default (data) => ({
 
     resetForLock() {
         this.clear();
-        Object.assign(this, { picker: null, modal: null, search: '', category: null, customerQuery: '', customerResults: [], draftReference: '', view: null });
+        Object.assign(this, { picker: null, modal: null, search: '', category: null, customerQuery: '', customerResults: [], draftReference: '', view: null, tableSheet: null, transferFrom: null });
     },
 
     /** Servis haqqı bu sifarişə aiddirmi (ayara və xidmət növünə görə) — kassir onu ləğv edə bilər. */

@@ -77,6 +77,57 @@ class FloorPlanTest extends TestCase
         $this->assertTrue($group['orders'][1]['is_addition']);
     }
 
+    public function test_move_table_to_free_table(): void
+    {
+        $a = $this->order('Plov');
+        $b = $this->order('Ayran');
+        $target = StoreTable::where('title', 'Masa 1')->firstOrFail();
+
+        $this->postJson(route('orders.transfer'), ['from_table_id' => $this->table->id, 'to_table_id' => $target->id])
+            ->assertOk()->assertJsonPath('message', 'Masa 5 → Masa 1 köçürüldü.');
+
+        $this->assertSame([$target->id, $target->id], Order::whereIn('id', [$a, $b])->pluck('store_table_id')->all());
+        $this->assertFalse(Order::find($a)->is_addition);
+        $this->assertTrue(Order::find($b)->is_addition);
+        $board = collect($this->getJson(route('orders.board'))->json());
+        $this->assertNull($board->firstWhere('key', 't'.$this->table->id));
+        $this->assertCount(2, $board->firstWhere('key', 't'.$target->id)['unpaid_ids']);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'table.transfer']);
+    }
+
+    public function test_move_to_busy_table_merges_bills_and_deposit_follows_target(): void
+    {
+        $vip = StoreTable::where('title', 'VIP')->firstOrFail();
+        $vip->update(['deposit' => 100]);
+        $this->postJson(route('pos.store'), [
+            'action' => 'kitchen', 'delivery_type' => 'dinein', 'store_table_id' => $vip->id,
+            'cart' => [['menu_item_id' => MenuItem::where('title', 'Plov')->value('id'), 'quantity' => 1]],
+        ])->assertOk();
+        $moved = $this->order('Dolma');
+
+        $this->postJson(route('orders.transfer'), ['from_table_id' => $this->table->id, 'to_table_id' => $vip->id])
+            ->assertOk()->assertJsonPath('message', 'Masa 5 → VIP: hesablar birləşdirildi.');
+
+        $this->assertTrue(Order::find($moved)->is_addition);
+        $group = collect($this->getJson(route('orders.board'))->json())->firstWhere('key', 't'.$vip->id);
+        $this->assertCount(2, $group['unpaid_ids']);
+        $this->assertEquals(100.00, $group['due']); // depozit hədəf masanınkıdır
+    }
+
+    public function test_transfer_validation(): void
+    {
+        $this->postJson(route('orders.transfer'), ['from_table_id' => $this->table->id, 'to_table_id' => $this->table->id])->assertUnprocessable();
+        $empty = StoreTable::where('title', 'Masa 2')->firstOrFail();
+        $this->postJson(route('orders.transfer'), ['from_table_id' => StoreTable::where('title', 'Masa 3')->value('id'), 'to_table_id' => $empty->id])->assertUnprocessable();
+
+        $other = app(TenantProvisioner::class)->create('Başqa', 'O', 'q@pos.test', 'password');
+        app(Tenancy::class)->set($other->tenant);
+        $foreign = StoreTable::create(['title' => 'Y', 'seating_capacity' => 2]);
+        app(Tenancy::class)->set($this->admin->tenant);
+        $this->order('Plov');
+        $this->postJson(route('orders.transfer'), ['from_table_id' => $this->table->id, 'to_table_id' => $foreign->id])->assertUnprocessable();
+    }
+
     public function test_pre_bill_and_closing_the_table_bill(): void
     {
         $a = $this->order('Plov');

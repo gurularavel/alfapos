@@ -81,6 +81,7 @@ Route::middleware('auth')->group(function () {
             Route::get('/orders/board', [OrderController::class, 'board'])->name('orders.board');
             Route::post('/orders/pay', [OrderController::class, 'pay'])->name('orders.pay');
             Route::get('/orders/bill', [OrderController::class, 'bill'])->name('orders.bill');
+            Route::post('/orders/transfer', [OrderController::class, 'transfer'])->name('orders.transfer');
             Route::post('/orders/{order}/status', [OrderController::class, 'status'])->name('orders.status');
             Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
             Route::get('/orders/{order}/token', [OrderController::class, 'token'])->name('orders.token');

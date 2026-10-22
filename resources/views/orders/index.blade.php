@@ -62,6 +62,15 @@
                     </template>
                 </div>
 
+                <div class="flex items-center gap-2 border-t border-zinc-100 px-3 py-2" x-show="g.is_table && g.unpaid_ids.length">
+                    <span class="text-sm text-zinc-500">Köçür:</span>
+                    <select class="input py-1.5 text-sm" @change="const s = $event.target, to = s.value, name = s.selectedOptions[0]?.text; s.value = ''; if (to && confirm(g.title + ' → ' + name + ' köçürülsün? Dolu masadırsa hesablar birləşəcək.')) post(@js(route('orders.transfer')), { from_table_id: Number(g.key.slice(1)), to_table_id: Number(to) })">
+                        <option value="">Masa seçin…</option>
+                        @foreach ($tables as $t)
+                            <option value="{{ $t->id }}" :disabled="g.key === 't{{ $t->id }}'">{{ $t->title }}{{ $t->floor ? ' · '.$t->floor : '' }}</option>
+                        @endforeach
+                    </select>
+                </div>
                 <div class="flex items-center justify-between border-t border-amber-100 bg-amber-50 px-4 py-2 text-sm text-amber-800" x-show="g.deposit > 0 && g.unpaid_ids.length">
                     <span x-text="'Depozit (min.) ' + money(g.deposit) + ' · sifariş ' + money(g.orders_total)"></span>
                     <span class="font-bold" x-text="g.deposit_topup > 0 ? '+' + money(g.deposit_topup) : 'qarşılanıb'"></span>

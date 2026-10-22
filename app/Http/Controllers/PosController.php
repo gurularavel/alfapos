@@ -75,6 +75,7 @@ class PosController extends Controller
                     'board' => route('orders.board'),
                     'pay' => route('orders.pay'),
                     'bill' => route('orders.bill'),
+                    'transfer' => route('orders.transfer'),
                 ],
             ],
         ]);

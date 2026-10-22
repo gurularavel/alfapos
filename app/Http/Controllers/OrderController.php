@@ -11,6 +11,7 @@ use App\Services\OrderService;
 use App\Support\PosTerminal;
 use App\Support\Tenancy;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class OrderController extends Controller
@@ -20,6 +21,7 @@ class OrderController extends Controller
         return view('orders.index', [
             'paymentTypes' => PaymentType::where('is_active', true)->get(['id', 'title']),
             'terminal' => $terminal->state(),
+            'tables' => StoreTable::orderBy('floor')->orderByRaw('LENGTH(title)')->orderBy('title')->get(['id', 'title', 'floor']),
         ]);
     }
 
@@ -113,6 +115,46 @@ class OrderController extends Controller
         $service->cancel($order, $request->input('reason'));
 
         return response()->json(['message' => 'Sifariş ləğv edildi.']);
+    }
+
+    /**
+     * Masanı köçürmək: masanın ödənilməmiş sifarişləri başqa masaya keçir.
+     * Hədəf masada açıq hesab varsa hesablar birləşir (bir qəbzlə bağlanacaq).
+     */
+    public function transfer(Request $request, Tenancy $tenancy)
+    {
+        $tid = $tenancy->id();
+        $data = $request->validate([
+            'from_table_id' => ['required', Rule::exists('store_tables', 'id')->where('tenant_id', $tid)],
+            'to_table_id' => ['required', 'different:from_table_id', Rule::exists('store_tables', 'id')->where('tenant_id', $tid)],
+            'order_ids' => ['nullable', 'array'],
+            'order_ids.*' => ['integer'],
+        ], ['to_table_id.different' => 'Eyni masaya köçürmək olmaz.']);
+
+        $orders = Order::where('store_table_id', $data['from_table_id'])->where('payment_status', 'pending')
+            ->whereNotIn('status', ['draft', 'cancelled'])
+            ->when($data['order_ids'] ?? null, fn ($q, $ids) => $q->whereIn('id', $ids))
+            ->orderBy('created_at')->get();
+        abort_if($orders->isEmpty(), 422, 'Köçürüləcək açıq sifariş yoxdur.');
+
+        $from = StoreTable::find($data['from_table_id']);
+        $to = StoreTable::find($data['to_table_id']);
+        $merged = Order::where('store_table_id', $to->id)->where('payment_status', 'pending')->whereNotIn('status', ['draft', 'cancelled'])->exists();
+
+        DB::transaction(function () use ($orders, $to, $merged) {
+            foreach ($orders as $order) {
+                // Birləşmədə gələn sifarişlər hədəf masanın hesabına "əlavə" kimi düşür
+                $order->update(['store_table_id' => $to->id, 'delivery_type' => 'dinein', 'is_addition' => $merged || $order->is_addition]);
+                Realtime::order($order, 'updated');
+            }
+        });
+
+        AuditLog::record('table.transfer', $to, ['from' => $from->title, 'to' => $to->title, 'orders' => $orders->pluck('token_no'), 'merged' => $merged]);
+
+        return response()->json([
+            'message' => $merged ? "{$from->title} → {$to->title}: hesablar birləşdirildi." : "{$from->title} → {$to->title} köçürüldü.",
+            'to_table_id' => $to->id,
+        ]);
     }
 
     /** Hesab çeki (pre-bill): masanın ödənilməmiş sifarişləri — müştəri ödəməzdən əvvəl baxır. */

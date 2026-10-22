@@ -324,12 +324,16 @@
             <span class="flex items-center gap-1.5"><span class="size-4 rounded bg-brand-500"></span> Hazır sifariş var</span>
             <span class="flex items-center gap-1.5"><span class="badge-amber">D</span> Depozitli kabinet</span>
         </div>
+        <div x-show="transferFrom" x-cloak class="mx-3 mt-3 flex items-center justify-between gap-3 rounded-2xl bg-brand-600 px-5 py-4 text-white sm:mx-5">
+            <p class="text-lg font-bold" x-text="(transferFrom?.title ?? '') + ' köçürülür — hədəf masaya toxunun (dolu masa seçilsə hesablar birləşir)'"></p>
+            <button type="button" class="rounded-xl bg-white/15 px-5 py-3 font-bold active:bg-white/30" @click="transferFrom = null">Ləğv et</button>
+        </div>
         {{-- Zal planı (Ayarlar → Masalar → Zal planı). Boş masa → POS; dolu masa → əməliyyat paneli --}}
         <div class="relative min-h-0 flex-1 p-3 sm:p-5">
             <div class="relative h-full w-full overflow-hidden rounded-3xl bg-white ring-1 ring-zinc-200">
                 <template x-for="t in mapTables" :key="t.id">
                     <button type="button" @click="tapTable(t)" class="absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center rounded-2xl p-2 transition select-none active:scale-95"
-                            :class="String(tableId) === String(t.id) && deliveryType === 'dinein' ? 'bg-brand-50 ring-4 ring-brand-400' : ''"
+                            :class="transferFrom?.id === t.id ? 'bg-zinc-100 opacity-50 ring-4 ring-zinc-400' : (String(tableId) === String(t.id) && deliveryType === 'dinein' ? 'bg-brand-50 ring-4 ring-brand-400' : '')"
                             :style="`left: ${t.x}%; top: ${t.y}%`">
                         <span x-show="t.deposit > 0" class="badge-amber absolute -top-1 -left-1" x-text="'D ' + money(t.deposit)"></span>
                         <span x-show="tableState(t)?.ready" class="badge-green absolute -top-1 -right-1">Hazır</span>
@@ -369,6 +373,7 @@
                     <div x-show="!tableSheet.paying" class="grid grid-cols-2 gap-3 border-t border-zinc-100 p-4">
                         <button type="button" class="btn-secondary py-4 text-base" @click="pickTable(tableSheet.table)"><x-icon name="plus" class="size-5" /> Əlavə sifariş</button>
                         <button type="button" class="btn-secondary py-4 text-base" @click="printBill()"><x-icon name="printer" class="size-5" /> Hesab çeki</button>
+                        <button type="button" class="btn-secondary col-span-2 py-4 text-base" @click="startTransfer()"><x-icon name="arrow-right" class="size-5" /> Masanı köçür / birləşdir</button>
                         <button type="button" x-show="$store.terminal.canPay" class="btn-primary col-span-2 py-5 text-lg" @click="tableSheet.paying = true"><x-icon name="cash" class="size-6" /> Hesabı bağla · <span x-text="money(tableSheet.group.due)"></span></button>
                         <p x-show="!$store.terminal.canPay" class="col-span-2 text-center text-sm text-zinc-500">Hesabı kassir bağlayır — "Hesab çeki"ni müştəriyə aparın.</p>
                     </div>
