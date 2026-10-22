@@ -50,7 +50,15 @@ export default (data) => ({
         const terminal = Alpine.store('terminal');
         if (terminal?.active && terminal.locked) this.resetForLock();
         this.refreshQrCount();
-        setInterval(() => this.refreshQrCount(), 20000);
+        // Canlı bağlantı varsa QR sifarişlər siqnalla gəlir; yoxdursa 20 saniyədə bir yoxlanılır
+        setInterval(() => !Alpine.store('rt').connected && this.refreshQrCount(), 20000);
+        window.addEventListener('rt:order', ({ detail }) => {
+            if (detail.source === 'qr' && detail.type === 'created') {
+                this.refreshQrCount();
+                beep();
+                toast(`Yeni QR sifariş #${detail.token_no}`);
+            }
+        });
     },
 
     // ---- tam ekran ----

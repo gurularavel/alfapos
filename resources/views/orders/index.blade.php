@@ -1,6 +1,7 @@
 <x-layouts.app title="Sifarişlər">
 <div x-data="{ ...poller(@js(route('orders.board')), 8000), pay: null, paymentTypeId: @js($paymentTypes->first()?->id) }">
-    <x-page-header title="Sifarişlər" subtitle="Aktiv və ödənilməmiş sifarişlər. Hər 8 saniyədən bir yenilənir.">
+    <x-page-header title="Sifarişlər" subtitle="Aktiv və ödənilməmiş sifarişlər.">
+        <x-live-badge />
         <template x-if="$store.terminal.active && $store.terminal.operator"><span class="badge-green py-1.5 text-sm" x-text="$store.terminal.operator.name + ' · ' + $store.terminal.operator.role"></span></template>
         <a href="{{ route('pos') }}" class="btn-secondary"><x-icon name="pos" class="size-4" /> POS</a>
         <button class="btn-secondary" @click="load()"><x-icon name="refresh" class="size-4" /> Yenilə</button>

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\Realtime;
 use App\Models\AuditLog;
 use App\Models\Order;
 use App\Models\PaymentType;
@@ -93,6 +94,7 @@ class OrderController extends Controller
             $order->items()->where('status', '!=', 'cancelled')->update(['status' => 'completed']);
         }
         AuditLog::record('order.status', $order, $data);
+        Realtime::order($order, 'updated');
 
         return response()->json(['message' => 'Status yeniləndi.']);
     }

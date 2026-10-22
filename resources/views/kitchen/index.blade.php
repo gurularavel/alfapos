@@ -1,6 +1,7 @@
 <x-layouts.app title="Mətbəx">
-<div x-data="poller(@js(route('kitchen.feed')), 5000)">
-    <x-page-header title="Mətbəx" subtitle="Hazırlanacaq sifarişlər. Hər 5 saniyədən bir yenilənir.">
+<div x-data="{ ...poller(@js(route('kitchen.feed')), 5000), realtime(e) { if (e.type === 'created') { beep(); toast('Yeni sifariş #' + e.token_no) } } }">
+    <x-page-header title="Mətbəx" subtitle="Hazırlanacaq sifarişlər. Yeni sifariş gələndə səs siqnalı verilir.">
+        <x-live-badge />
         <button class="btn-secondary" @click="load()"><x-icon name="refresh" class="size-4" /> Yenilə</button>
     </x-page-header>
 

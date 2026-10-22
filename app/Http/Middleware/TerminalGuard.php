@@ -21,7 +21,8 @@ class TerminalGuard
 
     public function handle(Request $request, Closure $next): Response
     {
-        if (! $request->user() || ! $this->terminal->active()) {
+        // Canlı yeniləmə kanalının autentifikasiyası terminalda da (kilidli olsa belə) işləməlidir
+        if (! $request->user() || ! $this->terminal->active() || $request->is('broadcasting/auth')) {
             return $next($request);
         }
 

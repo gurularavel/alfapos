@@ -2,6 +2,7 @@ import Alpine from 'alpinejs';
 import collapse from '@alpinejs/collapse';
 import pos from './pos';
 import terminal from './terminal';
+import { startRealtime } from './echo';
 
 Alpine.plugin(collapse);
 
@@ -41,19 +42,36 @@ window.printUrl = (url) => {
     if (!w) window.location.href = url;
 };
 
-/** Periodik yenilənən siyahılar üçün (Orders, Kitchen). */
+/**
+ * Yenilənən siyahılar (Sifarişlər, Mətbəx). Reverb bağlıdırsa siqnal gələn kimi yenilənir,
+ * ehtiyat olaraq 60 saniyədə bir; bağlantı yoxdursa hər `interval` ms-dən bir yoxlayır.
+ */
 const poller = (url, interval = 8000) => ({
     rows: [],
     loading: true,
     timer: null,
+    lastLoad: 0,
+    debounce: null,
     async init() {
         await this.load();
-        this.timer = setInterval(() => document.visibilityState === 'visible' && this.load(), interval);
+        this.timer = setInterval(() => {
+            if (document.visibilityState !== 'visible') return;
+            const wait = Alpine.store('rt').connected ? 60000 : interval;
+            if (Date.now() - this.lastLoad >= wait) this.load();
+        }, 1000);
+        this.onRealtime = (e) => {
+            this.realtime?.(e.detail);
+            clearTimeout(this.debounce);
+            this.debounce = setTimeout(() => this.load(), 250);
+        };
+        window.addEventListener('rt:order', this.onRealtime);
     },
     destroy() {
         clearInterval(this.timer);
+        window.removeEventListener('rt:order', this.onRealtime);
     },
     async load() {
+        this.lastLoad = Date.now();
         try {
             this.rows = await api(url);
         } catch (e) {
@@ -80,6 +98,27 @@ Alpine.data('pos', pos);
 
 // POS və Sifarişlər səhifələri terminal vəziyyətini window.TERMINAL_STATE ilə ötürür
 if (window.TERMINAL_STATE) Alpine.store('terminal', terminal(window.TERMINAL_STATE));
+
+// Reverb bağlantısının vəziyyəti (ekranlarda "Canlı" göstəricisi və polling tezliyi üçün)
+Alpine.store('rt', { connected: false });
+startRealtime(Alpine);
+
+/** Mətbəx üçün qısa səs siqnalı (brauzer səsə yalnız istifadəçi ekrana toxunandan sonra icazə verir). */
+window.beep = () => {
+    try {
+        const ctx = (window.__audio ??= new AudioContext());
+        [0, 0.18].forEach((t) => {
+            const o = ctx.createOscillator();
+            const g = ctx.createGain();
+            o.frequency.value = 880;
+            g.gain.setValueAtTime(0.25, ctx.currentTime + t);
+            g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.15);
+            o.connect(g).connect(ctx.destination);
+            o.start(ctx.currentTime + t);
+            o.stop(ctx.currentTime + t + 0.16);
+        });
+    } catch {}
+};
 
 window.Alpine = Alpine;
 Alpine.start();

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Support\Realtime;
 use App\Models\AuditLog;
 use App\Models\InventoryItem;
 use App\Models\Invoice;
@@ -139,6 +140,10 @@ class OrderService
                 $this->deductStock($order);
             }
 
+            if ($order->status !== 'draft') {
+                Realtime::order($order, 'created');
+            }
+
             return $order->load('items');
         });
     }
@@ -179,6 +184,7 @@ class OrderService
             }
 
             AuditLog::record('invoice.created', $invoice, ['total' => $invoice->total]);
+            $orders->each(fn ($o) => Realtime::order($o, 'paid'));
 
             return $invoice;
         });
@@ -194,6 +200,7 @@ class OrderService
                 $this->restoreStock($order);
             }
             AuditLog::record('order.cancelled', $order, array_filter(['reason' => $reason]));
+            Realtime::order($order, 'cancelled');
         });
     }
 

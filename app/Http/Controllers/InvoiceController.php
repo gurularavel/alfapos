@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\Realtime;
 use App\Models\AuditLog;
 use App\Models\Invoice;
 use App\Services\OrderService;
@@ -43,6 +44,7 @@ class InvoiceController extends Controller
                 $order->update(['status' => 'cancelled', 'payment_status' => 'pending']);
                 $order->items()->update(['status' => 'cancelled']);
                 $service->restoreStock($order);
+                Realtime::order($order, 'cancelled');
             }
             AuditLog::record('invoice.void', $invoice, $data);
         });

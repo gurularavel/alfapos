@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\Realtime;
 use App\Models\Order;
 use App\Models\OrderItem;
 use Illuminate\Http\Request;
@@ -43,6 +44,7 @@ class KitchenController extends Controller
 
         $item->update($data);
         $this->syncOrderStatus($order);
+        Realtime::order($order, 'kitchen');
 
         return response()->json(['message' => 'Yeniləndi.']);
     }
@@ -51,6 +53,7 @@ class KitchenController extends Controller
     {
         $order->items()->whereIn('status', ['created', 'preparing'])->update(['status' => 'ready']);
         $this->syncOrderStatus($order);
+        Realtime::order($order, 'kitchen');
 
         return response()->json(['message' => 'Sifariş hazırdır.']);
     }

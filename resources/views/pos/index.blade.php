@@ -24,6 +24,7 @@
             </button>
             <a href="{{ route('orders.index') }}" class="btn-secondary btn-sm"><x-icon name="table" class="size-4" /> Masa sifarişləri</a>
             <div class="ml-auto flex flex-wrap items-center gap-1.5">
+                <x-live-badge />
                 <template x-if="$store.terminal.active && $store.terminal.operator">
                     <div class="flex items-center gap-1.5">
                         <span class="badge-green py-1.5 text-sm"><x-icon name="users" class="size-4" /> <span x-text="$store.terminal.operator.name + ' · ' + $store.terminal.operator.role"></span></span>
