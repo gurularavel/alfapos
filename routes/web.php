@@ -30,6 +30,7 @@ Route::get('/d/{token}/state', [CustomerDisplayController::class, 'state'])->mid
 
 // Public QR menyu (müştəri telefonu)
 Route::get('/m/{code}', [QrMenuController::class, 'show'])->name('qr.show');
+Route::get('/m/{code}/credits', [QrMenuController::class, 'credits'])->name('qr.credits');
 Route::post('/m/{code}/order', [QrMenuController::class, 'order'])->middleware('throttle:10,1')->name('qr.order');
 Route::post('/m/{code}/feedback', [QrMenuController::class, 'feedback'])->middleware('throttle:5,1')->name('qr.feedback');
 

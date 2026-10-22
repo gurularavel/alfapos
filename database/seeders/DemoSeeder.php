@@ -16,6 +16,7 @@ use App\Services\OrderService;
 use App\Services\TenantProvisioner;
 use App\Support\Tenancy;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Str;
 
 /**
@@ -114,6 +115,11 @@ class DemoSeeder extends Seeder
         RecipeItem::create(['menu_item_id' => $latte->id, 'inventory_item_id' => $milk->id, 'quantity' => 200]);
         RecipeItem::create(['menu_item_id' => $latte->id, 'inventory_item_id' => $coffee->id, 'quantity' => 18]);
         RecipeItem::create(['menu_item_id' => $burger->id, 'inventory_item_id' => $bun->id, 'quantity' => 1]);
+
+        // Məhsul şəkilləri (Wikimedia Commons, müəllif/lisenziya credits.json-da). Testlərdə storage-i doldurmuruq.
+        if (! app()->runningUnitTests()) {
+            Artisan::call('app:import-menu-images', ['dir' => database_path('seeders/demo-images'), '--tenant' => $tenant->name]);
+        }
 
         foreach ([['Masa 1', 'Zal'], ['Masa 2', 'Zal'], ['Masa 3', 'Zal'], ['Masa 4', 'Teras'], ['Masa 5', 'Teras'], ['VIP', '2-ci mərtəbə']] as $i => [$t, $f]) {
             StoreTable::create(['title' => $t, 'floor' => $f, 'seating_capacity' => $i === 5 ? 8 : 4]);

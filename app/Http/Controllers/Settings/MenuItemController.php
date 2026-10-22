@@ -93,6 +93,7 @@ class MenuItemController extends Controller
             'category_id' => ['nullable', Rule::exists('categories', 'id')->where('tenant_id', $tid)],
             'tax_id' => ['nullable', Rule::exists('taxes', 'id')->where('tenant_id', $tid)],
             'image' => ['nullable', 'image', 'max:2048'],
+            'image_credit' => ['nullable', 'string', 'max:500'],
             'variants' => ['nullable', 'array'],
             'variants.*.id' => ['nullable', 'integer'],
             'variants.*.title' => ['required', 'string', 'max:60'],
@@ -107,7 +108,7 @@ class MenuItemController extends Controller
             'recipe.*.target' => ['nullable', 'string', 'max:40'], // "", "v:<idx>", "a:<idx>"
         ]);
 
-        $item->fill(collect($data)->only(['title', 'description', 'price', 'category_id', 'tax_id'])->all());
+        $item->fill(collect($data)->only(['title', 'description', 'price', 'category_id', 'tax_id', 'image_credit'])->all());
         $item->is_enabled = $request->boolean('is_enabled');
         if ($request->boolean('remove_image') && $item->image) {
             Storage::disk('public')->delete($item->image);

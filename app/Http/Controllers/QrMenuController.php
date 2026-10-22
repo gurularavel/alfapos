@@ -30,6 +30,17 @@ class QrMenuController extends Controller
         ]);
     }
 
+    /** Menyu şəkillərinin müəllif və lisenziya məlumatı (CC BY şərti). */
+    public function credits(string $code)
+    {
+        $tenant = $this->resolve($code);
+
+        return view('qr.credits', [
+            'tenant' => $tenant,
+            'items' => MenuItem::whereNotNull('image_credit')->where('is_enabled', true)->orderBy('title')->get(['title', 'image_credit']),
+        ]);
+    }
+
     public function order(Request $request, string $code, OrderService $service)
     {
         $tenant = $this->resolve($code);

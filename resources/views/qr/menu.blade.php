@@ -80,6 +80,10 @@
         </template>
     </div>
 
+    @if ($items->whereNotNull('image_credit')->isNotEmpty())
+        <p class="px-4 pt-4 text-center text-xs text-zinc-400"><a href="{{ route('qr.credits', $tenant->qr_code) }}" class="underline">Şəkil müəllifləri</a></p>
+    @endif
+
     @if ($tenant->is_feedback_enabled)
         <section id="feedback" class="m-4 rounded-2xl bg-zinc-50 p-5" x-data="{ rating: 5 }">
             <h2 class="text-lg font-black">Rəyinizi bildirin</h2>

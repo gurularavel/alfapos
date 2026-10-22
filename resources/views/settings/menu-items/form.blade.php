@@ -104,6 +104,9 @@
                 </div>
                 <input type="file" name="image" accept="image/*" class="text-sm" @change="preview = URL.createObjectURL($event.target.files[0])">
                 @if ($item->image)<label class="mt-2 flex items-center gap-2 text-sm text-red-600"><input type="checkbox" name="remove_image" value="1" class="rounded"> Şəkli sil</label>@endif
+                <label class="label mt-3">Şəkil müəllifi / lisenziya <span class="font-normal text-zinc-400">— istəyə bağlı</span></label>
+                <input name="image_credit" value="{{ old('image_credit', $item->image_credit) }}" class="input text-xs" maxlength="500" placeholder="Məs. Ad Soyad · CC BY 4.0 · mənbə linki">
+                <p class="mt-1 text-xs text-zinc-500">İnternetdən götürülmüş CC BY şəkillər üçün doldurun — QR menyuda "Şəkil müəllifləri" səhifəsində göstərilir.</p>
             </div>
             <button class="btn-primary w-full py-3">Yadda saxla</button>
         </div>
