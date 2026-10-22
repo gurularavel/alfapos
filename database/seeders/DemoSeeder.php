@@ -17,31 +17,51 @@ use App\Services\TenantProvisioner;
 use App\Support\Tenancy;
 use Illuminate\Database\Seeder;
 
-/** Lokal inkişaf və testlər üçün demo biznes. Production-da işlədilmir (bütün parollar "password"). */
+/**
+ * Demo biznes + istifadəçilər. Lokalda emaillər @pos.test, parollar "password".
+ * Production-da `php artisan app:seed-demo` domeni və hər istifadəçi üçün təsadüfi parolu bura ötürür.
+ */
 class DemoSeeder extends Seeder
 {
+    public static string $domain = 'pos.test';
+
+    /** @var array<string, string> açar (super|demo|kassir|metbex) => parol */
+    public static array $passwords = [];
+
+    public const USERS = ['super' => 'Superadmin', 'demo' => 'Biznes admini', 'kassir' => 'Kassir', 'metbex' => 'Aşpaz (mətbəx)'];
+
+    protected function email(string $key): string
+    {
+        return $key.'@'.static::$domain;
+    }
+
+    protected function password(string $key): string
+    {
+        return static::$passwords[$key] ?? 'password';
+    }
+
     public function run(): void
     {
-        User::updateOrCreate(['email' => 'super@pos.test'], [
-            'name' => 'Super Admin', 'password' => 'password', 'role' => 'superadmin',
+        User::updateOrCreate(['email' => $this->email('super')], [
+            'name' => 'Super Admin', 'password' => $this->password('super'), 'role' => 'superadmin',
         ]);
 
-        if (User::where('email', 'demo@pos.test')->exists()) {
+        if (User::where('email', $this->email('demo'))->exists()) {
             return;
         }
 
-        $admin = app(TenantProvisioner::class)->create('Demo Restoran', 'Demo Admin', 'demo@pos.test', 'password', '+994501234567');
+        $admin = app(TenantProvisioner::class)->create('Demo Restoran', 'Demo Admin', $this->email('demo'), $this->password('demo'), '+994501234567');
         $tenant = $admin->tenant;
         $tenant->update(['address' => 'Bakı, Nizami küç. 10', 'service_charge' => 5, 'daily_sales_goal' => 1000, 'is_qr_order_enabled' => true]);
         app(Tenancy::class)->set($tenant);
         auth()->setUser($admin);
 
         User::create([
-            'tenant_id' => $tenant->id, 'name' => 'Kassir Aynur', 'email' => 'kassir@pos.test', 'password' => 'password',
+            'tenant_id' => $tenant->id, 'name' => 'Kassir Aynur', 'email' => $this->email('kassir'), 'password' => $this->password('kassir'),
             'role' => 'user', 'designation' => 'Kassir', 'scopes' => ['POS', 'ORDERS', 'INVOICES', 'CUSTOMERS'],
         ]);
         User::create([
-            'tenant_id' => $tenant->id, 'name' => 'Aşpaz Rauf', 'email' => 'metbex@pos.test', 'password' => 'password',
+            'tenant_id' => $tenant->id, 'name' => 'Aşpaz Rauf', 'email' => $this->email('metbex'), 'password' => $this->password('metbex'),
             'role' => 'user', 'designation' => 'Aşpaz', 'scopes' => ['KITCHEN'],
         ]);
 
