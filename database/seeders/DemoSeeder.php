@@ -119,6 +119,7 @@ class DemoSeeder extends Seeder
         // Məhsul şəkilləri (Wikimedia Commons, müəllif/lisenziya credits.json-da). Testlərdə storage-i doldurmuruq.
         if (! app()->runningUnitTests()) {
             Artisan::call('app:import-menu-images', ['dir' => database_path('seeders/demo-images'), '--tenant' => $tenant->name]);
+            Artisan::call('app:import-screensaver', ['dir' => database_path('seeders/demo-screensaver'), '--tenant' => $tenant->name]);
         }
 
         foreach ([['Masa 1', 'Zal'], ['Masa 2', 'Zal'], ['Masa 3', 'Zal'], ['Masa 4', 'Teras'], ['Masa 5', 'Teras'], ['VIP', '2-ci mərtəbə']] as $i => [$t, $f]) {

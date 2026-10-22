@@ -26,25 +26,28 @@
     </div>
 
     {{-- PIN paneli --}}
-    <div x-show="$store.terminal.mode === 'pin'" x-transition.opacity class="absolute inset-0 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" @click.self="$store.terminal.mode = 'saver'">
-        <div class="w-full max-w-xs rounded-3xl bg-white p-6 text-ink shadow-2xl">
-            <p class="text-center text-lg font-black" x-text="$store.terminal.purpose === 'exit' ? 'Terminaldan çıxış — admin PIN' : 'PIN kodunuzu daxil edin'"></p>
-            <div class="my-5 flex justify-center gap-3" :class="$store.terminal.error && 'animate-[shake_.3s]'">
+    {{-- Sensor ekran üçün: düymələr ~96px (ekran hündürlüyünə görə 72–104px), touch-manipulation ilə iki dəfə toxunuşda zoom olmur --}}
+    <div x-show="$store.terminal.mode === 'pin'" class="absolute inset-0 flex items-center justify-center bg-black/70 p-3 backdrop-blur-sm [touch-action:manipulation]" @click.self="$store.terminal.mode = 'saver'">
+        <div class="w-full max-w-md rounded-[2rem] bg-white p-5 text-ink shadow-2xl sm:p-7">
+            <p class="text-center text-xl font-black sm:text-2xl" x-text="$store.terminal.purpose === 'exit' ? 'Terminaldan çıxış — admin PIN' : 'PIN kodunuzu daxil edin'"></p>
+            <div class="my-5 flex justify-center gap-5" :class="$store.terminal.error && 'animate-[shake_.3s]'">
                 <template x-for="n in 4">
-                    <span class="size-4 rounded-full border-2 transition" :class="$store.terminal.pin.length >= n ? 'border-brand-500 bg-brand-500' : 'border-zinc-300'"></span>
+                    <span class="size-6 rounded-full border-[3px] transition" :class="$store.terminal.pin.length >= n ? 'scale-110 border-brand-500 bg-brand-500' : 'border-zinc-300'"></span>
                 </template>
             </div>
-            <p class="mb-3 h-5 text-center text-sm font-semibold text-red-600" x-text="$store.terminal.error"></p>
-            <div class="grid grid-cols-3 gap-2.5">
+            <p class="mb-3 min-h-6 text-center text-base font-bold text-red-600" x-text="$store.terminal.error"></p>
+            <div class="grid grid-cols-3 gap-3">
                 <template x-for="d in ['1','2','3','4','5','6','7','8','9']">
-                    <button type="button" class="h-16 rounded-2xl bg-zinc-100 text-2xl font-black transition active:scale-95 active:bg-brand-100" @click="$store.terminal.press(d)" x-text="d"></button>
+                    <button type="button" class="h-[clamp(4.5rem,11vh,6.5rem)] rounded-3xl bg-zinc-100 text-4xl font-black tabular-nums shadow-[inset_0_-3px_0_rgb(0_0_0/0.06)] transition select-none active:scale-95 active:bg-brand-500 active:text-white" @click="$store.terminal.press(d)" x-text="d"></button>
                 </template>
-                <button type="button" class="h-16 rounded-2xl text-sm font-bold text-zinc-500" @click="$store.terminal.mode = 'saver'">Ləğv</button>
-                <button type="button" class="h-16 rounded-2xl bg-zinc-100 text-2xl font-black transition active:scale-95 active:bg-brand-100" @click="$store.terminal.press('0')">0</button>
-                <button type="button" class="flex h-16 items-center justify-center rounded-2xl text-zinc-500" @click="$store.terminal.back()" aria-label="Sil">⌫</button>
+                <button type="button" class="h-[clamp(4.5rem,11vh,6.5rem)] rounded-3xl text-lg font-bold text-zinc-500 transition select-none active:scale-95 active:bg-zinc-100" @click="$store.terminal.mode = 'saver'">Ləğv</button>
+                <button type="button" class="h-[clamp(4.5rem,11vh,6.5rem)] rounded-3xl bg-zinc-100 text-4xl font-black shadow-[inset_0_-3px_0_rgb(0_0_0/0.06)] transition select-none active:scale-95 active:bg-brand-500 active:text-white" @click="$store.terminal.press('0')">0</button>
+                <button type="button" class="flex h-[clamp(4.5rem,11vh,6.5rem)] items-center justify-center rounded-3xl text-zinc-600 transition select-none active:scale-95 active:bg-zinc-100" @click="$store.terminal.back()" aria-label="Sil">
+                    <svg class="size-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2Z"/><path d="m18 9-6 6M12 9l6 6"/></svg>
+                </button>
             </div>
         </div>
     </div>
 
-    <button type="button" x-show="$store.terminal.mode === 'saver'" class="absolute top-4 right-4 rounded-full bg-black/30 px-3 py-1.5 text-xs font-semibold text-white/70 backdrop-blur hover:text-white" @click.stop="$store.terminal.openPin('exit')">Terminaldan çıx</button>
+    <button type="button" x-show="$store.terminal.mode === 'saver'" class="absolute top-4 right-4 rounded-full bg-black/40 px-5 py-3 text-sm font-semibold text-white/80 backdrop-blur active:bg-black/60" @click.stop="$store.terminal.openPin('exit')">Terminaldan çıx</button>
 </div>

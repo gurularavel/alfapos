@@ -1,0 +1,58 @@
+{
+    "restoran_01.jpg": {
+        "term": "restaurant interior",
+        "title": "File:Restaurant in Place D'Youville, Quebec City.jpg",
+        "license": "CC0",
+        "artist": "Wilfredor",
+        "source": "https://commons.wikimedia.org/wiki/File:Restaurant_in_Place_D%27Youville,_Quebec_City.jpg",
+        "size": "7438x5040"
+    },
+    "restoran_02.jpg": {
+        "term": "restaurant dining room",
+        "title": "File:Dining room at the inn Dans les bras de Morphée, located on Île d'Orléans.jpg",
+        "license": "CC0",
+        "artist": "Wilfredor",
+        "source": "https://commons.wikimedia.org/wiki/File:Dining_room_at_the_inn_Dans_les_bras_de_Morph%C3%A9e,_located_on_%C3%8Ele_d%27Orl%C3%A9ans.jpg",
+        "size": "8253x5504"
+    },
+    "restoran_03.jpg": {
+        "term": "restaurant dining room",
+        "title": "File:The Athenaeum Dining Room.jpg",
+        "license": "CC0",
+        "artist": "Michael D Beckwith",
+        "source": "https://commons.wikimedia.org/wiki/File:The_Athenaeum_Dining_Room.jpg",
+        "size": "8686x5783"
+    },
+    "restoran_04.jpg": {
+        "term": "restaurant table setting",
+        "title": "File:Table set on terrace over water, Venice.jpg",
+        "license": "CC0",
+        "artist": "Gerda Arendt",
+        "source": "https://commons.wikimedia.org/wiki/File:Table_set_on_terrace_over_water,_Venice.jpg",
+        "size": "4000x3000"
+    },
+    "restoran_05.jpg": {
+        "term": "restaurant table setting",
+        "title": "File:Lunch table on a balcony, Mainz.jpg",
+        "license": "CC0",
+        "artist": "Gerda Arendt",
+        "source": "https://commons.wikimedia.org/wiki/File:Lunch_table_on_a_balcony,_Mainz.jpg",
+        "size": "3250x2438"
+    },
+    "restoran_06.jpg": {
+        "term": "bar interior",
+        "title": "File:The Mind Palace Bar Interior.jpg",
+        "license": "CC0",
+        "artist": "Sherlock: Escape Rooms",
+        "source": "https://commons.wikimedia.org/wiki/File:The_Mind_Palace_Bar_Interior.jpg",
+        "size": "7443x5504"
+    },
+    "restoran_07.jpg": {
+        "term": "coffee shop interior",
+        "title": "File:Empty coffee shop interior with wooden table and water skis.jpg",
+        "license": "CC0",
+        "artist": "Drew Coffman",
+        "source": "https://commons.wikimedia.org/wiki/File:Empty_coffee_shop_interior_with_wooden_table_and_water_skis.jpg",
+        "size": "4096x2730"
+    }
+}
