@@ -144,6 +144,30 @@ class BranchTerminalTest extends TestCase
             ->assertViewHas('branchSales', fn ($rows) => $rows->firstWhere('name', '28 May filialı')?->checks === 2 && $rows->firstWhere('name', 'Əsas filial')?->checks >= 1);
     }
 
+    public function test_dashboard_shows_sales_by_staff(): void
+    {
+        $plov = MenuItem::where('title', 'Plov')->value('id');
+        $send = fn () => $this->postJson(route('pos.store'), ['action' => 'kitchen', 'delivery_type' => 'takeaway', 'cart' => [['menu_item_id' => $plov, 'quantity' => 2]]])->assertOk()->json('order.id');
+
+        // Ofisiant PIN ilə iki sifariş verir, kassir PIN ilə hesabı bağlayır
+        $this->onDevice($this->kassa)->postJson(route('pos.terminal.enter'))->assertOk();
+        $this->postJson(route('pos.terminal.unlock'), ['pin' => '2222'])->assertOk();
+        $ids = [$send(), $send()];
+        $this->postJson(route('pos.terminal.lock'))->assertOk();
+        $this->postJson(route('pos.terminal.unlock'), ['pin' => '1111'])->assertOk();
+        $this->postJson(route('orders.pay'), ['order_ids' => $ids, 'payment_type_id' => PaymentType::value('id')])->assertOk();
+        $this->postJson(route('pos.terminal.exit'), ['pin' => '1234'])->assertOk();
+
+        $this->offDevice()->get(route('dashboard'))->assertOk()->assertSee('İşçilər üzrə satış')
+            ->assertViewHas('staffSales', function ($rows) {
+                $waiter = $rows->firstWhere('name', 'Ofisiant Nicat');
+                $cashier = $rows->firstWhere('name', 'Kassir Aynur');
+
+                return $waiter->orders === 2 && $waiter->orders_total === 56.0 && $waiter->checks === 0
+                    && $cashier->checks === 1 && $cashier->collected > 56.0 && $cashier->orders === 0;
+            });
+    }
+
     public function test_foreign_terminal_cannot_be_bound_and_new_tenant_gets_defaults(): void
     {
         $other = app(TenantProvisioner::class)->create('Başqa', 'O', 'o@pos.test', 'password');

@@ -60,6 +60,8 @@ class DashboardController extends Controller
             ->selectRaw("invoices.branch_id, COALESCE(branches.name, 'Filialsız') as name, COUNT(*) as checks, SUM(invoices.total) as total")
             ->orderByDesc('total')->get();
 
+        $staffSales = $this->staffSales($today, $tenancy->id());
+
         $todayInvoices = $paid($today);
 
         return view('dashboard', [
@@ -74,6 +76,7 @@ class DashboardController extends Controller
             'paymentMix' => $paymentMix,
             'terminalSales' => $terminalSales,
             'branchSales' => $branchSales,
+            'staffSales' => $staffSales,
             'branchCount' => \App\Models\Branch::count(),
             'lowStock' => InventoryItem::whereColumn('quantity', '<=', 'min_quantity')->orderBy('quantity')->limit(5)->get(),
             'feedbacks' => Feedback::latest()->limit(3)->get(),
@@ -83,6 +86,38 @@ class DashboardController extends Controller
             'taxToday' => (float) (clone $todayInvoices)->sum('tax_total'),
             'serviceToday' => (float) (clone $todayInvoices)->sum('service_charge_total'),
         ]);
+    }
+
+    /**
+     * Bu gün işçilər üzrə: qəbul etdiyi sifarişlər (sifarişin müəllifi — ofisiant/kassir) və
+     * kassaya yığdığı çeklər (çekin müəllifi — kassir). Ləğv olunmuş sifariş/məhsullar sayılmır.
+     */
+    protected function staffSales(Carbon $day, int $tenantId)
+    {
+        $orders = Order::query()
+            ->whereDate('orders.created_at', $day)->whereNotIn('orders.status', ['draft', 'cancelled'])->whereNotNull('orders.created_by')
+            ->groupBy('orders.created_by')
+            ->selectRaw("orders.created_by as user_id, COUNT(*) as orders, SUM((SELECT COALESCE(SUM(oi.price * oi.quantity), 0) FROM order_items oi WHERE oi.order_id = orders.id AND oi.status != 'cancelled')) as orders_total")
+            ->get()->keyBy('user_id');
+
+        $collected = Invoice::query()
+            ->where('status', 'paid')->whereDate('created_at', $day)->whereNotNull('created_by')
+            ->groupBy('created_by')
+            ->selectRaw('created_by as user_id, COUNT(*) as checks, SUM(total) as collected')
+            ->get()->keyBy('user_id');
+
+        $ids = $orders->keys()->merge($collected->keys())->unique();
+
+        return \App\Models\User::where('tenant_id', $tenantId)->whereIn('id', $ids)->get(['id', 'name', 'role', 'designation', 'tenant_id'])
+            ->map(fn ($u) => (object) [
+                'name' => $u->name,
+                'role' => $u->roleLabel(),
+                'orders' => (int) ($orders[$u->id]->orders ?? 0),
+                'orders_total' => (float) ($orders[$u->id]->orders_total ?? 0),
+                'checks' => (int) ($collected[$u->id]->checks ?? 0),
+                'collected' => (float) ($collected[$u->id]->collected ?? 0),
+            ])
+            ->sortByDesc(fn ($r) => max($r->orders_total, $r->collected))->values()->take(8);
     }
 
     protected function change(float $now, float $before): ?float

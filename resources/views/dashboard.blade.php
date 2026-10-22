@@ -85,6 +85,42 @@
 
     <div class="card card-pad">
         <div class="mb-3 flex items-center justify-between">
+            <h2 class="font-extrabold">İşçilər üzrə satış <span class="text-xs font-normal text-zinc-500">bu gün</span></h2>
+            <a href="{{ route('reports.show', ['staff-orders', 'from' => today()->toDateString(), 'to' => today()->toDateString()]) }}" class="text-xs font-semibold text-brand-700 hover:underline">Hesabat →</a>
+        </div>
+        @php($staffMax = max(1, (float) $staffSales->max(fn ($r) => max($r->orders_total, $r->collected))))
+        @forelse ($staffSales as $i => $row)
+            <div class="mb-3 text-sm">
+                <div class="mb-1 flex items-center justify-between gap-2">
+                    <span class="flex min-w-0 items-center gap-2">
+                        <span class="flex size-6 shrink-0 items-center justify-center rounded-full bg-brand-50 text-xs font-bold text-brand-700">{{ $i + 1 }}</span>
+                        <span class="truncate font-semibold">{{ $row->name }}</span>
+                        <span class="shrink-0 text-xs text-zinc-400">{{ $row->role }}</span>
+                    </span>
+                    <span class="shrink-0 font-bold tabular-nums">{{ money(max($row->orders_total, $row->collected)) }}</span>
+                </div>
+                @if ($row->orders)
+                    <div class="h-1.5 rounded-full bg-zinc-100"><div class="h-1.5 rounded-full bg-amber-400" style="width: {{ $row->orders_total / $staffMax * 100 }}%"></div></div>
+                @endif
+                @if ($row->checks)
+                    <div class="mt-1 h-1.5 rounded-full bg-zinc-100"><div class="h-1.5 rounded-full bg-brand-500" style="width: {{ $row->collected / $staffMax * 100 }}%"></div></div>
+                @endif
+                <p class="mt-1 text-xs text-zinc-500">
+                    @if ($row->orders)<span class="text-amber-600">●</span> {{ $row->orders }} sifariş · {{ money($row->orders_total) }}@endif
+                    @if ($row->orders && $row->checks) &nbsp; @endif
+                    @if ($row->checks)<span class="text-brand-600">●</span> kassa: {{ $row->checks }} çek · {{ money($row->collected) }}@endif
+                </p>
+            </div>
+        @empty
+            <p class="text-sm text-zinc-500">Bu gün satış yoxdur.</p>
+        @endforelse
+        @if ($staffSales->isNotEmpty())
+            <p class="mt-2 text-xs text-zinc-400"><span class="text-amber-500">●</span> qəbul etdiyi sifarişlər &nbsp; <span class="text-brand-500">●</span> kassaya yığdığı çeklər</p>
+        @endif
+    </div>
+
+    <div class="card card-pad">
+        <div class="mb-3 flex items-center justify-between">
             <h2 class="font-extrabold">Filiallar üzrə satış <span class="text-xs font-normal text-zinc-500">bu gün</span></h2>
             <a href="{{ route('reports.show', ['sales-by-branch', 'from' => today()->toDateString(), 'to' => today()->toDateString()]) }}" class="text-xs font-semibold text-brand-700 hover:underline">Hesabat →</a>
         </div>
