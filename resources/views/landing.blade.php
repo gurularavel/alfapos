@@ -60,7 +60,7 @@
         </div>
         <div class="flex flex-wrap gap-3">
             <a href="{{ route('faq') }}" class="btn bg-white px-6 py-3 text-base text-brand-800 hover:bg-brand-50">Sual-cavab</a>
-            <a href="tel:{{ config('app.company.phone_intl') }}" class="btn bg-white/15 px-6 py-3 text-base text-white hover:bg-white/25">{{ config('app.company.phone') }}</a>
+            <a href="tel:{{ site('phone_intl') }}" class="btn bg-white/15 px-6 py-3 text-base text-white hover:bg-white/25">{{ site('phone') }}</a>
         </div>
     </div>
 </section>

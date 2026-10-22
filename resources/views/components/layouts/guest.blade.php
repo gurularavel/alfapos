@@ -27,7 +27,7 @@
                 <a href="{{ route('privacy') }}" class="hover:text-brand-700">Məxfilik siyasəti</a>
                 <a href="{{ route('terms') }}" class="hover:text-brand-700">İstifadə şərtləri</a>
             </nav>
-            <p class="mt-2 text-center text-xs text-zinc-400">© {{ date('Y') }} {{ config('app.company.name') }} · {{ config('app.company.phone') }} · AlfaPOS v{{ config('app.version') }}</p>
+            <p class="mt-2 text-center text-xs text-zinc-400">© {{ date('Y') }} {{ site('company_name') }} · {{ site('phone') }} · AlfaPOS v{{ config('app.version') }}</p>
         </div>
     </div>
 </div>

@@ -59,6 +59,17 @@ Route::middleware('auth')->group(function () {
         Route::resource('tenants', Admin\TenantController::class)->except(['show', 'destroy']);
         Route::post('tenants/{tenant}/extend', [Admin\TenantController::class, 'extend'])->name('tenants.extend');
         Route::resource('plans', Admin\PlanController::class)->except(['show']);
+
+        // Sayt: əlaqə/rekvizitlər, səhifələr (Markdown), sual-cavab
+        Route::get('site', [Admin\SiteController::class, 'index'])->name('site.index');
+        Route::put('site/settings', [Admin\SiteController::class, 'updateSettings'])->name('site.settings');
+        Route::post('site/preview', [Admin\SiteController::class, 'preview'])->name('site.preview');
+        Route::get('site/pages/{slug}', [Admin\SiteController::class, 'editPage'])->whereIn('slug', array_keys(\App\Models\SitePage::SLUGS))->name('site.pages.edit');
+        Route::put('site/pages/{slug}', [Admin\SiteController::class, 'updatePage'])->whereIn('slug', array_keys(\App\Models\SitePage::SLUGS))->name('site.pages.update');
+        Route::post('site/faqs', [Admin\SiteController::class, 'storeFaq'])->name('site.faqs.store');
+        Route::put('site/faqs/{faq}', [Admin\SiteController::class, 'updateFaq'])->name('site.faqs.update');
+        Route::delete('site/faqs/{faq}', [Admin\SiteController::class, 'destroyFaq'])->name('site.faqs.destroy');
+        Route::post('site/faqs/{faq}/move', [Admin\SiteController::class, 'moveFaq'])->name('site.faqs.move');
     });
 
     Route::middleware('subscribed')->prefix('dashboard')->group(function () {

@@ -62,6 +62,18 @@ body.pos-full [data-shell] { display: none !important; }
 body.pos-full [data-shell-content] { padding-left: 0 !important; }
 body.pos-full .pos-screen { height: calc(100dvh - 1.5rem); }
 
+/* Superadmindən redaktə olunan Markdown səhifələri (Haqqımızda, hüquqi sənədlər) */
+.md-content { @apply space-y-4 text-[17px] leading-relaxed text-zinc-700; }
+.md-content h2 { @apply mt-10 scroll-mt-24 text-2xl font-black text-ink; }
+.md-content h3 { @apply mt-6 text-lg font-extrabold text-ink; }
+.md-content ul { @apply list-disc space-y-1.5 pl-6; }
+.md-content ol { @apply list-decimal space-y-1.5 pl-6; }
+.md-content a { @apply font-semibold text-brand-700 underline; }
+.md-content strong { @apply font-bold text-ink; }
+.md-content blockquote { @apply border-l-4 border-brand-300 pl-4 text-zinc-600; }
+.md-content table { @apply w-full text-left text-sm; }
+.md-content th, .md-content td { @apply border-b border-zinc-200 px-3 py-2; }
+
 @keyframes shake {
     0%, 100% { transform: translateX(0); }
     25% { transform: translateX(-8px); }

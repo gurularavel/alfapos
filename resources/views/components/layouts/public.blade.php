@@ -1,12 +1,12 @@
 @props(['title' => null, 'description' => null])
-@php($company = config('app.company'))
+@php($s = site())
 <!DOCTYPE html>
 <html lang="az">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $title ? $title.' · ' : '' }}{{ config('app.name') }} — restoran və kafe üçün POS sistemi</title>
-    <meta name="description" content="{{ $description ?? 'AlfaPOS — bulud əsaslı POS: sifariş, mətbəx ekranı, QR menyu, anbar və hesabatlar. '.$company['name'].' şirkətinin məhsulu.' }}">
+    <meta name="description" content="{{ $description ?? 'AlfaPOS — bulud əsaslı POS: sifariş, mətbəx ekranı, QR menyu, anbar və hesabatlar. '.$s['company_name'].' şirkətinin məhsulu.' }}">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="flex min-h-screen flex-col bg-canvas font-sans text-ink antialiased" x-data="{ menu: false }">
@@ -44,7 +44,7 @@
         <div>
             <x-logo class="text-2xl" />
             <p class="mt-3 text-sm text-zinc-600">Restoran, kafe, bar və otellər üçün bulud əsaslı POS sistemi.</p>
-            <p class="mt-3 text-sm text-zinc-500">AlfaPOS <b>{{ $company['name'] }}</b> şirkətinin məhsuludur.</p>
+            <p class="mt-3 text-sm text-zinc-500">AlfaPOS <b>{{ $s['company_name'] }}</b> şirkətinin məhsuludur.</p>
         </div>
         <div>
             <p class="font-extrabold">Məhsul</p>
@@ -67,15 +67,17 @@
         <div>
             <p class="font-extrabold">Dəstək</p>
             <ul class="mt-3 space-y-2 text-sm text-zinc-600">
-                <li><a href="tel:{{ $company['phone_intl'] }}" class="flex items-center gap-2 hover:text-brand-700"><x-icon name="online" class="size-4" /> {{ $company['phone'] }}</a></li>
-                <li><a href="mailto:{{ $company['email'] }}" class="flex items-center gap-2 hover:text-brand-700"><x-icon name="file" class="size-4" /> {{ $company['email'] }}</a></li>
-                <li><a href="https://wa.me/{{ ltrim($company['phone_intl'], '+') }}" target="_blank" rel="noopener" class="flex items-center gap-2 hover:text-brand-700"><x-icon name="note" class="size-4" /> WhatsApp</a></li>
+                <li><a href="tel:{{ $s['phone_intl'] }}" class="flex items-center gap-2 hover:text-brand-700"><x-icon name="online" class="size-4" /> {{ $s['phone'] }}</a></li>
+                @if ($s['city_phone'])<li><a href="tel:{{ $s['city_phone_intl'] }}" class="flex items-center gap-2 hover:text-brand-700"><x-icon name="online" class="size-4" /> {{ $s['city_phone'] }}</a></li>@endif
+                <li><a href="mailto:{{ $s['email'] }}" class="flex items-center gap-2 hover:text-brand-700"><x-icon name="file" class="size-4" /> {{ $s['email'] }}</a></li>
+                @if ($s['whatsapp'])<li><a href="https://wa.me/{{ ltrim($s['whatsapp_intl'], '+') }}" target="_blank" rel="noopener" class="flex items-center gap-2 hover:text-brand-700"><x-icon name="note" class="size-4" /> WhatsApp</a></li>@endif
+                @if ($s['address'])<li><a href="{{ $s['map_url'] ?: route('contact') }}" target="_blank" rel="noopener" class="flex items-start gap-2 hover:text-brand-700"><x-icon name="store" class="mt-0.5 size-4 shrink-0" /> {{ $s['address'] }}</a></li>@endif
             </ul>
         </div>
     </div>
     <div class="border-t border-zinc-100">
         <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-5 text-xs text-zinc-500 sm:px-6">
-            <p>© {{ date('Y') }} {{ $company['name'] }}. Bütün hüquqlar qorunur.</p>
+            <p>© {{ date('Y') }} {{ $s['company_name'] }} · VÖEN {{ $s['voen'] }}. Bütün hüquqlar qorunur.</p>
             <p>AlfaPOS v{{ config('app.version') }}</p>
         </div>
     </div>

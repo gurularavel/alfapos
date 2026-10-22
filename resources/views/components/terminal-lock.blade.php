@@ -25,7 +25,7 @@
         </div>
         {{-- Məhsulun versiyası və dəstək --}}
         <p class="pointer-events-none absolute inset-x-0 bottom-2 text-center text-xs font-semibold tracking-wide text-white/50">
-            AlfaPOS v{{ config('app.version') }} · {{ config('app.company.name') }} · Dəstək: {{ config('app.company.phone') }}
+            AlfaPOS v{{ config('app.version') }} · {{ site('company_name') }} · Dəstək: {{ site('phone') }}
         </p>
     </div>
 
