@@ -64,7 +64,7 @@
 
                 <div class="flex items-center gap-2 border-t border-zinc-100 px-3 py-2" x-show="g.is_table && g.unpaid_ids.length">
                     <span class="text-sm text-zinc-500">Köçür:</span>
-                    <select class="input py-1.5 text-sm" @change="const s = $event.target, to = s.value, name = s.selectedOptions[0]?.text; s.value = ''; if (to && confirm(g.title + ' → ' + name + ' köçürülsün? Dolu masadırsa hesablar birləşəcək.')) post(@js(route('orders.transfer')), { from_table_id: Number(g.key.slice(1)), to_table_id: Number(to) })">
+                    <select class="input py-1.5 text-sm" @change="const s = $event.target, to = s.value, name = s.selectedOptions[0]?.text; s.value = ''; if (to && confirm(g.title + ' → ' + name + ' köçürülsün? Dolu masadırsa hesablar birləşəcək.')) post(@js(route('orders.transfer')), { from_table_id: Number(g.key.slice(1)), to_table_id: Number(to) }).then(r => r && @js($autoPrintKot) && printUrl(r.slip_url))">
                         <option value="">Masa seçin…</option>
                         @foreach ($tables as $t)
                             <option value="{{ $t->id }}" :disabled="g.key === 't{{ $t->id }}'">{{ $t->title }}{{ $t->floor ? ' · '.$t->floor : '' }}</option>

@@ -16,12 +16,13 @@ use Illuminate\Validation\Rule;
 
 class OrderController extends Controller
 {
-    public function index(PosTerminal $terminal)
+    public function index(PosTerminal $terminal, Tenancy $tenancy)
     {
         return view('orders.index', [
             'paymentTypes' => PaymentType::where('is_active', true)->get(['id', 'title']),
             'terminal' => $terminal->state(),
             'tables' => StoreTable::orderBy('floor')->orderByRaw('LENGTH(title)')->orderBy('title')->get(['id', 'title', 'floor']),
+            'autoPrintKot' => (bool) $tenancy->tenant()->printSetting('print_token', true),
         ]);
     }
 
@@ -141,10 +142,13 @@ class OrderController extends Controller
         $to = StoreTable::find($data['to_table_id']);
         $merged = Order::where('store_table_id', $to->id)->where('payment_status', 'pending')->whereNotIn('status', ['draft', 'cancelled'])->exists();
 
-        DB::transaction(function () use ($orders, $to, $merged) {
+        DB::transaction(function () use ($orders, $from, $to, $merged) {
             foreach ($orders as $order) {
                 // Birləşmədə gələn sifarişlər hədəf masanın hesabına "əlavə" kimi düşür
-                $order->update(['store_table_id' => $to->id, 'delivery_type' => 'dinein', 'is_addition' => $merged || $order->is_addition]);
+                $order->update([
+                    'store_table_id' => $to->id, 'delivery_type' => 'dinein', 'is_addition' => $merged || $order->is_addition,
+                    'transferred_from' => $from->label(), 'transferred_at' => now(),
+                ]);
                 Realtime::order($order, 'updated');
             }
         });
@@ -154,7 +158,19 @@ class OrderController extends Controller
         return response()->json([
             'message' => $merged ? "{$from->title} → {$to->title}: hesablar birləşdirildi." : "{$from->title} → {$to->title} köçürüldü.",
             'to_table_id' => $to->id,
+            'slip_url' => route('orders.transfer-slip', ['ids' => $orders->pluck('id')->implode(',')]),
         ]);
+    }
+
+    /** Mətbəx üçün masa köçürmə çeki: hansı tokenlər/yeməklər hansı masadan hansına keçib. */
+    public function transferSlip(Request $request, Tenancy $tenancy)
+    {
+        $ids = array_filter(array_map('intval', explode(',', (string) $request->query('ids'))));
+        $orders = Order::with(['items' => fn ($q) => $q->where('status', '!=', 'cancelled'), 'table'])
+            ->whereIn('id', $ids)->whereNotNull('transferred_from')->orderBy('created_at')->get();
+        abort_if($orders->isEmpty(), 404);
+
+        return view('print.transfer', ['orders' => $orders, 'tenant' => $tenancy->tenant(), 'by' => app(PosTerminal::class)->effectiveUser()?->name]);
     }
 
     /** Hesab çeki (pre-bill): masanın ödənilməmiş sifarişləri — müştəri ödəməzdən əvvəl baxır. */

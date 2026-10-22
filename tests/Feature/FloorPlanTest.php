@@ -95,6 +95,19 @@ class FloorPlanTest extends TestCase
         $this->assertDatabaseHas('audit_logs', ['action' => 'table.transfer']);
     }
 
+    public function test_transfer_note_on_kitchen_tickets(): void
+    {
+        $a = $this->order('Plov', 2);
+        $target = StoreTable::where('title', 'Masa 1')->firstOrFail();
+
+        $slip = $this->postJson(route('orders.transfer'), ['from_table_id' => $this->table->id, 'to_table_id' => $target->id])->assertOk()->json('slip_url');
+
+        $this->get($slip)->assertOk()
+            ->assertSee('MASA KÖÇÜRÜLDÜ')->assertSee('Masa 5 · Teras → Masa 1 · Zal')->assertSee('Plov')->assertSee('Token #'.Order::find($a)->token_no);
+        $this->get(route('orders.token', $a))->assertOk()->assertSee('Köçürülüb: Masa 5 · Teras → Masa 1 · Zal');
+        $this->assertSame('Masa 5 · Teras', collect($this->getJson(route('kitchen.feed'))->json())->firstWhere('id', $a)['transferred_from']);
+    }
+
     public function test_move_to_busy_table_merges_bills_and_deposit_follows_target(): void
     {
         $vip = StoreTable::where('title', 'VIP')->firstOrFail();

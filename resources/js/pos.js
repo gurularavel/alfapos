@@ -166,6 +166,8 @@ export default (data) => ({
         try {
             const r = await api(this.routes.transfer, { method: 'POST', body: { from_table_id: from.id, to_table_id: t.id } });
             toast(r.message);
+            // Mətbəxə "MASA KÖÇÜRÜLDÜ" çeki (Çap ayarları → mətbəx çekini avtomatik çap et)
+            if (this.autoPrintKot) printUrl(r.slip_url);
             this.transferFrom = null;
             if (String(this.tableId) === String(from.id)) this.tableId = String(t.id);
             await this.loadBoard();

@@ -13,6 +13,7 @@
                 <div class="flex items-center justify-between bg-zinc-50 px-4 py-3">
                     <div>
                         <p class="font-extrabold"><span x-text="o.title"></span> <span x-show="o.is_addition" class="badge-amber align-middle">ƏLAVƏ</span></p>
+                        <p x-show="o.transferred_from" class="text-xs font-bold text-sky-700" x-text="o.transferred_from + '-dən köçürülüb'"></p>
                         <p class="text-xs text-zinc-500" x-text="o.delivery_type + (o.waiter ? ' · ' + o.waiter : '')"></p>
                     </div>
                     <div class="text-right">

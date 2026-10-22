@@ -26,7 +26,7 @@ class Order extends Model
 
     protected function casts(): array
     {
-        return ['discount_value' => 'decimal:2', 'no_service_charge' => 'boolean', 'is_addition' => 'boolean'];
+        return ['discount_value' => 'decimal:2', 'no_service_charge' => 'boolean', 'is_addition' => 'boolean', 'transferred_at' => 'datetime'];
     }
 
     public function items(): HasMany

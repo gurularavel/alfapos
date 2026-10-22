@@ -2,6 +2,9 @@
     <div class="c">
         <div class="b">{{ $tenant->name }}</div>
         <div class="muted">MƏTBƏX ÇEKİ (KOT)</div>
+        @if ($order->transferred_from)
+            <div class="b" style="border:1px dashed #000;margin:4px 0;padding:2px">Köçürülüb: {{ $order->transferred_from }} → {{ $order->table?->label() }}</div>
+        @endif
         @if ($order->is_addition)
             <div class="lg b" style="border:2px solid #000;margin:4px 0;padding:2px">ƏLAVƏ SİFARİŞ</div>
             @php($previous = \App\Models\Order::where('store_table_id', $order->store_table_id)->where('payment_status', 'pending')->whereNotIn('status', ['draft', 'cancelled'])->where('id', '<', $order->id)->pluck('token_no'))
