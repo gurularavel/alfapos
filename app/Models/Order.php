@@ -64,6 +64,16 @@ class Order extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    public function discountApprover(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'discount_approved_by');
+    }
+
+    public function returns(): HasMany
+    {
+        return $this->hasMany(ItemReturn::class);
+    }
+
     public function scopeActive($query)
     {
         return $query->whereIn('status', ['created', 'preparing', 'ready']);

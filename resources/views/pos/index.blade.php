@@ -409,7 +409,7 @@
                         <template x-for="o in tableSheet.group.orders" :key="o.id">
                             <div class="mb-3">
                                 <p class="mb-1 text-xs font-bold tracking-wide text-zinc-400 uppercase" x-text="'Token #' + o.token_no + ' · ' + o.time + ' · ' + o.status_label"></p>
-                                <template x-for="i in o.items"><p class="flex justify-between text-base" :class="i.status === 'cancelled' && 'line-through text-zinc-400'"><span x-text="i.qty + ' × ' + i.title + (i.variant ? ' (' + i.variant + ')' : '')"></span></p></template>
+                                <template x-for="i in o.items"><p class="flex items-center justify-between gap-2 text-base" :class="i.status === 'cancelled' && 'line-through text-zinc-400'"><span x-text="i.qty + ' × ' + i.title + (i.variant ? ' (' + i.variant + ')' : '')"></span><button type="button" x-show="i.status !== 'cancelled'" class="shrink-0 rounded-lg px-2 py-1 text-xs font-bold text-red-600 hover:bg-red-50" @click="returnItem(i, o)">Ləğv</button></p></template>
                             </div>
                         </template>
                         <div class="mt-2 rounded-2xl bg-zinc-50 p-4">

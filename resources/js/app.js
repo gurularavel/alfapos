@@ -6,6 +6,7 @@ import { startRealtime } from './echo';
 import customerDisplay from './display';
 import { planEditor } from './floorplan';
 import staffMeal from './staff-meal';
+import { approvalStore, returnsStore, withApproval } from './returns';
 
 Alpine.plugin(collapse);
 
@@ -28,7 +29,10 @@ window.api = async (url, { method = 'GET', body } = {}) => {
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
         const first = data.errors ? Object.values(data.errors)[0][0] : null;
-        throw new Error(first || data.message || 'Xəta baş verdi');
+        const error = new Error(first || data.message || 'Xəta baş verdi');
+        error.errors = data.errors ?? null; // withApproval() approver_pin xətasını buradan tanıyır
+        error.status = res.status;
+        throw error;
     }
     return data;
 };
@@ -107,6 +111,11 @@ if (window.TERMINAL_STATE) Alpine.store('terminal', terminal(window.TERMINAL_STA
 
 // Reverb bağlantısının vəziyyəti (ekranlarda "Canlı" göstəricisi və polling tezliyi üçün)
 Alpine.store('rt', { connected: false });
+
+// Menecer təsdiqi (PIN) və ləğv / qaytarma pəncərələri — layout-dakı komponentlər istifadə edir
+window.withApproval = withApproval;
+Alpine.store('approval', approvalStore());
+if (window.RETURN_ROUTES) Alpine.store('returns', returnsStore(window.RETURN_ROUTES));
 startRealtime(Alpine);
 
 /**

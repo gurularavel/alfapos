@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Support\PosTerminal;
 use App\Support\Tenancy;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\ValidationException;
 
 class TerminalController extends Controller
@@ -73,10 +74,18 @@ class TerminalController extends Controller
     protected function pinUser(Request $request): User
     {
         $data = $request->validate(['pin' => ['required', 'digits:4']]);
+        // PIN təxmin etməyə qarşı: menecerin PIN-i ilə girən hər şeyi təsdiqləyə bilər
+        $key = 'terminal-pin:'.$this->tenancy->id().':'.$request->user()?->id.':'.$request->ip();
+        if (RateLimiter::tooManyAttempts($key, 10)) {
+            throw ValidationException::withMessages(['pin' => 'Çox səhv cəhd. '.ceil(RateLimiter::availableIn($key) / 60).' dəqiqə sonra yenidən yoxlayın.']);
+        }
         $user = User::findByPin($this->tenancy->id(), $data['pin']);
         if (! $user) {
+            RateLimiter::hit($key, 300);
+
             throw ValidationException::withMessages(['pin' => 'PIN yanlışdır.']);
         }
+        RateLimiter::clear($key);
 
         return $user;
     }

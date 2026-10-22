@@ -27,6 +27,7 @@
             ['reservations.index', 'Rezervlər', 'calendar', 'RESERVATIONS', 'reservations.*'],
             ['customers.index', 'Müştərilər', 'users', 'CUSTOMERS', 'customers.*'],
             ['invoices.index', 'Fakturalar', 'invoice', 'INVOICES', 'invoices.*'],
+            ['returns.index', 'Ləğv və qaytarma', 'refresh', 'APPROVE,REPORTS', 'returns.*'],
             ['inventory.index', 'Anbar', 'box', 'INVENTORY', 'inventory.*'],
             ['feedbacks.index', 'Rəylər', 'star', 'FEEDBACK', 'feedbacks.*'],
             ['users.index', 'İstifadəçilər', 'user-cog', 'ADMIN', 'users.*'],
@@ -109,6 +110,7 @@
         <div x-transition class="rounded-xl px-4 py-3 text-sm font-semibold text-white shadow-lg" :class="t.type === 'error' ? 'bg-red-600' : 'bg-ink'" x-text="t.message"></div>
     </template>
 </div>
+@auth @unless (auth()->user()->isSuperAdmin()) <x-approval-dialogs /> @endunless @endauth
 @stack('scripts')
 </body>
 </html>

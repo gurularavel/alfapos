@@ -47,7 +47,12 @@
                                             <span class="block text-xs text-zinc-500" x-show="i.addons" x-text="'+ ' + i.addons"></span>
                                             <span class="block text-xs text-amber-700" x-show="i.notes" x-text="i.notes"></span>
                                         </span>
-                                        <x-icon name="check" class="mt-0.5 size-4 shrink-0 text-brand-500" x-show="['ready','completed'].includes(i.status)" />
+                                        <span class="flex shrink-0 items-center gap-1">
+                                            <x-icon name="check" class="mt-0.5 size-4 text-brand-500" x-show="['ready','completed'].includes(i.status)" />
+                                            <button type="button" x-show="i.status !== 'cancelled'" class="rounded px-1.5 text-xs font-bold text-red-600 no-underline hover:bg-red-50"
+                                                    @click="$store.returns.show({ item: { id: i.id, title: i.title, qty: i.qty, price: i.price, status: i.status }, order: { id: o.id, token_no: o.token_no, paid: o.payment_status === 'paid' }, onDone: () => load() })"
+                                                    x-text="o.payment_status === 'paid' ? 'Qaytar' : 'Ləğv'"></button>
+                                        </span>
                                     </li>
                                 </template>
                             </ul>
@@ -56,7 +61,7 @@
                                 <button class="btn-secondary btn-sm" @click="printUrl(@js(route('orders.token', '__ID__')).replace('__ID__', o.id))"><x-icon name="printer" class="size-3.5" /> Token</button>
                                 <button class="btn-secondary btn-sm" x-show="o.invoice_id" @click="printUrl(@js(route('invoices.receipt', '__ID__')).replace('__ID__', o.invoice_id))"><x-icon name="invoice" class="size-3.5" /> Qəbz</button>
                                 <button class="btn-secondary btn-sm" x-show="o.status !== 'completed'" @click="post(@js(route('orders.status', '__ID__')).replace('__ID__', o.id), { status: 'completed' })"><x-icon name="check" class="size-3.5" /> Təhvil verildi</button>
-                                <button class="btn-ghost btn-sm text-red-600" x-show="o.payment_status !== 'paid'" @click="confirm('Sifariş #' + o.token_no + ' ləğv edilsin?') && post(@js(route('orders.cancel', '__ID__')).replace('__ID__', o.id), {})">Ləğv</button>
+                                <button class="btn-ghost btn-sm text-red-600" x-show="o.payment_status !== 'paid'" @click="$store.returns.showOrder({ order: { id: o.id, token_no: o.token_no, paid: false }, onDone: () => load() })">Sifarişi ləğv et</button>
                             </div>
                         </div>
                     </template>

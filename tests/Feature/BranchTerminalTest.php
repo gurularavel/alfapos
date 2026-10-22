@@ -198,7 +198,7 @@ class BranchTerminalTest extends TestCase
 
         $send([$item('Plov', 2), $item('Dolma', 1)]);
         $cancelled = $send([$item('Plov', 5)]);
-        $this->postJson(route('orders.cancel', $cancelled), ['reason' => 'Test'])->assertOk();
+        $this->postJson(route('orders.cancel', $cancelled), ['reason' => 'wrong'])->assertOk();
 
         $this->get(route('dashboard'))->assertOk()->assertSee('Kateqoriyalar üzrə satış')->assertSee('Əsas yeməklər')
             ->assertViewHas('categorySales', fn ($rows) => $rows->count() === 1

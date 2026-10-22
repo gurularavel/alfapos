@@ -17,6 +17,7 @@ use App\Http\Controllers\QrMenuController;
 use App\Http\Controllers\ReadyStockController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ReservationController;
+use App\Http\Controllers\ReturnController;
 use App\Http\Controllers\Settings;
 use App\Http\Controllers\StaffMealController;
 use App\Http\Controllers\SubscriptionController;
@@ -105,6 +106,9 @@ Route::middleware('auth')->group(function () {
             Route::get('/orders/transfer-slip', [OrderController::class, 'transferSlip'])->name('orders.transfer-slip');
             Route::post('/orders/{order}/status', [OrderController::class, 'status'])->name('orders.status');
             Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
+            Route::post('/orders/items/{orderItem}/return', [ReturnController::class, 'store'])->name('orders.items.return');
+            Route::get('/orders/returns/{itemReturn}/slip', [ReturnController::class, 'slip'])->name('orders.returns.slip');
+            Route::get('/orders/returns/{itemReturn}/receipt', [ReturnController::class, 'receipt'])->name('orders.returns.receipt');
             Route::get('/orders/{order}/token', [OrderController::class, 'token'])->name('orders.token');
         });
 
@@ -151,6 +155,7 @@ Route::middleware('auth')->group(function () {
         });
 
         Route::get('/feedbacks', [FeedbackController::class, 'index'])->middleware('scope:FEEDBACK')->name('feedbacks.index');
+        Route::get('/returns', [ReturnController::class, 'index'])->middleware('scope:APPROVE,REPORTS')->name('returns.index');
         Route::get('/reports', [ReportController::class, 'index'])->middleware('scope:REPORTS')->name('reports.index');
         Route::get('/reports/{report}', [ReportController::class, 'show'])->middleware('scope:REPORTS')->name('reports.show');
 

@@ -154,6 +154,28 @@
         @endif
     </div>
 
+    @if (auth()->user()->hasScope('APPROVE') || auth()->user()->hasScope('REPORTS'))
+        <div @class(['card card-pad', 'ring-2 ring-red-300' => $returnStats->after_bill])>
+            <div class="mb-3 flex items-center justify-between">
+                <h2 class="font-extrabold">Ləğv və qaytarma <span class="text-xs font-normal text-zinc-500">bu gün</span></h2>
+                <a href="{{ route('returns.index') }}" class="text-xs font-semibold text-brand-700 hover:underline">Jurnal →</a>
+            </div>
+            <div class="mb-3 grid grid-cols-3 gap-2 text-center">
+                <div class="rounded-xl bg-zinc-50 p-2"><p class="text-lg font-extrabold tabular-nums">{{ $returnStats->count }}</p><p class="text-[11px] text-zinc-500">məhsul</p></div>
+                <div class="rounded-xl bg-zinc-50 p-2"><p class="text-lg font-extrabold tabular-nums">{{ money($returnStats->amount) }}</p><p class="text-[11px] text-zinc-500">məbləğ</p></div>
+                <div class="rounded-xl bg-red-50 p-2"><p class="text-lg font-extrabold text-red-700 tabular-nums">{{ money($returnStats->refunds) }}</p><p class="text-[11px] text-zinc-500">pul qaytarılıb</p></div>
+            </div>
+            @if ($returnStats->after_bill)
+                <p class="mb-2 rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-700"><x-icon name="alert" class="mr-1 inline size-3.5" /> {{ $returnStats->after_bill }} məhsul hesab çeki verildikdən sonra silinib — yoxlayın.</p>
+            @endif
+            @forelse ($returnStats->by_staff as $row)
+                <div class="flex justify-between py-1 text-sm"><span class="font-semibold">{{ $row->name }}</span><span class="text-zinc-500">{{ $row->count }} məhsul · <b class="text-ink">{{ money($row->amount) }}</b></span></div>
+            @empty
+                <p class="text-sm text-zinc-500">Bu gün ləğv və qaytarma yoxdur.</p>
+            @endforelse
+        </div>
+    @endif
+
     <div class="card card-pad">
         <div class="mb-3 flex items-center justify-between">
             <h2 class="font-extrabold">Masalar üzrə satış <span class="text-xs font-normal text-zinc-500">bu gün</span></h2>

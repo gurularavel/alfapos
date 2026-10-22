@@ -33,11 +33,13 @@ class User extends Authenticatable
         'FEEDBACK' => 'Rəylər',
         'REPORTS' => 'Hesabatlar',
         'SETTINGS' => 'Ayarlar',
+        'APPROVE' => 'Təsdiq: ləğv, qaytarma, endirim',
     ];
 
     /** Biznes daxilindəki rollar və hər rol üçün təklif olunan icazələr (formda avtomatik doldurulur). */
     public const ROLES = [
         'admin' => ['Admin (sahibkar)', []],
+        'manager' => ['Menecer', ['DASHBOARD', 'POS', 'ORDERS', 'KITCHEN', 'PAYMENTS', 'INVOICES', 'CUSTOMERS', 'RESERVATIONS', 'INVENTORY', 'STAFF_MEALS', 'REPORTS', 'APPROVE']],
         'cashier' => ['Kassir', ['POS', 'ORDERS', 'PAYMENTS', 'INVOICES', 'CUSTOMERS', 'RESERVATIONS']],
         'waiter' => ['Ofisiant', ['POS', 'ORDERS', 'RESERVATIONS']],
         'chef' => ['Aşpaz', ['KITCHEN']],

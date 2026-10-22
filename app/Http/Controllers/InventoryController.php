@@ -62,7 +62,7 @@ class InventoryController extends Controller
     public function movement(Request $request, InventoryItem $inventoryItem, StockService $stock)
     {
         $data = $request->validate([
-            'type' => ['required', Rule::in(['in', 'out', 'wastage'])],
+            'type' => ['required', Rule::in(['in', 'out', 'wastage', 'supplier'])], // supplier — təchizatçıya qaytarma
             'quantity' => ['required', 'numeric', 'gt:0'],
             'unit_cost' => ['nullable', 'numeric', 'min:0', 'max:1000000'], // girişin alış qiyməti (1 vahid)
             'note' => ['nullable', 'string', 'max:255'],

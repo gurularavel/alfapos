@@ -9,6 +9,7 @@
         <hr>
     @endif
 
+    @if ($invoice->print_count > 1)<div class="c b" style="border:1px dashed #000;margin-bottom:6px;padding:2px">NÜSXƏ · {{ $invoice->print_count }}-ci çap</div>@endif
     <table>
         <tr><td>Faktura:</td><td class="r b">{{ $invoice->number }}</td></tr>
         <tr><td>Tarix:</td><td class="r">{{ $invoice->created_at->format('d.m.Y H:i') }}</td></tr>
@@ -56,6 +57,7 @@
         <tr><td>Ödəniş</td><td class="r">{{ $invoice->paymentType?->title }}</td></tr>
     </table>
     @if ($invoice->status === 'void')<hr><div class="c b lg">LƏĞV EDİLİB</div>@endif
+    @if ($invoice->refunded_total > 0)<hr><table><tr class="b"><td>Qaytarılıb</td><td class="r">−{{ money($invoice->refunded_total) }}</td></tr><tr><td>Xalis</td><td class="r">{{ money($invoice->total - $invoice->refunded_total) }}</td></tr></table>@endif
     <hr>
     <div class="c muted">{{ $tenant->printSetting('footer') }}</div>
     @if ($tenant->is_feedback_enabled && $tenant->is_qr_menu_enabled)

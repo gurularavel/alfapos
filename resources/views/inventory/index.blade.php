@@ -69,8 +69,8 @@
         <template x-if="move"><form method="POST" :action="@js(url('dashboard/inventory')) + '/' + move.id + '/movement'" id="move-form" class="space-y-3">
             @csrf
             <p class="font-bold" x-text="move.title"></p>
-            <div class="grid grid-cols-3 gap-2">
-                @foreach (['in' => 'Giriş', 'out' => 'Çıxış', 'wastage' => 'İsraf'] as $k => $v)
+            <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                @foreach (['in' => 'Giriş', 'out' => 'Çıxış', 'wastage' => 'İsraf', 'supplier' => 'Təchizatçıya'] as $k => $v)
                     <label class="cursor-pointer rounded-xl border border-zinc-200 py-2 text-center text-sm font-bold has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50"><input type="radio" name="type" value="{{ $k }}" x-model="move.type" class="sr-only">{{ $v }}</label>
                 @endforeach
             </div>

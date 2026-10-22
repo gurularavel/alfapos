@@ -108,7 +108,7 @@ class ReadyStockTest extends TestCase
         $order = Order::find($this->sell('Dolma', 4)->assertOk()->json('order.id'));
         $this->assertSame(15.0, $this->stock('Dolma'));
 
-        $this->postJson(route('orders.cancel', $order), ['reason' => 'Səhv'])->assertOk();
+        $this->postJson(route('orders.cancel', $order), ['reason' => 'wrong'])->assertOk();
 
         $this->assertSame(19.0, $this->stock('Dolma'));
         $this->get(route('reports.show', 'ready-stock'))->assertOk()

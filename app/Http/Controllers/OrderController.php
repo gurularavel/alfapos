@@ -4,10 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Support\Realtime;
 use App\Models\AuditLog;
+use App\Models\ItemReturn;
 use App\Models\Order;
 use App\Models\PaymentType;
 use App\Models\StoreTable;
+use App\Services\ApprovalService;
 use App\Services\OrderService;
+use App\Services\ReturnService;
 use App\Support\PosTerminal;
 use App\Support\Tenancy;
 use Illuminate\Http\Request;
@@ -70,6 +73,7 @@ class OrderController extends Controller
                         'waiter' => $o->creator?->name,
                         'notes' => $o->notes,
                         'items' => $o->items->map(fn ($i) => [
+                            'id' => $i->id, 'price' => (float) $i->price,
                             'title' => $i->title, 'variant' => $i->variant_title, 'qty' => $i->quantity, 'total' => $i->lineTotal(),
                             'addons' => collect($i->addons)->pluck('title')->implode(', '), 'status' => $i->status, 'notes' => $i->notes,
                         ]),
@@ -110,10 +114,22 @@ class OrderController extends Controller
         return response()->json(['message' => 'Status yeniləndi.']);
     }
 
-    public function cancel(Request $request, Order $order, OrderService $service)
+    /** Bütün sifarişin ləğvi: səbəb və menecer təsdiqi tələb olunur, hər sətir ləğv jurnalına düşür. */
+    public function cancel(Request $request, Order $order, OrderService $service, ApprovalService $approval, ReturnService $returns)
     {
         abort_if($order->payment_status === 'paid', 422, 'Ödənilmiş sifariş ləğv edilə bilməz — fakturanı ləğv edin.');
-        $service->cancel($order, $request->input('reason'));
+        abort_if($order->status === 'cancelled', 422, 'Sifariş artıq ləğv edilib.');
+        $data = $request->validate([
+            'reason' => ['required', Rule::in(array_keys(ItemReturn::REASONS))],
+            'note' => ['nullable', 'required_if:reason,other', 'string', 'max:255'],
+            'approver_pin' => ['nullable', 'string'],
+        ], ['reason.required' => 'Ləğvin səbəbini seçin.', 'note.required_if' => 'Səbəbi qısa yazın.']);
+        $approver = $approval->approve($data['approver_pin'] ?? null);
+
+        DB::transaction(function () use ($order, $data, $approver, $service, $returns) {
+            $returns->recordOrderCancel($order->load('items'), $data['reason'], $data['note'] ?? null, $approver);
+            $service->cancel($order, ItemReturn::REASONS[$data['reason']].($data['note'] ?? null ? ': '.$data['note'] : '').' · təsdiq: '.$approver->name);
+        });
 
         return response()->json(['message' => 'Sifariş ləğv edildi.']);
     }
@@ -191,7 +207,11 @@ class OrderController extends Controller
         $deposit = (float) ($service->depositTable($orders)?->deposit ?? 0);
         $topup = StoreTable::depositTopup($totals['total'], $deposit);
 
-        return view('print.bill', compact('orders', 'tenant', 'totals', 'deposit', 'topup'));
+        // Hər çap sayılır: təkrar hesab çeki "NÜSXƏ" kimi çıxır, çapdan sonrakı ləğvlər hesabatda işarələnir
+        Order::whereIn('id', $orders->pluck('id'))->increment('bill_print_count');
+        $printNo = (int) $orders->max('bill_print_count') + 1;
+
+        return view('print.bill', compact('orders', 'tenant', 'totals', 'deposit', 'topup', 'printNo'));
     }
 
     /** Mətbəx üçün token / KOT çapı. */

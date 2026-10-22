@@ -6,6 +6,7 @@ use App\Models\Branch;
 use App\Models\Customer;
 use App\Models\InventoryItem;
 use App\Models\Invoice;
+use App\Models\ItemReturn;
 use App\Models\MenuItem;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -28,6 +29,9 @@ class ReportController extends Controller
         'sales-by-order-type' => ['Satış', 'Sifariş tipi üzrə', 'Zalda / özü aparır / çatdırılma.'],
         'sales-by-table' => ['Satış', 'Masalar üzrə satış', 'Hansı masa nə qədər gəlir gətirir.'],
         'voids' => ['Satış', 'Ləğvlər', 'Ləğv edilmiş fakturalar və sifarişlər.'],
+        'returns' => ['Nəzarət', 'Ləğv və qaytarmalar', 'Hər ləğv olunan / qaytarılan məhsul: səbəb, kim edib, kim təsdiqləyib.'],
+        'returns-by-staff' => ['Nəzarət', 'İşçilər üzrə ləğv', 'Hər işçinin sifarişlərindən nə qədəri ləğv / qaytarılıb (faizlə). Fırıldağa nəzarət.'],
+        'discounts' => ['Nəzarət', 'Endirim və servis imtinası', 'Endirimli sifarişlər: kim verib, kim təsdiqləyib, məbləğ.'],
         'payment-summary' => ['Ödənişlər', 'Ödəniş növləri', 'Nağd, kart və digər ödəniş növləri üzrə cəm.'],
         'item-sales' => ['Menyu', 'Məhsul satışları', 'Hər məhsuldan satılan miqdar və məbləğ.'],
         'category-sales' => ['Menyu', 'Kateqoriya satışları', 'Kateqoriyalar üzrə gəlir.'],
@@ -103,8 +107,11 @@ class ReportController extends Controller
             ->where('order_items.status', '!=', 'cancelled')->tap($inv);
 
         return match ($report) {
-            'sales-summary' => (function () use ($paid) {
+            'sales-summary' => (function () use ($paid, $from, $to) {
                 $s = $paid()->selectRaw('COUNT(*) c, SUM(sub_total) sub, SUM(discount_total) disc, SUM(tax_total) tax, SUM(service_charge_total) svc, SUM(deposit_topup) dep, SUM(total) total')->first();
+                $refunds = (float) ItemReturn::where('kind', 'refund')->whereBetween('created_at', [$from, $to])
+                    ->when($this->branchId, fn ($w) => $w->where('branch_id', $this->branchId))
+                    ->when($this->terminalId, fn ($w) => $w->where('terminal_id', $this->terminalId))->sum('amount');
                 $rows = [
                     ['Çek sayı', $s->c],
                     ['Brüt satış', money($s->sub)],
@@ -114,6 +121,8 @@ class ReportController extends Controller
                     ['Depozit fərqləri (kabinet)', money($s->dep)],
                     ['Xalis gəlir', money($s->total)],
                     ['Orta çek', money($s->c ? $s->total / $s->c : 0)],
+                    ['Müştəriyə qaytarılıb', money($refunds)],
+                    ['Qaytarmalardan sonra', money($s->total - $refunds)],
                 ];
 
                 return [['Göstərici', 'Dəyər'], $rows, null];
@@ -150,6 +159,20 @@ class ReportController extends Controller
                     ->selectRaw("DATE(created_at) d, COUNT(*) c, SUM(status = 'completed') done, SUM(status = 'cancelled') cancelled")->groupBy('d')->orderBy('d')->get()
                     ->map(fn ($r) => [$r->d, $r->c, $r->done, $r->cancelled])->all(), null],
             'item-profit' => $this->itemProfit($items()),
+            'returns' => [['Vaxt', 'Token', 'Məhsul', 'Məbləğ', 'Növ', 'Səbəb', 'Sifarişi verən', 'Edən', 'Təsdiq'],
+                ItemReturn::with(['order:id,token_no', 'orderCreator:id,name', 'requester:id,name', 'approver:id,name'])
+                    ->whereBetween('created_at', [$from, $to])->when($this->branchId, fn ($w) => $w->where('branch_id', $this->branchId))
+                    ->when($this->terminalId, fn ($w) => $w->where('terminal_id', $this->terminalId))->latest('id')->get()
+                    ->map(fn (ItemReturn $r) => [$r->created_at->format('d.m H:i'), '#'.$r->order?->token_no, $r->quantity.' × '.$r->title, money($r->amount),
+                        ItemReturn::KINDS[$r->kind].($r->after_bill ? ' · çekdən sonra' : ''), ItemReturn::REASONS[$r->reason] ?? $r->reason,
+                        $r->orderCreator?->name ?? '—', $r->requester?->name ?? '—', $r->approver?->name ?? '—'])->all(), null],
+            'returns-by-staff' => $this->returnsByStaff($from, $to, $ord, $tid),
+            'discounts' => [['Vaxt', 'Token', 'Endirim', 'Servis imtinası', 'Sifarişi verən', 'Təsdiq'],
+                Order::with(['creator:id,name', 'discountApprover:id,name'])->whereBetween('created_at', [$from, $to])->where('status', '!=', 'draft')->tap($ord)
+                    ->where(fn ($q) => $q->where('discount_value', '>', 0)->orWhere('no_service_charge', true))->latest('id')->get()
+                    ->map(fn (Order $o) => [$o->created_at->format('d.m H:i'), '#'.$o->token_no,
+                        $o->discount_value > 0 ? ($o->discount_type === 'percentage' ? qty($o->discount_value).'%' : money($o->discount_value)) : '—',
+                        $o->no_service_charge ? 'bəli' : '—', $o->creator?->name ?? '—', $o->discountApprover?->name ?? '—'])->all(), null],
             'ready-stock' => [['Yemək', 'Hazırlanıb', 'Satılıb', 'Personal', 'İsraf', 'Sayım fərqi', 'Cari qalıq', 'Maya / porsiya'],
                 MenuItem::where('track_stock', true)->orderBy('title')->get()->map(function (MenuItem $m) use ($from, $to) {
                     // Ləğv olunan sifariş / personal yeməyi "return" kimi geri gəlir — öz mənbəyindən çıxılır
@@ -214,6 +237,36 @@ class ReportController extends Controller
             $rows,
             ['Cəm', (float) $data->sum('qty') + 0, money($data->sum('revenue')), money($cost), money($knownRevenue - $cost), $margin($knownRevenue, $cost), ($u = (float) $data->sum('unknown_qty')) ? ($u + 0).' əd' : ''],
         ];
+    }
+
+    /**
+     * İşçilər üzrə ləğv / qaytarma: sifarişi verən işçinin vurduğu məbləğin neçə faizi ləğv olunub.
+     * Yüksək faiz (5%+) — "sifarişi vurub pulu götürüb, sonra ləğv etdirmək" kimi halların əlamətidir.
+     *
+     * @return array{0: list<string>, 1: list<list<string|int>>, 2: null}
+     */
+    protected function returnsByStaff(Carbon $from, Carbon $to, callable $ord, int $tid): array
+    {
+        $returns = ItemReturn::whereBetween('created_at', [$from, $to])->whereNotNull('order_creator_id')
+            ->when($this->branchId, fn ($w) => $w->where('branch_id', $this->branchId))
+            ->groupBy('order_creator_id')
+            ->selectRaw("order_creator_id, COUNT(*) c, SUM(amount) amount, SUM(kind = 'refund') refunds, SUM(after_bill) after_bill")
+            ->get()->keyBy('order_creator_id');
+        // Vurulan (ləğvdən əvvəlki) məbləğ: ləğv olunan sətirlər də daxil
+        $ordered = OrderItem::join('orders', 'orders.id', '=', 'order_items.order_id')
+            ->where('orders.tenant_id', $tid)->whereBetween('orders.created_at', [$from, $to])->where('orders.status', '!=', 'draft')->tap($ord)
+            ->whereIn('orders.created_by', $returns->keys())
+            ->groupBy('orders.created_by')->selectRaw('orders.created_by u, SUM(order_items.price * order_items.quantity) t')->pluck('t', 'u');
+
+        $rows = \App\Models\User::whereIn('id', $returns->keys())->get(['id', 'name'])
+            ->map(function ($u) use ($returns, $ordered) {
+                $r = $returns[$u->id];
+                $share = ($ordered[$u->id] ?? 0) > 0 ? round($r->amount / $ordered[$u->id] * 100, 1) : 0;
+
+                return [$u->name, (int) $r->c, (int) $r->refunds, (int) $r->after_bill, money($r->amount), money($ordered[$u->id] ?? 0), $share.'%'.($share >= 5 ? ' ⚠' : '')];
+            })->sortByDesc(fn ($row) => (float) $row[6])->values()->all();
+
+        return [['İşçi', 'Ləğv / qaytarma', 'O cümlədən qaytarma', 'Hesab çekindən sonra', 'Məbləğ', 'Vurduğu sifarişlər', 'Pay'], $rows, null];
     }
 
     /** @return array{0: list<string>, 1: list<list<string|int>>, 2: list<string|int>} */

@@ -9,6 +9,7 @@ use App\Models\MenuItem;
 use App\Models\Order;
 use App\Models\PaymentType;
 use App\Models\StoreTable;
+use App\Services\ApprovalService;
 use App\Services\OrderService;
 use App\Support\PosTerminal;
 use App\Support\Tenancy;
@@ -88,7 +89,7 @@ class PosController extends Controller
      *  - kitchen: sifariş mətbəxə göndərilir, ödəniş sonra (Orders ekranından)
      *  - pay: sifariş yaradılır, faktura kəsilir və mətbəxə göndərilir
      */
-    public function store(Request $request, OrderService $service, PosTerminal $terminal)
+    public function store(Request $request, OrderService $service, PosTerminal $terminal, ApprovalService $approval)
     {
         $data = $request->validate([
             'action' => ['required', Rule::in(['draft', 'kitchen', 'pay'])],
@@ -108,9 +109,14 @@ class PosController extends Controller
             'draft_reference' => ['nullable', 'string', 'max:60'],
             'draft_id' => ['nullable', 'integer'],
             'payment_type_id' => ['required_if:action,pay', 'nullable', Rule::exists('payment_types', 'id')->where('tenant_id', app(Tenancy::class)->id())],
+            'approver_pin' => ['nullable', 'string'],
         ]);
 
         abort_if($data['action'] === 'pay' && ! $terminal->effectiveUser()?->hasScope('PAYMENTS'), 403, 'Ödəniş qəbul etmək icazəniz yoxdur. Sifarişi mətbəxə göndərin.');
+
+        // Endirim və servis haqqından imtina pulu azaldır — menecer təsdiqi ilə (qaralamada hələ lazım deyil)
+        $discounted = (float) ($data['discount_value'] ?? 0) > 0 || ! empty($data['no_service_charge']);
+        $data['discount_approved_by'] = $discounted && $data['action'] !== 'draft' ? $approval->approve($data['approver_pin'] ?? null)->id : null;
 
         // Qaralamadan davam edilirsə, köhnə qaralamanı silirik
         if (! empty($data['draft_id'])) {

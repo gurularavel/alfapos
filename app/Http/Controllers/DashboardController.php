@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Feedback;
 use App\Models\InventoryItem;
+use App\Models\ItemReturn;
 use App\Models\Invoice;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -128,6 +129,18 @@ class DashboardController extends Controller
             'last_week' => (float) ($lastWeekHours[$h]->total ?? 0),
         ]);
 
+        // Bu gün ləğv və qaytarmalar (fırıldağa nəzarət): kimin sifarişlərindən nə qədər silinib
+        $todayReturns = ItemReturn::with('orderCreator:id,name')->whereDate('created_at', $today)->get();
+        $returnStats = (object) [
+            'count' => $todayReturns->count(),
+            'amount' => (float) $todayReturns->sum('amount'),
+            'refunds' => (float) $todayReturns->where('kind', 'refund')->sum('amount'),
+            'after_bill' => $todayReturns->where('after_bill', true)->count(),
+            'by_staff' => $todayReturns->groupBy(fn ($r) => $r->orderCreator?->name ?? '—')
+                ->map(fn ($g, $name) => (object) ['name' => $name, 'count' => $g->count(), 'amount' => (float) $g->sum('amount')])
+                ->sortByDesc('amount')->take(3)->values(),
+        ];
+
         $todayInvoices = $paid($today);
 
         return view('dashboard', [
@@ -147,6 +160,7 @@ class DashboardController extends Controller
             'tableSales' => $tableSales->take(8),
             'tableStats' => $tableStats,
             'hourly' => $hourly,
+            'returnStats' => $returnStats,
             'branchCount' => \App\Models\Branch::count(),
             'lowStock' => InventoryItem::whereColumn('quantity', '<=', 'min_quantity')->orderBy('quantity')->limit(5)->get(),
             'feedbacks' => Feedback::latest()->limit(3)->get(),

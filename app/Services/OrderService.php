@@ -167,6 +167,7 @@ class OrderService
                 'draft_reference' => $data['draft_reference'] ?? null,
                 'discount_type' => $data['discount_type'] ?? null,
                 'discount_value' => $data['discount_value'] ?? 0,
+                'discount_approved_by' => $data['discount_approved_by'] ?? null,
                 'no_service_charge' => (bool) ($data['no_service_charge'] ?? false),
                 'notes' => $data['notes'] ?? null,
                 'created_by' => app(PosTerminal::class)->effectiveId(),

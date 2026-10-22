@@ -4,6 +4,7 @@
         @if ($tenant->address)<div class="muted">{{ $tenant->address }}</div>@endif
         <div class="lg b" style="margin-top:6px">HESAB</div>
         <div class="muted">Ödəniş çeki deyil</div>
+        @if ($printNo > 1)<div class="b" style="border:1px dashed #000;margin-top:4px;padding:2px">NÜSXƏ · {{ $printNo }}-ci çap</div>@endif
     </div>
     <hr>
     <table>

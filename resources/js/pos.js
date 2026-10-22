@@ -106,6 +106,15 @@ export default (data) => ({
         } catch {}
     },
 
+    /** Masadakı sifarişin məhsulunu ləğv et (ödənilibsə — qaytar). Menecer təsdiqi pəncərədə istənir. */
+    returnItem(item, order) {
+        Alpine.store('returns').show({
+            item: { id: item.id, title: item.title, qty: item.qty, price: item.price, status: item.status },
+            order: { id: order.id, token_no: order.token_no, paid: order.payment_status === 'paid' },
+            onDone: () => this.loadBoard(),
+        });
+    },
+
     get floors() {
         return [...new Set(this.tables.map(floorOf))];
     },
@@ -466,7 +475,8 @@ export default (data) => ({
         this.busy = true;
         try {
             const totalsBefore = this.displayPayload.totals;
-            const r = await api(this.routes.store, { method: 'POST', body: this.payload(action) });
+            // Endirim / servis haqqından imtina menecer təsdiqi istəyə bilər (server approver_pin xətası qaytarır)
+            const r = await withApproval('Endirimi təsdiqləyin', (pin) => api(this.routes.store, { method: 'POST', body: { ...this.payload(action), approver_pin: pin } }));
             if (action !== 'draft') this.finishDisplay(action, r.order.token_no, totalsBefore);
             // Mətbəxə ayrıca çek: hər göndərilən sifariş (əlavə sifariş də) yalnız öz məhsulları ilə çap olunur
             for (const [id, stock] of Object.entries(r.stock ?? {})) {
