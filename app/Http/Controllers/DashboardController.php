@@ -39,6 +39,19 @@ class DashboardController extends Controller
             ->select('order_items.title', DB::raw('SUM(order_items.quantity) as qty'), DB::raw('SUM(order_items.quantity * order_items.price) as amount'))
             ->orderByDesc('qty')->limit(6)->get();
 
+        // Bu gün kateqoriyalar üzrə satış (Hesabatlar → Kateqoriya satışları ilə eyni qayda)
+        $categorySales = OrderItem::query()
+            ->join('orders', 'orders.id', '=', 'order_items.order_id')
+            ->leftJoin('menu_items', 'menu_items.id', '=', 'order_items.menu_item_id')
+            ->leftJoin('categories', 'categories.id', '=', 'menu_items.category_id')
+            ->where('orders.tenant_id', $tenancy->id())
+            ->whereDate('orders.created_at', $today)
+            ->whereNotIn('orders.status', ['draft', 'cancelled'])
+            ->where('order_items.status', '!=', 'cancelled')
+            ->groupBy('categories.id', 'categories.title')
+            ->selectRaw("categories.id, COALESCE(categories.title, 'Kateqoriyasız') as title, SUM(order_items.quantity) as qty, SUM(order_items.quantity * order_items.price) as amount")
+            ->orderByDesc('amount')->get();
+
         $orderTypes = Order::whereDate('created_at', $today)->where('status', '!=', 'draft')
             ->groupBy('delivery_type')->select('delivery_type', DB::raw('COUNT(*) as total'))->pluck('total', 'delivery_type');
 
@@ -88,6 +101,7 @@ class DashboardController extends Controller
             'goal' => (float) $tenancy->tenant()->daily_sales_goal,
             'trend' => $trend,
             'topItems' => $topItems,
+            'categorySales' => $categorySales,
             'orderTypes' => $orderTypes,
             'paymentMix' => $paymentMix,
             'terminalSales' => $terminalSales,

@@ -120,6 +120,43 @@
 
 <div class="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
     <div class="card card-pad">
+        <div class="mb-3 flex items-center justify-between">
+            <h2 class="font-extrabold">Kateqoriyalar üzrə satış <span class="text-xs font-normal text-zinc-500">bu gün</span></h2>
+            <a href="{{ route('reports.show', ['category-sales', 'from' => today()->toDateString(), 'to' => today()->toDateString()]) }}" class="text-xs font-semibold text-brand-700 hover:underline">Hesabat →</a>
+        </div>
+        @php($categoryTotal = max(1, (float) $categorySales->sum('amount')))
+        @php($categoryColors = ['bg-brand-500', 'bg-sky-500', 'bg-amber-400', 'bg-violet-500', 'bg-rose-400', 'bg-teal-400'])
+        @php($categoryTop = $categorySales->take(6))
+        @php($categoryRest = $categorySales->slice(6))
+        @if ($categorySales->isNotEmpty())
+            {{-- Paylar bir zolaqda --}}
+            <div class="mb-4 flex h-3 overflow-hidden rounded-full bg-zinc-100">
+                @foreach ($categoryTop as $i => $row)
+                    <div class="{{ $categoryColors[$i] }} h-full" style="width: {{ $row->amount / $categoryTotal * 100 }}%" title="{{ $row->title }} — {{ money($row->amount) }}"></div>
+                @endforeach
+                @if ($categoryRest->isNotEmpty())<div class="h-full bg-zinc-300" style="width: {{ $categoryRest->sum('amount') / $categoryTotal * 100 }}%" title="Digər"></div>@endif
+            </div>
+        @endif
+        @forelse ($categoryTop as $i => $row)
+            <div class="flex items-center gap-2 py-1 text-sm">
+                <span class="size-2.5 shrink-0 rounded-full {{ $categoryColors[$i] }}"></span>
+                <span @class(['min-w-0 flex-1 truncate font-semibold', 'text-zinc-500' => ! $row->id])>{{ $row->title }}</span>
+                <span class="shrink-0 text-xs text-zinc-500">{{ (float) $row->qty }} əd · {{ round($row->amount / $categoryTotal * 100) }}%</span>
+                <span class="w-20 shrink-0 text-right font-bold tabular-nums">{{ money($row->amount) }}</span>
+            </div>
+        @empty
+            <p class="text-sm text-zinc-500">Bu gün satış yoxdur.</p>
+        @endforelse
+        @if ($categoryRest->isNotEmpty())
+            <div class="flex items-center gap-2 py-1 text-sm text-zinc-500">
+                <span class="size-2.5 shrink-0 rounded-full bg-zinc-300"></span>
+                <span class="flex-1">Digər ({{ $categoryRest->count() }})</span>
+                <span class="w-20 text-right font-bold tabular-nums">{{ money($categoryRest->sum('amount')) }}</span>
+            </div>
+        @endif
+    </div>
+
+    <div class="card card-pad">
         <h2 class="mb-3 font-extrabold">Top məhsullar <span class="text-xs font-normal text-zinc-500">bu gün</span></h2>
         @forelse ($topItems as $i => $row)
             <div class="flex items-center gap-3 py-1.5 text-sm">

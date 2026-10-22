@@ -190,6 +190,21 @@ class BranchTerminalTest extends TestCase
             });
     }
 
+    public function test_dashboard_shows_sales_by_category(): void
+    {
+        Order::query()->delete(); // demo seed-in bugünkü sifarişləri nəticəyə qarışmasın
+        $item = fn (string $title, int $qty) => ['menu_item_id' => MenuItem::where('title', $title)->value('id'), 'quantity' => $qty];
+        $send = fn (array $cart) => $this->postJson(route('pos.store'), ['action' => 'kitchen', 'delivery_type' => 'takeaway', 'cart' => $cart])->assertOk()->json('order.id');
+
+        $send([$item('Plov', 2), $item('Dolma', 1)]);
+        $cancelled = $send([$item('Plov', 5)]);
+        $this->postJson(route('orders.cancel', $cancelled), ['reason' => 'Test'])->assertOk();
+
+        $this->get(route('dashboard'))->assertOk()->assertSee('Kateqoriyalar üzrə satış')->assertSee('Əsas yeməklər')
+            ->assertViewHas('categorySales', fn ($rows) => $rows->count() === 1
+                && $rows[0]->title === 'Əsas yeməklər' && (float) $rows[0]->qty === 3.0 && (float) $rows[0]->amount === 38.0);
+    }
+
     public function test_foreign_terminal_cannot_be_bound_and_new_tenant_gets_defaults(): void
     {
         $other = app(TenantProvisioner::class)->create('Başqa', 'O', 'o@pos.test', 'password');
