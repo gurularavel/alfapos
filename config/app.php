@@ -15,6 +15,17 @@ return [
 
     'name' => env('APP_NAME', 'AlfaPOS'),
 
+    // Məhsulun versiyası (POS ekran qoruyucusunda və saytın footer-ində göstərilir). Buraxılışda artırın.
+    'version' => '1.0.0',
+
+    // Məhsulun sahibi və dəstək əlaqəsi (ictimai səhifələr, footer)
+    'company' => [
+        'name' => 'Kvadrat',
+        'phone' => '055 703 80 08',
+        'phone_intl' => '+994557038008',
+        'email' => 'support@kvadrat.az',
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Application Environment

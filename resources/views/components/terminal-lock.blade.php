@@ -23,6 +23,10 @@
             </div>
             <p class="animate-pulse rounded-full bg-white/15 px-5 py-2.5 text-lg font-bold backdrop-blur">Başlamaq üçün toxunun</p>
         </div>
+        {{-- Məhsulun versiyası və dəstək --}}
+        <p class="pointer-events-none absolute inset-x-0 bottom-2 text-center text-xs font-semibold tracking-wide text-white/50">
+            AlfaPOS v{{ config('app.version') }} · {{ config('app.company.name') }} · Dəstək: {{ config('app.company.phone') }}
+        </p>
     </div>
 
     {{--

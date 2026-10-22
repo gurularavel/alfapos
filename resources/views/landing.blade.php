@@ -1,25 +1,4 @@
-<!DOCTYPE html>
-<html lang="az">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ config('app.name') }} — Restoran və kafe üçün POS sistemi</title>
-    <meta name="description" content="Bulud əsaslı POS: sifariş, mətbəx ekranı, QR menyu, anbar və hesabatlar.">
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-</head>
-<body class="bg-canvas font-sans text-ink antialiased">
-<header class="mx-auto flex max-w-6xl items-center justify-between px-4 py-5 sm:px-6">
-    <a href="/"><x-logo class="text-2xl" /></a>
-    <nav class="flex items-center gap-2">
-        @auth
-            <a href="{{ auth()->user()->homeRoute() }}" class="btn-primary">Panelə keç</a>
-        @else
-            <a href="{{ route('login') }}" class="btn-ghost">Giriş</a>
-            <a href="{{ route('register') }}" class="btn-primary">Pulsuz başla</a>
-        @endauth
-    </nav>
-</header>
-
+<x-layouts.public>
 <section class="mx-auto max-w-6xl px-4 pt-12 pb-20 sm:px-6 lg:pt-20">
     <div class="max-w-3xl">
         <span class="badge-green mb-5">{{ \App\Services\TenantProvisioner::TRIAL_DAYS }} gün pulsuz</span>
@@ -27,18 +6,21 @@
         <p class="mt-6 max-w-xl text-lg text-zinc-600">Kassa, mətbəx, masalar, QR menyu, anbar və hesabatlar. Planşetdə, kompüterdə və telefonda işləyir — quraşdırma tələb etmir.</p>
         <div class="mt-8 flex flex-wrap gap-3">
             <a href="{{ route('register') }}" class="btn-primary px-6 py-3 text-base">Hesab yarat <x-icon name="arrow-right" class="size-4" /></a>
-            <a href="{{ route('login') }}" class="btn-secondary px-6 py-3 text-base">Demo-ya bax</a>
+            <a href="{{ route('contact') }}" class="btn-secondary px-6 py-3 text-base">Demo üçün əlaqə</a>
         </div>
     </div>
 
-    <div class="mt-16 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div id="imkanlar" class="mt-16 grid scroll-mt-24 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         @foreach ([
-            ['pos', 'Sürətli POS', 'Kateqoriyalar, variantlar, əlavələr, endirim və bölünmüş hesab ilə saniyələr içində sifariş.'],
-            ['chef', 'Mətbəx ekranı', 'Sifarişlər avtomatik mətbəxə düşür, aşpaz hər məhsulu "hazırlanır → hazırdır" kimi işarələyir.'],
+            ['pos', 'Sürətli POS', 'Kateqoriyalar, variantlar, əlavələr, endirim, vergi və servis haqqı ilə saniyələr içində sifariş.'],
+            ['table', 'Masalar və zal planı', 'Zalın real planı, dolu/boş masalar, əlavə sifariş, masanı köçürmək, kabinet depoziti.'],
+            ['chef', 'Mətbəx ekranı', 'Sifarişlər canlı olaraq mətbəxə düşür, aşpaz hər məhsulu "hazırlanır → hazırdır" kimi işarələyir.'],
+            ['user-cog', 'PIN ilə terminal', 'Kassir və ofisiant öz PIN-i ilə daxil olur, sifariş avtomatik onun adına yazılır.'],
             ['qr', 'QR menyu və sifariş', 'Hər masanın öz QR kodu. Müştəri menyuya baxır, sifariş verir, rəy yazır.'],
+            ['online', 'Müştəri ekranı', 'Kassada ikinci ekran: müştəri səbəti və cəmi canlı görür.'],
             ['box', 'Anbar və resept', 'Satışda inqrediyentlər avtomatik silinir, az qalan stok üçün xəbərdarlıq.'],
             ['chart', 'Hesabatlar', 'Günlük, saatlıq, məhsul, kateqoriya, ödəniş növü, işçi və vergi hesabatları.'],
-            ['user-cog', 'İşçilər və icazələr', 'Kassir, ofisiant, aşpaz — hər kəs yalnız öz bölməsini görür.'],
+            ['printer', 'Çek və mətbəx çeki', '58/80 mm qəbz, mətbəx çeki, hesab çeki — nümunəni çap edib yoxlamaq imkanı.'],
         ] as [$icon, $title, $text])
             <div class="card card-pad">
                 <div class="mb-4 flex size-11 items-center justify-center rounded-xl bg-brand-100 text-brand-700"><x-icon :name="$icon" /></div>
@@ -49,7 +31,7 @@
     </div>
 </section>
 
-<section class="border-t border-zinc-200 bg-white">
+<section id="qiymetler" class="scroll-mt-20 border-t border-zinc-200 bg-white">
     <div class="mx-auto max-w-6xl px-4 py-16 sm:px-6">
         <h2 class="text-3xl font-black">Qiymətlər</h2>
         <div class="mt-8 grid gap-4 md:grid-cols-3">
@@ -69,6 +51,17 @@
         </div>
     </div>
 </section>
-<footer class="py-8 text-center text-sm text-zinc-500">© {{ date('Y') }} {{ config('app.name') }}</footer>
-</body>
-</html>
+
+<section class="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+    <div class="flex flex-col items-start justify-between gap-6 rounded-3xl bg-brand-700 p-8 text-white sm:p-12 lg:flex-row lg:items-center">
+        <div>
+            <h2 class="text-3xl font-black">Sualınız var?</h2>
+            <p class="mt-2 text-white/80">Ən çox verilən suallara baxın və ya bizə zəng edin — quraşdırmada kömək edirik.</p>
+        </div>
+        <div class="flex flex-wrap gap-3">
+            <a href="{{ route('faq') }}" class="btn bg-white px-6 py-3 text-base text-brand-800 hover:bg-brand-50">Sual-cavab</a>
+            <a href="tel:{{ config('app.company.phone_intl') }}" class="btn bg-white/15 px-6 py-3 text-base text-white hover:bg-white/25">{{ config('app.company.phone') }}</a>
+        </div>
+    </div>
+</section>
+</x-layouts.public>

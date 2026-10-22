@@ -60,6 +60,7 @@
             <form method="POST" action="{{ route('logout') }}">@csrf
                 <button class="nav-link w-full"><x-icon name="logout" /> Çıxış</button>
             </form>
+            <p class="px-3 pt-2 text-[11px] text-zinc-500">AlfaPOS v{{ config('app.version') }} · Dəstək: <a href="tel:{{ config('app.company.phone_intl') }}" class="font-semibold hover:text-brand-700">{{ config('app.company.phone') }}</a></p>
         </div>
     </aside>
     <div x-cloak x-show="nav" @click="nav = false" class="fixed inset-0 z-30 bg-black/30 lg:hidden"></div>

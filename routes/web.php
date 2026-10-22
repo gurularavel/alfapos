@@ -24,6 +24,13 @@ use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'landing')->name('home');
 
+// İctimai səhifələr (footer)
+Route::view('/haqqimizda', 'pages.about')->name('about');
+Route::view('/elaqe', 'pages.contact')->name('contact');
+Route::view('/sual-cavab', 'pages.faq')->name('faq');
+Route::view('/mexfilik-siyaseti', 'pages.privacy')->name('privacy');
+Route::view('/istifade-sertleri', 'pages.terms')->name('terms');
+
 // Müştəriyə baxan ekran (girişsiz, gizli token ilə)
 Route::get('/d/{token}', [CustomerDisplayController::class, 'show'])->name('display.show');
 Route::get('/d/{token}/state', [CustomerDisplayController::class, 'state'])->middleware('throttle:120,1')->name('display.state');

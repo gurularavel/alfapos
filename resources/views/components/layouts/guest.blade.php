@@ -20,6 +20,14 @@
         <div class="w-full max-w-md">
             <a href="{{ route('home') }}" class="mb-8 block lg:hidden"><x-logo class="text-3xl" /></a>
             {{ $slot }}
+            <nav class="mt-8 flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs text-zinc-500">
+                <a href="{{ route('about') }}" class="hover:text-brand-700">Haqqımızda</a>
+                <a href="{{ route('faq') }}" class="hover:text-brand-700">Sual-cavab</a>
+                <a href="{{ route('contact') }}" class="hover:text-brand-700">Əlaqə</a>
+                <a href="{{ route('privacy') }}" class="hover:text-brand-700">Məxfilik siyasəti</a>
+                <a href="{{ route('terms') }}" class="hover:text-brand-700">İstifadə şərtləri</a>
+            </nav>
+            <p class="mt-2 text-center text-xs text-zinc-400">© {{ date('Y') }} {{ config('app.company.name') }} · {{ config('app.company.phone') }} · AlfaPOS v{{ config('app.version') }}</p>
         </div>
     </div>
 </div>
