@@ -1,14 +1,11 @@
 import Echo from 'laravel-echo';
 import Pusher from 'pusher-js';
 
-/**
- * Canlı yeniləmələr (Laravel Reverb). Yalnız biznes istifadəçisinin səhifələrində qoşulur
- * (<meta name="tenant-id">). Bağlantı olmasa ekranlar ehtiyat polling ilə işləməyə davam edir.
- */
-export function startRealtime(Alpine) {
-    const tenantId = document.querySelector('meta[name="tenant-id"]')?.content;
+/** Reverb bağlantısı; açar build-də yoxdursa (Reverb söndürülüb) null qaytarır. */
+export function createEcho() {
     const key = import.meta.env.VITE_REVERB_APP_KEY;
-    if (!tenantId || !key) return;
+    if (!key) return null;
+    if (window.Echo) return window.Echo;
 
     window.Pusher = Pusher;
     window.Echo = new Echo({
@@ -21,12 +18,28 @@ export function startRealtime(Alpine) {
         enabledTransports: ['ws', 'wss'],
     });
 
-    const store = Alpine.store('rt');
-    window.Echo.connector.pusher.connection.bind('state_change', ({ current }) => {
+    return window.Echo;
+}
+
+/** Bağlantı vəziyyətini Alpine store-a yazır (ekranlarda "Canlı" göstəricisi və polling tezliyi üçün). */
+export function trackConnection(echo, store) {
+    echo.connector.pusher.connection.bind('state_change', ({ current }) => {
         store.connected = current === 'connected';
     });
+}
 
-    window.Echo.private(`tenant.${tenantId}`).listen('.order.changed', (e) => {
+/**
+ * Canlı yeniləmələr (Laravel Reverb). Yalnız biznes istifadəçisinin səhifələrində qoşulur
+ * (<meta name="tenant-id">). Bağlantı olmasa ekranlar ehtiyat polling ilə işləməyə davam edir.
+ */
+export function startRealtime(Alpine) {
+    const tenantId = document.querySelector('meta[name="tenant-id"]')?.content;
+    if (!tenantId) return;
+    const echo = createEcho();
+    if (!echo) return;
+
+    trackConnection(echo, Alpine.store('rt'));
+    echo.private(`tenant.${tenantId}`).listen('.order.changed', (e) => {
         window.dispatchEvent(new CustomEvent('rt:order', { detail: e }));
     });
 }

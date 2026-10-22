@@ -3,6 +3,7 @@ import collapse from '@alpinejs/collapse';
 import pos from './pos';
 import terminal from './terminal';
 import { startRealtime } from './echo';
+import customerDisplay from './display';
 
 Alpine.plugin(collapse);
 
@@ -95,6 +96,7 @@ window.poller = poller;
 Alpine.data('poller', poller);
 
 Alpine.data('pos', pos);
+Alpine.data('customerDisplay', customerDisplay);
 
 // POS və Sifarişlər səhifələri terminal vəziyyətini window.TERMINAL_STATE ilə ötürür
 if (window.TERMINAL_STATE) Alpine.store('terminal', terminal(window.TERMINAL_STATE));

@@ -4,6 +4,7 @@
         @foreach ([
             ['settings.store', 'store', 'Mağaza məlumatları', 'Ad, loqo, ünvan, valyuta, servis haqqı, QR menyu və rəy ayarları.'],
             ['settings.terminal', 'pos', 'POS terminalı və səslər', 'Ekran qoruyucu, PIN ilə giriş, avtomatik kilid vaxtı, POS və mətbəx səsləri.'],
+            ['settings.displays.index', 'pos', 'Müştəri ekranları', 'Kassada müştəriyə baxan ikinci ekran: səbət və cəm canlı göstərilir.'],
             ['settings.print', 'printer', 'Çap ayarları', 'Qəbz başlığı/sonluğu, kağız eni (58/80mm), mətbəx çeki (KOT).'],
             ['settings.tables.index', 'table', 'Masalar', 'Masalar, mərtəbələr, tutum və hər masanın QR kodu.'],
             ['settings.menu-items.index', 'orders', 'Menyu', 'Məhsullar, variantlar, əlavələr, şəkillər və reseptlər.'],

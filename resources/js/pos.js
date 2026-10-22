@@ -29,7 +29,17 @@ export default (data) => ({
     busy: false,
     full: false,
 
+    // müştəri ekranı (bu cihazda seçilmiş kassa ekranı)
+    displayId: null,
+    displayTimer: null,
+    displayHoldUntil: 0,
+
     init() {
+        try {
+            const saved = Number(localStorage.getItem('pos-display'));
+            if (this.displays.some((d) => d.id === saved)) this.displayId = saved;
+        } catch {}
+        this.$watch('displayPayload', () => this.scheduleDisplay());
         window.APP_CURRENCY = this.currency;
         // Esc ilə brauzer tam ekranından çıxanda rejimi də söndürürük
         document.addEventListener('fullscreenchange', () => {
@@ -59,6 +69,55 @@ export default (data) => ({
                 toast(`Yeni QR sifariş #${detail.token_no}`);
             }
         });
+    },
+
+    // ---- müştəri ekranı ----
+    get display() {
+        return this.displays.find((d) => d.id === this.displayId) ?? null;
+    },
+
+    /** Müştəriyə göstərilən hissə: yalnız məhsul adları, miqdar və cəmlər (qeydlər daxili məlumatdır). */
+    get displayPayload() {
+        const t = this.totals;
+        return {
+            mode: this.cart.length ? 'cart' : 'idle',
+            items: this.cart.map((l) => ({ title: l.title, subtitle: l.subtitle || null, qty: l.quantity, total: Math.round(l.price * l.quantity * 100) / 100 })),
+            totals: { sub: t.sub, discount: t.discount, tax: t.tax, service: t.service, total: t.total },
+            customer: this.customer?.name ?? null,
+        };
+    },
+
+    selectDisplay(id) {
+        this.displayId = id;
+        try {
+            localStorage.setItem('pos-display', id ?? '');
+        } catch {}
+        if (id) this.pushDisplay(this.displayPayload);
+    },
+
+    openDisplayWindow() {
+        if (this.display) window.open(this.display.url, 'customer-display', 'width=1280,height=800');
+    },
+
+    scheduleDisplay() {
+        if (!this.display) return;
+        // Ödənişdən sonra "Təşəkkür" ekranı bir müddət qalsın — boş səbət onu dərhal əvəz etməsin
+        if (!this.cart.length && Date.now() < this.displayHoldUntil) return;
+        clearTimeout(this.displayTimer);
+        this.displayTimer = setTimeout(() => this.pushDisplay(this.displayPayload), 250);
+    },
+
+    pushDisplay(payload) {
+        if (!this.display) return;
+        api(this.display.push, { method: 'POST', body: payload }).catch(() => {});
+    },
+
+    /** Sifariş göndəriləndə / ödəniləndə müştəri ekranında təşəkkür + token. */
+    finishDisplay(action, tokenNo, totals) {
+        if (!this.display) return;
+        clearTimeout(this.displayTimer);
+        this.displayHoldUntil = Date.now() + 10000;
+        this.pushDisplay({ mode: action === 'pay' ? 'paid' : 'sent', items: [], totals, token_no: tokenNo, customer: this.customer?.name ?? null });
     },
 
     // ---- tam ekran ----
@@ -230,7 +289,9 @@ export default (data) => ({
         if (!this.cart.length) return toast('Səbət boşdur', 'error');
         this.busy = true;
         try {
+            const totalsBefore = this.displayPayload.totals;
             const r = await api(this.routes.store, { method: 'POST', body: this.payload(action) });
+            if (action !== 'draft') this.finishDisplay(action, r.order.token_no, totalsBefore);
             if (action === 'draft') {
                 toast(r.message);
                 this.modal = null;

@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\CustomerDisplayController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\InventoryController;
@@ -22,6 +23,10 @@ use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'landing')->name('home');
+
+// Müştəriyə baxan ekran (girişsiz, gizli token ilə)
+Route::get('/d/{token}', [CustomerDisplayController::class, 'show'])->name('display.show');
+Route::get('/d/{token}/state', [CustomerDisplayController::class, 'state'])->middleware('throttle:120,1')->name('display.state');
 
 // Public QR menyu (müştəri telefonu)
 Route::get('/m/{code}', [QrMenuController::class, 'show'])->name('qr.show');
@@ -59,6 +64,7 @@ Route::middleware('auth')->group(function () {
             Route::get('/pos/qr-orders', [PosController::class, 'qrOrders'])->name('pos.qr');
             Route::get('/pos/customers', [PosController::class, 'searchCustomers'])->name('pos.customers');
             Route::post('/pos/customers', [PosController::class, 'storeCustomer'])->name('pos.customers.store');
+            Route::post('/pos/display/{display}/push', [CustomerDisplayController::class, 'push'])->middleware('throttle:240,1')->name('pos.display.push');
         });
 
         Route::prefix('pos/terminal')->name('pos.terminal.')->middleware('scope:POS,ORDERS')->group(function () {
@@ -123,6 +129,7 @@ Route::middleware('auth')->group(function () {
             Route::put('/terminal', [Settings\TerminalController::class, 'update'])->name('terminal.update');
             Route::delete('/terminal/images/{index}', [Settings\TerminalController::class, 'destroyImage'])->whereNumber('index')->name('terminal.images.destroy');
             Route::resource('tables', Settings\TableController::class)->only(['index', 'store', 'update', 'destroy']);
+            Route::resource('displays', Settings\DisplayController::class)->only(['index', 'store', 'update', 'destroy']);
             Route::get('/tables/{table}/qr', [Settings\TableController::class, 'qr'])->name('tables.qr');
             Route::resource('categories', Settings\CategoryController::class)->only(['index', 'store', 'update', 'destroy']);
             Route::resource('taxes', Settings\TaxController::class)->only(['index', 'store', 'update', 'destroy']);

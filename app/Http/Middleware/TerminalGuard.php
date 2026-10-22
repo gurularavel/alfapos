@@ -15,7 +15,8 @@ class TerminalGuard
 {
     protected const ALLOWED = ['pos', 'pos.*', 'orders.*', 'invoices.receipt'];
 
-    protected const ALWAYS_OPEN = ['pos.terminal.unlock', 'pos.terminal.lock', 'pos.terminal.exit'];
+    // display.push: kilidlənəndə müştəri ekranına "boş" vəziyyət göndərilməlidir
+    protected const ALWAYS_OPEN = ['pos.terminal.unlock', 'pos.terminal.lock', 'pos.terminal.exit', 'pos.display.push'];
 
     public function __construct(protected PosTerminal $terminal) {}
 

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Category;
 use App\Models\Customer;
+use App\Models\CustomerDisplay;
 use App\Models\MenuItem;
 use App\Models\Order;
 use App\Models\PaymentType;
@@ -49,6 +50,9 @@ class PosController extends Controller
                 'currency' => $tenant->currency,
                 'deliveryTypes' => Order::DELIVERY_TYPES,
                 'terminal' => $terminal->state(),
+                'displays' => CustomerDisplay::orderBy('name')->get()->map(fn (CustomerDisplay $d) => [
+                    'id' => $d->id, 'name' => $d->name, 'url' => $d->url(), 'push' => route('pos.display.push', $d),
+                ]),
                 'sounds' => [
                     'addItem' => (bool) $tenant->terminalSetting('sound_add_item'),
                     'newOrder' => (bool) $tenant->terminalSetting('sound_new_order'),

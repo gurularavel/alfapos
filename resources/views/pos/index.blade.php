@@ -23,6 +23,9 @@
                 <span x-show="qrOrders.length" x-text="qrOrders.length" class="absolute -top-1.5 -right-1.5 flex size-5 items-center justify-center rounded-full bg-red-500 text-[10px] text-white"></span>
             </button>
             <a href="{{ route('orders.index') }}" class="btn-secondary btn-sm"><x-icon name="table" class="size-4" /> Masa sifarişləri</a>
+            <button class="btn-secondary btn-sm" @click="modal = 'display'" :class="display && 'border-brand-400 text-brand-700'">
+                <x-icon name="online" class="size-4" /> <span x-text="display ? display.name : 'Müştəri ekranı'"></span>
+            </button>
             <div class="ml-auto flex flex-wrap items-center gap-1.5">
                 <x-live-badge />
                 <template x-if="$store.terminal.active && $store.terminal.operator">
@@ -254,6 +257,29 @@
         </template>
         <p x-show="!qrOrders.length" class="py-8 text-center text-sm text-zinc-500">Bu gün yeni QR sifariş yoxdur.</p>
         <x-slot:footer><a href="{{ route('orders.index') }}" class="btn-primary">Sifarişlər ekranına keç</a></x-slot:footer>
+    </x-modal>
+
+    {{-- Müştəri ekranı seçimi --}}
+    <x-modal show="modal === 'display'" close="modal = null" title="Müştəri ekranı" width="max-w-md">
+        <p class="mb-3 text-sm text-zinc-500">Bu kassanın müştəriyə baxan ekranını seçin. Səbət dəyişdikcə müştəri məhsulları və cəmi canlı görəcək. Seçim bu cihazda yadda qalır.</p>
+        <div class="space-y-2">
+            <template x-for="d in displays" :key="d.id">
+                <label class="flex cursor-pointer items-center justify-between rounded-xl border border-zinc-200 px-4 py-3 has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50">
+                    <span class="flex items-center gap-3"><input type="radio" name="display" :checked="displayId === d.id" @change="selectDisplay(d.id)" class="text-brand-500"> <span class="font-bold" x-text="d.name"></span></span>
+                </label>
+            </template>
+            <label class="flex cursor-pointer items-center gap-3 rounded-xl border border-zinc-200 px-4 py-3 text-sm text-zinc-600 has-[:checked]:border-zinc-400">
+                <input type="radio" name="display" :checked="!displayId" @change="selectDisplay(null)"> Bu cihazda müştəri ekranı istifadə etmə
+            </label>
+        </div>
+        <p x-show="!displays.length" class="rounded-xl bg-amber-50 p-3 text-sm text-amber-800">Hələ müştəri ekranı yaradılmayıb.</p>
+        <x-slot:footer>
+            @if (auth()->user()->isAdmin() || auth()->user()->hasScope('SETTINGS'))
+                <a href="{{ route('settings.displays.index') }}" class="btn-ghost mr-auto">Ekranları idarə et</a>
+            @endif
+            <button class="btn-secondary" x-show="display" @click="openDisplayWindow()"><x-icon name="pos" class="size-4" /> Bu kompüterdə aç</button>
+            <button class="btn-primary" @click="modal = null">Hazır</button>
+        </x-slot:footer>
     </x-modal>
 
     {{-- Yeni müştəri --}}
