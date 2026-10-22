@@ -1,0 +1,6 @@
+# FASTPANEL sənəd kökü layihə qovluğudur: bütün sorğuları public/-a yönləndiririk,
+# beləliklə .env, vendor/, storage/ və s. vebdən açılmır.
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
