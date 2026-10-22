@@ -3,7 +3,7 @@
     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         @foreach ([
             ['settings.store', 'store', 'Mağaza məlumatları', 'Ad, loqo, ünvan, valyuta, servis haqqı, QR menyu və rəy ayarları.'],
-            ['settings.terminal', 'pos', 'POS terminalı', 'Ekran qoruyucu şəkilləri, PIN ilə giriş, avtomatik kilid vaxtı.'],
+            ['settings.terminal', 'pos', 'POS terminalı və səslər', 'Ekran qoruyucu, PIN ilə giriş, avtomatik kilid vaxtı, POS və mətbəx səsləri.'],
             ['settings.print', 'printer', 'Çap ayarları', 'Qəbz başlığı/sonluğu, kağız eni (58/80mm), mətbəx çeki (KOT).'],
             ['settings.tables.index', 'table', 'Masalar', 'Masalar, mərtəbələr, tutum və hər masanın QR kodu.'],
             ['settings.menu-items.index', 'orders', 'Menyu', 'Məhsullar, variantlar, əlavələr, şəkillər və reseptlər.'],

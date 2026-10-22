@@ -55,7 +55,7 @@ export default (data) => ({
         window.addEventListener('rt:order', ({ detail }) => {
             if (detail.source === 'qr' && detail.type === 'created') {
                 this.refreshQrCount();
-                beep();
+                if (this.sounds?.newOrder) playSound('alert');
                 toast(`Yeni QR sifariş #${detail.token_no}`);
             }
         });
@@ -96,7 +96,10 @@ export default (data) => ({
 
     // ---- səbət ----
     open(item) {
-        if (!item.variants.length && !item.addons.length) return this.add(item, null, [], 1, '');
+        if (!item.variants.length && !item.addons.length) {
+            this.addSound();
+            return this.add(item, null, [], 1, '');
+        }
         this.picker = { item, variantId: item.variants[0]?.id ?? null, addonIds: [], quantity: 1, notes: '' };
     },
 
@@ -109,6 +112,7 @@ export default (data) => ({
 
     confirmPicker() {
         const p = this.picker;
+        this.addSound();
         this.add(p.item, p.variantId, p.addonIds, p.quantity, p.notes);
         this.picker = null;
     },
@@ -137,7 +141,12 @@ export default (data) => ({
         });
     },
 
+    addSound() {
+        if (this.sounds?.addItem) playSound('add');
+    },
+
     inc(line) {
+        this.addSound();
         line.quantity++;
     },
     dec(line) {

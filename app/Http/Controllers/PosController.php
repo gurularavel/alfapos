@@ -49,6 +49,10 @@ class PosController extends Controller
                 'currency' => $tenant->currency,
                 'deliveryTypes' => Order::DELIVERY_TYPES,
                 'terminal' => $terminal->state(),
+                'sounds' => [
+                    'addItem' => (bool) $tenant->terminalSetting('sound_add_item'),
+                    'newOrder' => (bool) $tenant->terminalSetting('sound_new_order'),
+                ],
                 'routes' => [
                     'store' => route('pos.store'),
                     'drafts' => route('pos.drafts'),

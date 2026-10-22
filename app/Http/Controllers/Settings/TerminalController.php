@@ -46,6 +46,8 @@ class TerminalController extends Controller
             'images' => array_values($images),
             'lock_timeout' => (int) $data['lock_timeout'],
             'lock_after_order' => $request->boolean('lock_after_order'),
+            'sound_add_item' => $request->boolean('sound_add_item'),
+            'sound_new_order' => $request->boolean('sound_new_order'),
         ]);
 
         return back()->with('success', 'Terminal ayarları yeniləndi.');

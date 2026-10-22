@@ -103,22 +103,34 @@ if (window.TERMINAL_STATE) Alpine.store('terminal', terminal(window.TERMINAL_STA
 Alpine.store('rt', { connected: false });
 startRealtime(Alpine);
 
-/** Mətbəx üçün qısa səs siqnalı (brauzer səsə yalnız istifadəçi ekrana toxunandan sonra icazə verir). */
-window.beep = () => {
+/**
+ * Səslər (fayl tələb etmir, WebAudio ilə yaradılır). Brauzer səsə yalnız istifadəçi ekrana
+ * ən azı bir dəfə toxunandan sonra icazə verir.
+ *  - add:   məhsul səbətə əlavə olunanda qısa, yumşaq "klik"
+ *  - alert: yeni sifariş üçün ikili siqnal
+ */
+const SOUNDS = {
+    add: [[0, 1320, 0.06, 0.18]],
+    alert: [[0, 880, 0.15, 0.25], [0.18, 880, 0.15, 0.25]],
+};
+window.playSound = (kind = 'alert') => {
     try {
         const ctx = (window.__audio ??= new AudioContext());
-        [0, 0.18].forEach((t) => {
+        if (ctx.state === 'suspended') ctx.resume();
+        for (const [at, freq, length, volume] of SOUNDS[kind] ?? SOUNDS.alert) {
             const o = ctx.createOscillator();
             const g = ctx.createGain();
-            o.frequency.value = 880;
-            g.gain.setValueAtTime(0.25, ctx.currentTime + t);
-            g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.15);
+            o.type = kind === 'add' ? 'triangle' : 'sine';
+            o.frequency.value = freq;
+            g.gain.setValueAtTime(volume, ctx.currentTime + at);
+            g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + at + length);
             o.connect(g).connect(ctx.destination);
-            o.start(ctx.currentTime + t);
-            o.stop(ctx.currentTime + t + 0.16);
-        });
+            o.start(ctx.currentTime + at);
+            o.stop(ctx.currentTime + at + length + 0.01);
+        }
     } catch {}
 };
+window.beep = () => window.playSound('alert');
 
 window.Alpine = Alpine;
 Alpine.start();

@@ -5,14 +5,15 @@ namespace App\Http\Controllers;
 use App\Support\Realtime;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Support\Tenancy;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 class KitchenController extends Controller
 {
-    public function index()
+    public function index(Tenancy $tenancy)
     {
-        return view('kitchen.index');
+        return view('kitchen.index', ['soundNewOrder' => (bool) $tenancy->tenant()->terminalSetting('sound_new_order')]);
     }
 
     public function feed()

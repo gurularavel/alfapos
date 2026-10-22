@@ -115,7 +115,15 @@ class TerminalTest extends TestCase
     public function test_terminal_settings_page_saves_timeout(): void
     {
         $this->get(route('settings.terminal'))->assertOk();
-        $this->put(route('settings.terminal.update'), ['lock_timeout' => 45, 'lock_after_order' => 1])->assertSessionHasNoErrors();
-        $this->assertSame(45, $this->admin->tenant->fresh()->terminalSetting('lock_timeout'));
+        $this->assertTrue($this->admin->tenant->terminalSetting('sound_add_item'));
+
+        // Səs açarları göndərilməyəndə (checkbox söndürülüb) false olur
+        $this->put(route('settings.terminal.update'), ['lock_timeout' => 45, 'lock_after_order' => 1, 'sound_new_order' => 1])->assertSessionHasNoErrors();
+        $tenant = $this->admin->tenant->fresh();
+        $this->assertSame(45, $tenant->terminalSetting('lock_timeout'));
+        $this->assertFalse($tenant->terminalSetting('sound_add_item'));
+        $this->assertTrue($tenant->terminalSetting('sound_new_order'));
+
+        $this->get(route('pos'))->assertOk()->assertViewHas('posData', fn ($d) => $d['sounds'] === ['addItem' => false, 'newOrder' => true]);
     }
 }

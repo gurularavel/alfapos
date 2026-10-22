@@ -68,7 +68,13 @@ class Tenant extends Model
         return data_get($this->print_settings, $key, $default);
     }
 
-    public const TERMINAL_DEFAULTS = ['images' => [], 'lock_timeout' => 20, 'lock_after_order' => true];
+    public const TERMINAL_DEFAULTS = [
+        'images' => [],
+        'lock_timeout' => 20,
+        'lock_after_order' => true,
+        'sound_add_item' => true,   // POS-da məhsul səbətə əlavə olunanda qısa səs
+        'sound_new_order' => true,  // mətbəxdə yeni sifariş və POS-da yeni QR sifariş siqnalı
+    ];
 
     public function terminalSetting(string $key): mixed
     {

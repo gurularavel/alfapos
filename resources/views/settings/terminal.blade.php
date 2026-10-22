@@ -57,6 +57,21 @@
                     <span>Sifariş göndəriləndən / ödəniş alınandan sonra dərhal kilidlə<br><span class="text-xs text-zinc-500">Növbəti işçi öz PIN-i ilə davam edir.</span></span>
                 </label>
             </div>
+            <div class="card card-pad space-y-3" x-data>
+                <p class="font-extrabold">Səslər</p>
+                <label class="flex items-start justify-between gap-3 text-sm">
+                    <span>Məhsul səbətə əlavə olunanda səs<br><span class="text-xs text-zinc-500">Kassir/ofisiant hər toxunuşun qəbul olunduğunu eşidir.</span></span>
+                    <input type="checkbox" name="sound_add_item" value="1" @checked($store->terminalSetting('sound_add_item')) class="mt-0.5 size-5 rounded text-brand-500">
+                </label>
+                <label class="flex items-start justify-between gap-3 text-sm">
+                    <span>Yeni sifariş siqnalı<br><span class="text-xs text-zinc-500">Mətbəx ekranında yeni sifariş, POS-da yeni QR sifariş gələndə.</span></span>
+                    <input type="checkbox" name="sound_new_order" value="1" @checked($store->terminalSetting('sound_new_order')) class="mt-0.5 size-5 rounded text-brand-500">
+                </label>
+                <div class="flex gap-2">
+                    <button type="button" class="btn-secondary btn-sm" @click="playSound('add')">▶ Əlavə səsi</button>
+                    <button type="button" class="btn-secondary btn-sm" @click="playSound('alert')">▶ Sifariş siqnalı</button>
+                </div>
+            </div>
             <div class="card card-pad text-sm text-zinc-600">
                 <p class="mb-1 font-extrabold text-ink">Necə işləyir?</p>
                 <ol class="list-decimal space-y-1 pl-4">
