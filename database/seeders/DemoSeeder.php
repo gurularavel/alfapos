@@ -3,7 +3,9 @@
 namespace Database\Seeders;
 
 use App\Models\Category;
+use App\Models\Branch;
 use App\Models\Customer;
+use App\Models\Terminal;
 use App\Models\InventoryItem;
 use App\Models\MenuItem;
 use App\Models\PaymentType;
@@ -88,6 +90,12 @@ class DemoSeeder extends Seeder
             $user->save();
         }
 
+        // Filial və terminallar: əsas filialda Kassa 1 (provisioner yaradıb) və Bar; ofisiant yalnız Kassa 1-də işləyir
+        $mainBranch = Branch::firstOrFail();
+        $kassa = Terminal::firstOrFail();
+        Terminal::create(['branch_id' => $mainBranch->id, 'name' => 'Bar']);
+        User::where('role', 'waiter')->where('tenant_id', $tenant->id)->first()?->terminals()->sync([$kassa->id]);
+
         $vat = Tax::first();
         $cats = Category::pluck('id', 'title');
         $menu = [
@@ -123,7 +131,7 @@ class DemoSeeder extends Seeder
         }
 
         foreach ([['Masa 1', 'Zal'], ['Masa 2', 'Zal'], ['Masa 3', 'Zal'], ['Masa 4', 'Teras'], ['Masa 5', 'Teras'], ['VIP', '2-ci mərtəbə']] as $i => [$t, $f]) {
-            StoreTable::create(['title' => $t, 'floor' => $f, 'seating_capacity' => $i === 5 ? 8 : 4]);
+            StoreTable::create(['branch_id' => $mainBranch->id, 'title' => $t, 'floor' => $f, 'seating_capacity' => $i === 5 ? 8 : 4]);
         }
 
         $customer = Customer::create(['phone' => '+994551112233', 'name' => 'Elvin Məmmədov', 'birth_date' => '1990-05-12', 'gender' => 'male']);

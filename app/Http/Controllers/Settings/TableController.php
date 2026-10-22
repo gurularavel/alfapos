@@ -12,7 +12,8 @@ class TableController extends Controller
     public function index(Tenancy $tenancy)
     {
         return view('settings.tables', [
-            'tables' => StoreTable::orderBy('floor')->orderBy('title')->get(),
+            'tables' => StoreTable::with('branch:id,name')->orderBy('floor')->orderBy('title')->get(),
+            'branches' => \App\Models\Branch::orderBy('id')->get(['id', 'name']),
             'tenant' => $tenancy->tenant(),
         ]);
     }
@@ -92,6 +93,7 @@ class TableController extends Controller
             'floor' => ['nullable', 'string', 'max:60'],
             'seating_capacity' => ['required', 'integer', 'min:1', 'max:100'],
             'deposit' => ['nullable', 'numeric', 'min:0', 'max:999999'],
+            'branch_id' => ['nullable', \Illuminate\Validation\Rule::exists('branches', 'id')->where('tenant_id', app(Tenancy::class)->id())],
         ]);
 
         return ['deposit' => (float) ($data['deposit'] ?? 0)] + $data;

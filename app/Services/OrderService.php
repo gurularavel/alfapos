@@ -144,6 +144,7 @@ class OrderService
         }
 
         return DB::transaction(function () use ($lines, $data) {
+            $device = app(PosTerminal::class)->device();
             $deliveryType = $data['delivery_type'] ?? 'dinein';
             $tableId = $data['store_table_id'] ?? null;
             $status = $data['status'] ?? 'created';
@@ -154,6 +155,9 @@ class OrderService
 
             $order = Order::create([
                 'is_addition' => $isAddition,
+                // Filial/terminal: cihazın terminalından; yoxdursa (QR, panel) masanın filialından
+                'terminal_id' => ($source = $data['source'] ?? 'pos') === 'pos' ? $device?->id : null,
+                'branch_id' => ($source === 'pos' ? $device?->branch_id : null) ?? ($tableId ? StoreTable::whereKey($tableId)->value('branch_id') : null),
                 'token_no' => $this->nextToken(),
                 'delivery_type' => $data['delivery_type'] ?? 'dinein',
                 'customer_id' => $data['customer_id'] ?? null,
@@ -205,6 +209,9 @@ class OrderService
 
             $invoice = Invoice::create($sum + [
                 'number' => $this->nextInvoiceNumber(),
+                // Çek hansı terminalda vurulubsa; filial — terminalın, yoxdursa sifarişin filialı
+                'terminal_id' => ($device = app(PosTerminal::class)->device())?->id,
+                'branch_id' => $device?->branch_id ?? $orders->first()->branch_id,
                 'customer_id' => $customerId ?? $orders->first()->customer_id,
                 'payment_type_id' => $paymentTypeId,
                 'status' => 'paid',

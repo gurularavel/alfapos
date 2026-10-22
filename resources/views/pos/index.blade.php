@@ -28,6 +28,10 @@
                 <x-icon name="online" class="size-4" /> <span x-text="display ? display.name : 'Müştəri ekranı'"></span>
             </button>
             <div class="ml-auto flex flex-wrap items-center gap-1.5">
+                <span x-show="$store.terminal.device" class="badge-gray py-1.5 text-xs" :title="'Bu cihaz: ' + ($store.terminal.device?.name ?? '') + ' · ' + ($store.terminal.device?.branch ?? '')" x-text="($store.terminal.device?.name ?? '') + ' · ' + ($store.terminal.device?.branch ?? '')"></span>
+                @if (auth()->user()->isAdmin() || auth()->user()->hasScope('SETTINGS'))
+                    <a x-show="!$store.terminal.device" href="{{ route('settings.branches.index') }}" class="badge-amber py-1.5 text-xs" title="Bu cihaz terminala bağlı deyil — satışlar hesabatda terminalsız görünəcək">Terminal seçilməyib</a>
+                @endif
                 <x-live-badge />
                 <template x-if="$store.terminal.active && $store.terminal.operator">
                     <div class="flex items-center gap-1.5">

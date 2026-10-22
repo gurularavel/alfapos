@@ -42,7 +42,7 @@ class PosController extends Controller
             'posData' => [
                 'items' => $items,
                 'categories' => Category::where('is_enabled', true)->orderBy('sort')->get(['id', 'title']),
-                'tables' => StoreTable::orderBy('floor')->orderByRaw('LENGTH(title)')->orderBy('title')->get()->map(fn ($t) => [
+                'tables' => $terminal->scopeToBranch(StoreTable::query())->orderBy('floor')->orderByRaw('LENGTH(title)')->orderBy('title')->get()->map(fn ($t) => [
                     'id' => $t->id, 'title' => $t->title, 'floor' => $t->floor, 'label' => $t->label(), 'seats' => $t->seating_capacity, 'busy' => $busyTables->contains($t->id), 'deposit' => (float) $t->deposit, 'x' => $t->pos_x, 'y' => $t->pos_y,
                 ]),
                 'paymentTypes' => PaymentType::where('is_active', true)->get(['id', 'title', 'icon']),
@@ -167,7 +167,7 @@ class PosController extends Controller
     /** QR menyudan gələn, hələ qəbul edilməmiş sifarişlər. */
     public function qrOrders()
     {
-        return Order::with('items', 'table')->where('source', 'qr')->where('status', 'created')
+        return app(PosTerminal::class)->scopeToBranch(Order::with('items', 'table'))->where('source', 'qr')->where('status', 'created')
             ->whereDate('created_at', today())->latest()->get()
             ->map(fn (Order $o) => [
                 'id' => $o->id, 'token_no' => $o->token_no, 'table' => $o->table?->label(),

@@ -49,6 +49,16 @@ class Order extends Model
         return $this->belongsTo(Invoice::class);
     }
 
+    public function branch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class);
+    }
+
+    public function terminal(): BelongsTo
+    {
+        return $this->belongsTo(Terminal::class);
+    }
+
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

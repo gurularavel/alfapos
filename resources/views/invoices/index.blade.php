@@ -2,17 +2,18 @@
 <div x-data="{ voiding: null }">
     <x-page-header title="Fakturalar" subtitle="Bütün ödənilmiş və ləğv edilmiş çeklər." />
 
-    <form class="card mb-4 grid gap-2 p-3 sm:grid-cols-[1fr_auto_auto_auto_auto]">
+    <form class="card mb-4 grid gap-2 p-3 sm:grid-cols-[1fr_auto_auto_auto_auto_auto]">
         <input name="q" value="{{ request('q') }}" class="input" placeholder="Faktura №, müştəri adı və ya telefon">
         <input type="date" name="from" value="{{ request('from') }}" class="input">
         <input type="date" name="to" value="{{ request('to') }}" class="input">
+        <select name="terminal_id" class="input"><option value="">Bütün terminallar</option>@foreach ($terminals as $tm)<option value="{{ $tm->id }}" @selected(request('terminal_id') == $tm->id)>{{ $tm->name }}</option>@endforeach</select>
         <select name="status" class="input"><option value="">Bütün statuslar</option><option value="paid" @selected(request('status') === 'paid')>Ödənilib</option><option value="void" @selected(request('status') === 'void')>Ləğv</option></select>
         <button class="btn-primary"><x-icon name="search" class="size-4" /> Axtar</button>
     </form>
 
     <div class="card overflow-x-auto">
         <table class="table-base">
-            <thead><tr><th>Faktura</th><th>Tarix</th><th>Token</th><th>Müştəri</th><th>Ödəniş</th><th class="text-right">Cəm</th><th>Status</th><th></th></tr></thead>
+            <thead><tr><th>Faktura</th><th>Tarix</th><th>Token</th><th>Müştəri</th><th>Ödəniş</th><th>Terminal</th><th class="text-right">Cəm</th><th>Status</th><th></th></tr></thead>
             <tbody>
             @forelse ($invoices as $invoice)
                 <tr>
@@ -21,6 +22,7 @@
                     <td>{{ $invoice->orders->pluck('token_no')->map(fn ($t) => '#'.$t)->implode(', ') }}</td>
                     <td>{{ $invoice->customer?->name ?? 'Gəlmə müştəri' }}</td>
                     <td>{{ $invoice->paymentType?->title }}</td>
+                    <td class="text-zinc-500">{{ $invoice->terminal?->name ?? '—' }}</td>
                     <td class="text-right font-bold">{{ money($invoice->total) }}</td>
                     <td>
                         @if ($invoice->status === 'paid')<span class="badge-green">Ödənilib</span>
@@ -34,7 +36,7 @@
                     </td>
                 </tr>
             @empty
-                <tr><td colspan="8"><x-empty icon="invoice" title="Faktura tapılmadı" /></td></tr>
+                <tr><td colspan="9"><x-empty icon="invoice" title="Faktura tapılmadı" /></td></tr>
             @endforelse
             </tbody>
         </table>

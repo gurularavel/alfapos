@@ -3,7 +3,7 @@
     <x-page-header title="Masalar" subtitle="Hər masanın öz QR kodu var — çap edib masaya qoyun.">
         <a href="{{ route('settings.index') }}" class="btn-secondary">← Ayarlar</a>
         <a href="{{ route('settings.tables.plan') }}" class="btn-secondary"><x-icon name="table" class="size-4" /> Zal planı</a>
-        <button class="btn-primary" @click="edit = { id: null, title: '', floor: '', seating_capacity: 4, deposit: 0 }"><x-icon name="plus" class="size-4" /> Yeni masa</button>
+        <button class="btn-primary" @click="edit = { id: null, title: '', floor: '', seating_capacity: 4, deposit: 0, branch_id: {{ $branches->first()?->id ?? 'null' }} }"><x-icon name="plus" class="size-4" /> Yeni masa</button>
     </x-page-header>
 
     @forelse ($tables->groupBy(fn ($t) => $t->floor ?: 'Ümumi') as $floor => $group)
@@ -13,11 +13,11 @@
                 <div class="card card-pad text-center">
                     <div class="mx-auto mb-2 flex size-12 items-center justify-center rounded-xl bg-brand-50 text-brand-600"><x-icon name="table" /></div>
                     <p class="font-extrabold">{{ $t->title }}</p>
-                    <p class="text-xs text-zinc-500">{{ $t->seating_capacity }} nəfər</p>
+                    <p class="text-xs text-zinc-500">{{ $t->seating_capacity }} nəfər @if ($branches->count() > 1 && $t->branch) · {{ $t->branch->name }} @endif</p>
                     @if ($t->hasDeposit())<p class="mt-1"><span class="badge-amber">Depozit {{ money($t->deposit) }}</span></p>@endif
                     <div class="mt-3 flex justify-center gap-1">
                         <a href="{{ route('settings.tables.qr', $t) }}" target="_blank" class="btn-ghost btn-sm" title="QR kod"><x-icon name="qr" class="size-4" /></a>
-                        <button class="btn-ghost btn-sm" @click="edit = @js(['id' => $t->id, 'title' => $t->title, 'floor' => $t->floor, 'seating_capacity' => $t->seating_capacity, 'deposit' => (float) $t->deposit])"><x-icon name="edit" class="size-4" /></button>
+                        <button class="btn-ghost btn-sm" @click="edit = @js(['id' => $t->id, 'title' => $t->title, 'floor' => $t->floor, 'seating_capacity' => $t->seating_capacity, 'deposit' => (float) $t->deposit, 'branch_id' => $t->branch_id])"><x-icon name="edit" class="size-4" /></button>
                         <form method="POST" action="{{ route('settings.tables.destroy', $t) }}" onsubmit="return confirm('Silinsin?')">@csrf @method('DELETE')<button class="btn-ghost btn-sm text-red-600"><x-icon name="trash" class="size-4" /></button></form>
                     </div>
                 </div>
@@ -32,6 +32,11 @@
             @csrf
             <template x-if="edit.id"><input type="hidden" name="_method" value="PUT"></template>
             <div class="sm:col-span-2"><label class="label">Ad *</label><input name="title" x-model="edit.title" class="input" required placeholder="Masa 1"></div>
+            @if ($branches->count() > 1)
+                <div class="sm:col-span-2"><label class="label">Filial</label><select name="branch_id" x-model.number="edit.branch_id" class="input">@foreach ($branches as $b)<option value="{{ $b->id }}">{{ $b->name }}</option>@endforeach</select></div>
+            @else
+                <input type="hidden" name="branch_id" :value="edit.branch_id">
+            @endif
             <div><label class="label">Mərtəbə / zona</label><input name="floor" x-model="edit.floor" class="input" placeholder="Zal, Teras..."></div>
             <div><label class="label">Tutum *</label><input type="number" min="1" name="seating_capacity" x-model="edit.seating_capacity" class="input" required></div>
             <div class="sm:col-span-2">

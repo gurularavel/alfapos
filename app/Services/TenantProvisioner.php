@@ -2,7 +2,9 @@
 
 namespace App\Services;
 
+use App\Models\Branch;
 use App\Models\Category;
+use App\Models\Terminal;
 use App\Models\PaymentType;
 use App\Models\Plan;
 use App\Models\Tax;
@@ -56,6 +58,8 @@ class TenantProvisioner
                 PaymentType::create(['title' => $title, 'icon' => $icon]);
             }
             Tax::create(['title' => 'ƏDV 18%', 'rate' => 18, 'type' => 'inclusive']);
+            $branch = Branch::create(['name' => 'Əsas filial', 'phone' => $phone]);
+            Terminal::create(['branch_id' => $branch->id, 'name' => 'Kassa 1']);
             foreach (['İsti içkilər', 'Soyuq içkilər', 'Əsas yeməklər', 'Desertlər'] as $i => $title) {
                 Category::create(['title' => $title, 'sort' => $i]);
             }

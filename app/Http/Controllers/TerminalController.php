@@ -48,6 +48,9 @@ class TerminalController extends Controller
         if (! $user->hasScope('POS') && ! $user->hasScope('ORDERS')) {
             throw ValidationException::withMessages(['pin' => 'Bu işçinin POS-a icazəsi yoxdur.']);
         }
+        if (! $user->canUseTerminal($this->terminal->device())) {
+            throw ValidationException::withMessages(['pin' => $user->name.' bu terminalda işləyə bilməz.']);
+        }
 
         $this->terminal->unlock($user);
 

@@ -13,7 +13,7 @@ class SiteSetting extends Model
 
     /** Açar => [etiket, default]. Default-lar ilk quraşdırma üçündür. */
     public const FIELDS = [
-        'company_name' => ['Şirkətin adı', 'Kvadrat'],
+        'company_name' => ['Şirkətin adı', 'Kvadrat MMC'],
         'phone' => ['Mobil telefon', '055 703 80 08'],
         'city_phone' => ['Şəhər telefonu', '012 310 10 08'],
         'email' => ['E-poçt', 'support@kvadrat.az'],
@@ -23,7 +23,7 @@ class SiteSetting extends Model
         'map_url' => ['Xəritə linki', 'https://maps.app.goo.gl/zq4EyWu9hUAHm3EMA'],
         'map_lat' => ['Xəritə: enlik', '40.3938117'],
         'map_lng' => ['Xəritə: uzunluq', '49.8074573'],
-        'work_hours' => ['İş saatları', 'B.e. – Şənbə, 09:00 – 19:00'],
+        'work_hours' => ['İş saatları', '09:00 – 18:00'],
     ];
 
     protected $primaryKey = 'key';

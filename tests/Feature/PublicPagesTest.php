@@ -29,7 +29,7 @@ class PublicPagesTest extends TestCase
                 ->assertSee(route('privacy'))->assertSee(route('terms'))->assertSee('AlfaPOS v'.config('app.version'));
         }
 
-        $this->get(route('about'))->assertSee('<strong>Kvadrat</strong> şirkəti', false);
+        $this->get(route('about'))->assertSee('<strong>Kvadrat MMC</strong> şirkəti', false);
         $this->get(route('faq'))->assertSee('Masanın hesabını necə bağlayıram?')->assertSee('Şəhər: 012 310 10 08');
         $this->get(route('privacy'))->assertSee('Fərdi məlumatlar haqqında')->assertSee('id="b1"', false)->assertDontSee('{email}');
         $this->get(route('contact'))->assertSee('tel:+994557038008', false)->assertSee('tel:+994123101008', false)

@@ -151,6 +151,14 @@ Route::middleware('auth')->group(function () {
             Route::get('/terminal', [Settings\TerminalController::class, 'edit'])->name('terminal');
             Route::put('/terminal', [Settings\TerminalController::class, 'update'])->name('terminal.update');
             Route::delete('/terminal/images/{index}', [Settings\TerminalController::class, 'destroyImage'])->whereNumber('index')->name('terminal.images.destroy');
+            Route::get('/branches', [Settings\BranchController::class, 'index'])->name('branches.index');
+            Route::post('/branches', [Settings\BranchController::class, 'storeBranch'])->name('branches.store');
+            Route::put('/branches/{branch}', [Settings\BranchController::class, 'updateBranch'])->name('branches.update');
+            Route::delete('/branches/{branch}', [Settings\BranchController::class, 'destroyBranch'])->name('branches.destroy');
+            Route::post('/terminals', [Settings\BranchController::class, 'storeTerminal'])->name('terminals.store');
+            Route::put('/terminals/{terminal}', [Settings\BranchController::class, 'updateTerminal'])->name('terminals.update');
+            Route::delete('/terminals/{terminal}', [Settings\BranchController::class, 'destroyTerminal'])->name('terminals.destroy');
+            Route::post('/device', [Settings\BranchController::class, 'bindDevice'])->name('device.bind');
             Route::get('/tables/plan', [Settings\TableController::class, 'plan'])->name('tables.plan');
             Route::put('/tables/plan', [Settings\TableController::class, 'savePlan'])->name('tables.plan.save');
             Route::resource('tables', Settings\TableController::class)->only(['index', 'store', 'update', 'destroy']);

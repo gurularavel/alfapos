@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\StoreTable;
+use App\Models\Terminal;
 use App\Models\User;
 use App\Support\Tenancy;
 use Illuminate\Http\Request;
@@ -18,8 +19,9 @@ class UserController extends Controller
     public function index()
     {
         return view('users.index', [
-            'users' => User::where('tenant_id', $this->tenancy->id())->with('tables:id')->orderBy('name')->get(),
+            'users' => User::where('tenant_id', $this->tenancy->id())->with('tables:id', 'terminals:id')->orderBy('name')->get(),
             'tables' => StoreTable::orderBy('title')->get(),
+            'terminals' => Terminal::with('branch:id,name')->where('is_active', true)->orderBy('branch_id')->orderBy('name')->get(),
         ]);
     }
 
@@ -38,6 +40,7 @@ class UserController extends Controller
         $this->applyPin($request, $user);
         $user->save();
         $user->tables()->sync($this->tableIds($request));
+        $user->terminals()->sync(Terminal::whereIn('id', (array) $request->input('terminal_ids', []))->pluck('id'));
 
         return back()->with('success', 'İstifadəçi əlavə edildi.');
     }
@@ -59,6 +62,7 @@ class UserController extends Controller
         $this->applyPin($request, $user);
         $user->save();
         $user->tables()->sync($this->tableIds($request));
+        $user->terminals()->sync(Terminal::whereIn('id', (array) $request->input('terminal_ids', []))->pluck('id'));
 
         return back()->with('success', 'İstifadəçi yeniləndi.');
     }

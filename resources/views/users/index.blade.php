@@ -5,7 +5,7 @@
 <div x-data="{
         edit: null,
         presets: @js($presets),
-        blank: { id: null, name: '', email: '', phone: '', designation: '', role: 'waiter', scopes: @js($presets['waiter']), table_ids: [], is_active: true, has_pin: false },
+        blank: { id: null, name: '', email: '', phone: '', designation: '', role: 'waiter', scopes: @js($presets['waiter']), table_ids: [], terminal_ids: [], is_active: true, has_pin: false },
         setRole(role) { this.edit.role = role; if (this.presets[role]?.length) this.edit.scopes = [...this.presets[role]]; },
      }">
     <x-page-header title="İstifadəçilər" subtitle="İşçilər, rollar, icazələr və POS terminalı üçün PIN kodlar.">
@@ -14,7 +14,7 @@
 
     <div class="card overflow-x-auto">
         <table class="table-base">
-            <thead><tr><th>Ad</th><th>Rol</th><th>Login (email)</th><th>PIN</th><th>İcazələr</th><th>Status</th><th></th></tr></thead>
+            <thead><tr><th>Ad</th><th>Rol</th><th>Login (email)</th><th>PIN</th><th>Terminal</th><th>İcazələr</th><th>Status</th><th></th></tr></thead>
             <tbody>
             @foreach ($users as $u)
                 <tr>
@@ -22,10 +22,11 @@
                     <td><span class="{{ ['admin' => 'badge-green', 'cashier' => 'badge-blue', 'waiter' => 'badge-amber', 'chef' => 'badge-red'][$u->role] ?? 'badge-gray' }}">{{ $u->roleLabel() }}</span></td>
                     <td class="text-zinc-500">{{ $u->email ?? '— (yalnız PIN)' }}</td>
                     <td>{!! $u->hasPin() ? '<span class="badge-green">✓ var</span>' : '<span class="badge-gray">yoxdur</span>' !!}</td>
+                    <td class="text-xs text-zinc-500">{{ $u->isAdmin() ? 'Hamısı' : ($u->terminals->isEmpty() ? 'Hamısı' : $terminals->whereIn('id', $u->terminals->pluck('id'))->pluck('name')->implode(', ')) }}</td>
                     <td class="max-w-xs text-xs text-zinc-500">{{ $u->isAdmin() ? 'Hamısı' : collect($u->scopes)->map(fn ($s) => \App\Models\User::SCOPES[$s] ?? $s)->implode(', ') }}</td>
                     <td>{!! $u->is_active ? '<span class="badge-green">Aktiv</span>' : '<span class="badge-red">Deaktiv</span>' !!}</td>
                     <td class="text-right whitespace-nowrap">
-                        <button class="btn-ghost btn-sm" @click="edit = @js(['id' => $u->id, 'name' => $u->name, 'email' => $u->email, 'phone' => $u->phone, 'designation' => $u->designation, 'role' => $u->role, 'scopes' => $u->scopes ?? [], 'table_ids' => $u->tables->pluck('id'), 'is_active' => $u->is_active, 'has_pin' => $u->hasPin()])"><x-icon name="edit" class="size-4" /></button>
+                        <button class="btn-ghost btn-sm" @click="edit = @js(['id' => $u->id, 'name' => $u->name, 'email' => $u->email, 'phone' => $u->phone, 'designation' => $u->designation, 'role' => $u->role, 'scopes' => $u->scopes ?? [], 'table_ids' => $u->tables->pluck('id'), 'terminal_ids' => $u->terminals->pluck('id'), 'is_active' => $u->is_active, 'has_pin' => $u->hasPin()])"><x-icon name="edit" class="size-4" /></button>
                         @unless ($u->is(auth()->user()))
                             <form method="POST" action="{{ route('users.destroy', $u) }}" class="inline" onsubmit="return confirm('Silinsin?')">@csrf @method('DELETE')<button class="btn-ghost btn-sm text-red-600"><x-icon name="trash" class="size-4" /></button></form>
                         @endunless
@@ -71,6 +72,16 @@
                     @endforeach
                 </div>
             </div>
+            @if ($terminals->count() > 1)
+                <div x-show="edit.role !== 'admin'">
+                    <p class="label">Terminallar <span class="font-normal text-zinc-400">— PIN yalnız seçilmiş terminallarda işləyir; heç biri seçilməsə hamısında</span></p>
+                    <div class="flex flex-wrap gap-2">
+                        @foreach ($terminals as $tm)
+                            <label class="flex items-center gap-1.5 rounded-lg border border-zinc-200 px-2.5 py-1.5 text-sm has-[:checked]:border-brand-400 has-[:checked]:bg-brand-50"><input type="checkbox" name="terminal_ids[]" value="{{ $tm->id }}" x-model.number="edit.terminal_ids" class="rounded text-brand-500"> {{ $tm->name }} <span class="text-xs text-zinc-400">{{ $tm->branch?->name }}</span></label>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
             @if ($tables->isNotEmpty())
                 <div x-show="edit.role === 'waiter'">
                     <p class="label">Təyin olunmuş masalar</p>

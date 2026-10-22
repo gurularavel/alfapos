@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Support\Realtime;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Support\PosTerminal;
 use App\Support\Tenancy;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -19,6 +20,7 @@ class KitchenController extends Controller
     public function feed()
     {
         return Order::with(['items' => fn ($q) => $q->whereIn('status', ['created', 'preparing', 'ready']), 'table', 'customer:id,name', 'creator:id,name'])
+            ->tap(fn ($q) => app(PosTerminal::class)->scopeToBranch($q))
             ->whereIn('status', ['created', 'preparing'])
             ->whereHas('items', fn ($q) => $q->whereIn('status', ['created', 'preparing']))
             ->orderBy('created_at')->get()

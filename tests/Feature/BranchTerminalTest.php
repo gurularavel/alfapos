@@ -1,0 +1,147 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\Branch;
+use App\Models\Invoice;
+use App\Models\MenuItem;
+use App\Models\Order;
+use App\Models\PaymentType;
+use App\Models\StoreTable;
+use App\Models\Terminal;
+use App\Models\User;
+use App\Services\TenantProvisioner;
+use App\Support\PosTerminal;
+use App\Support\Tenancy;
+use Database\Seeders\DatabaseSeeder;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+class BranchTerminalTest extends TestCase
+{
+    use RefreshDatabase;
+
+    protected User $admin;
+
+    protected Terminal $kassa;
+
+    protected Terminal $bar;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seed(DatabaseSeeder::class);
+        auth()->logout();
+        $this->admin = User::where('email', 'demo@pos.test')->first();
+        app(Tenancy::class)->set($this->admin->tenant);
+        $this->actingAs($this->admin);
+        $this->kassa = Terminal::where('name', 'Kassa 1')->firstOrFail();
+        $this->bar = Terminal::where('name', 'Bar')->firstOrFail();
+    }
+
+    protected function onDevice(Terminal $terminal): static
+    {
+        // JSON sorğularında test klienti cookie-ləri yalnız withCredentials() ilə göndərir (brauzer həmişə göndərir)
+        return $this->withCredentials()->withCookie(PosTerminal::DEVICE_COOKIE, (string) $terminal->id);
+    }
+
+    /** Cihaz terminala bağlı deyil (panel) — əvvəlki cookie-ləri təmizləyir. */
+    protected function offDevice(): static
+    {
+        $this->defaultCookies = [];
+        $this->withCredentials = false;
+
+        return $this;
+    }
+
+    protected function order(string $action = 'pay', ?int $tableId = null): array
+    {
+        return $this->postJson(route('pos.store'), [
+            'action' => $action, 'delivery_type' => $tableId ? 'dinein' : 'takeaway', 'store_table_id' => $tableId,
+            'cart' => [['menu_item_id' => MenuItem::where('title', 'Plov')->value('id'), 'quantity' => 1]],
+            'payment_type_id' => PaymentType::value('id'),
+        ])->assertOk()->json();
+    }
+
+    public function test_settings_page_and_binding_this_device(): void
+    {
+        $this->get(route('settings.branches.index'))->assertOk()->assertSee('Kassa 1')->assertSee('Bar')->assertSee('Əsas filial');
+        $this->post(route('settings.device.bind'), ['terminal_id' => $this->bar->id])->assertSessionHasNoErrors()->assertCookie(PosTerminal::DEVICE_COOKIE);
+        $this->onDevice($this->bar)->get(route('pos'))->assertOk()
+            ->assertViewHas('posData', fn ($d) => $d['terminal']['device']['name'] === 'Bar');
+    }
+
+    public function test_orders_and_invoices_record_terminal_and_branch(): void
+    {
+        $r = $this->onDevice($this->bar)->order();
+        $order = Order::find($r['order']['id']);
+        $invoice = Invoice::find($r['invoice_id']);
+        $this->assertSame([$this->bar->id, $this->bar->branch_id], [$order->terminal_id, $order->branch_id]);
+        $this->assertSame([$this->bar->id, $this->bar->branch_id], [$invoice->terminal_id, $invoice->branch_id]);
+        $this->get(route('invoices.receipt', $invoice))->assertSee('Terminal:')->assertSee('Bar');
+
+        // Cihaz bağlı deyilsə — terminalsız, filial masadan
+        $free = Order::find($this->offDevice()->order('kitchen', StoreTable::value('id'))['order']['id']);
+        $this->assertNull($free->terminal_id);
+        $this->assertSame($this->kassa->branch_id, $free->branch_id);
+    }
+
+    public function test_waiter_bound_to_terminal(): void
+    {
+        $this->postJson(route('pos.terminal.enter'))->assertOk();
+        // Ofisiant Nicat yalnız Kassa 1-ə bağlıdır
+        $this->onDevice($this->bar)->postJson(route('pos.terminal.unlock'), ['pin' => '2222'])->assertUnprocessable()->assertJsonPath('errors.pin.0', 'Ofisiant Nicat bu terminalda işləyə bilməz.');
+        $this->onDevice($this->kassa)->postJson(route('pos.terminal.unlock'), ['pin' => '2222'])->assertOk();
+        // Terminala bağlanmamış kassir hər yerdə işləyir
+        $this->onDevice($this->bar)->postJson(route('pos.terminal.unlock'), ['pin' => '1111'])->assertOk();
+    }
+
+    public function test_device_sees_only_its_branch(): void
+    {
+        $second = Branch::create(['name' => '28 May filialı']);
+        $remote = Terminal::create(['branch_id' => $second->id, 'name' => 'Kassa A']);
+        $farTable = StoreTable::create(['branch_id' => $second->id, 'title' => 'F1', 'seating_capacity' => 2]);
+
+        $farOrder = $this->onDevice($remote)->order('kitchen', $farTable->id)['order']['id'];
+        $nearOrder = $this->onDevice($this->kassa)->order('kitchen', StoreTable::where('title', 'Masa 1')->value('id'))['order']['id'];
+
+        $kitchen = collect($this->onDevice($this->kassa)->getJson(route('kitchen.feed'))->json())->pluck('id');
+        $this->assertTrue($kitchen->contains($nearOrder));
+        $this->assertFalse($kitchen->contains($farOrder));
+        $this->onDevice($this->kassa)->get(route('pos'))->assertViewHas('posData', fn ($d) => ! collect($d['tables'])->pluck('id')->contains($farTable->id));
+
+        // Panel (cihaz bağlı deyil) hamısını görür
+        $all = collect($this->offDevice()->getJson(route('kitchen.feed'))->json())->pluck('id');
+        $this->assertTrue($all->contains($farOrder) && $all->contains($nearOrder));
+    }
+
+    public function test_reports_by_terminal_and_filters(): void
+    {
+        $this->onDevice($this->kassa)->order();
+        $this->onDevice($this->bar)->order();
+        $this->onDevice($this->bar)->order();
+
+        $this->get(route('reports.show', 'sales-by-terminal'))->assertOk()->assertSee('Kassa 1 · Əsas filial')->assertSee('Bar · Əsas filial');
+        $this->get(route('reports.show', ['sales-summary', 'terminal_id' => $this->bar->id]))->assertOk()
+            ->assertViewHas('rows', fn ($rows) => $rows[0] === ['Çek sayı', 2]);
+        $this->get(route('reports.show', 'sales-by-branch'))->assertOk()->assertSee('Əsas filial');
+        $this->get(route('reports.show', 'staff-by-terminal'))->assertOk()->assertSee('Demo Admin · Bar');
+        $this->get(route('invoices.index', ['terminal_id' => $this->kassa->id]))->assertOk()
+            ->assertViewHas('invoices', fn ($p) => $p->total() === 1 + Invoice::where('terminal_id', $this->kassa->id)->count() - 1);
+    }
+
+    public function test_foreign_terminal_cannot_be_bound_and_new_tenant_gets_defaults(): void
+    {
+        $other = app(TenantProvisioner::class)->create('Başqa', 'O', 'o@pos.test', 'password');
+        app(Tenancy::class)->set($other->tenant);
+        $foreign = Terminal::firstOrFail();
+        $this->assertSame('Kassa 1', $foreign->name);
+        $this->assertSame('Əsas filial', $foreign->branch->name);
+        app(Tenancy::class)->set($this->admin->tenant);
+
+        $this->post(route('settings.device.bind'), ['terminal_id' => $foreign->id])->assertSessionHasErrors('terminal_id');
+        // Başqa biznesin terminal cookie-si nəzərə alınmır
+        $order = Order::find($this->onDevice($foreign)->order()['order']['id']);
+        $this->assertNull($order->terminal_id);
+    }
+}

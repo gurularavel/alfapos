@@ -68,6 +68,22 @@ class User extends Authenticatable
         return $this->belongsToMany(StoreTable::class, 'table_user');
     }
 
+    /** İşçinin işləyə biləcəyi terminallar; boşdursa bütün terminallarda işləyə bilər. */
+    public function terminals(): BelongsToMany
+    {
+        return $this->belongsToMany(Terminal::class);
+    }
+
+    public function canUseTerminal(?Terminal $terminal): bool
+    {
+        if (! $terminal || $this->isAdmin()) {
+            return true;
+        }
+        $ids = $this->terminals()->pluck('terminals.id');
+
+        return $ids->isEmpty() || $ids->contains($terminal->id);
+    }
+
     public function isSuperAdmin(): bool
     {
         return $this->role === 'superadmin';

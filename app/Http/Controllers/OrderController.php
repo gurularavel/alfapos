@@ -31,7 +31,7 @@ class OrderController extends Controller
     {
         $tenant = $tenancy->tenant();
 
-        $orders = Order::with(['items', 'table', 'customer:id,name,phone', 'creator:id,name'])
+        $orders = app(PosTerminal::class)->scopeToBranch(Order::with(['items', 'table', 'customer:id,name,phone', 'creator:id,name']))
             ->where(fn ($q) => $q->active()->orWhere(fn ($w) => $w->where('payment_status', 'pending')->where('status', 'completed')))
             ->where('status', '!=', 'cancelled')
             ->orderBy('created_at')->get();
