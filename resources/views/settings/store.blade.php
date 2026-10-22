@@ -19,7 +19,7 @@
                 <div><label class="label">Saat qurşağı</label>
                     <select name="timezone" class="input">@foreach (['Asia/Baku', 'Europe/Istanbul', 'Europe/Moscow', 'Asia/Tbilisi', 'Asia/Tashkent', 'Asia/Almaty', 'Europe/London', 'UTC'] as $tz)<option @selected($store->timezone === $tz)>{{ $tz }}</option>@endforeach</select>
                 </div>
-                <div><label class="label">Servis haqqı (%)</label><input name="service_charge" type="number" step="0.01" min="0" max="100" value="{{ old('service_charge', $store->service_charge) }}" class="input"></div>
+                <div class="text-sm text-zinc-500"><span class="label">Servis haqqı və vergi</span><a href="{{ route('settings.taxes.index') }}" class="font-semibold text-brand-700 underline">Vergi və servis haqqı</a> bölməsində</div>
                 <div><label class="label">Günlük satış hədəfi</label><input name="daily_sales_goal" type="number" step="0.01" min="0" value="{{ old('daily_sales_goal', $store->daily_sales_goal) }}" class="input"></div>
             </div>
         </div>

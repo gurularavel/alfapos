@@ -25,28 +25,48 @@
         </div>
     </div>
 
-    {{-- PIN paneli --}}
-    {{-- Sensor ekran üçün: düymələr ~96px (ekran hündürlüyünə görə 72–104px), touch-manipulation ilə iki dəfə toxunuşda zoom olmur --}}
-    <div x-show="$store.terminal.mode === 'pin'" class="absolute inset-0 flex items-center justify-center bg-black/70 p-3 backdrop-blur-sm [touch-action:manipulation]" @click.self="$store.terminal.mode = 'saver'">
-        <div class="w-full max-w-md rounded-[2rem] bg-white p-5 text-ink shadow-2xl sm:p-7">
-            <p class="text-center text-xl font-black sm:text-2xl" x-text="$store.terminal.purpose === 'exit' ? 'Terminaldan çıxış — admin PIN' : 'PIN kodunuzu daxil edin'"></p>
-            <div class="my-5 flex justify-center gap-5" :class="$store.terminal.error && 'animate-[shake_.3s]'">
-                <template x-for="n in 4">
-                    <span class="size-6 rounded-full border-[3px] transition" :class="$store.terminal.pin.length >= n ? 'scale-110 border-brand-500 bg-brand-500' : 'border-zinc-300'"></span>
-                </template>
+    {{--
+        PIN paneli — tam ekran, flat. Üfüqi ekranda solda başlıq/nöqtələr, sağda klaviatura bütün hündürlüyü tutur;
+        şaquli ekranda üst-üstə. Düymələr ekranın ölçüsünə görə böyüyür (sensor ekran üçün), kölgə/çərçivə yoxdur.
+        touch-manipulation: iki dəfə toxunuşda zoom olmur.
+    --}}
+    <div x-show="$store.terminal.mode === 'pin'" class="absolute inset-0 flex flex-col bg-ink [touch-action:manipulation] lg:flex-row">
+        <section class="flex shrink-0 flex-col justify-between gap-6 bg-brand-700 p-6 sm:p-10 lg:w-[38%] lg:p-14">
+            <div class="flex items-center gap-4">
+                <template x-if="$store.terminal.store.logo"><img :src="$store.terminal.store.logo" alt="" class="size-14 rounded-xl bg-white object-cover"></template>
+                <div>
+                    <p class="text-xl font-black" x-text="$store.terminal.store.name"></p>
+                    <p class="text-sm font-semibold text-white/60 tabular-nums" x-text="$store.terminal.timeLabel + ' · ' + $store.terminal.dateLabel"></p>
+                </div>
             </div>
-            <p class="mb-3 min-h-6 text-center text-base font-bold text-red-600" x-text="$store.terminal.error"></p>
-            <div class="grid grid-cols-3 gap-3">
-                <template x-for="d in ['1','2','3','4','5','6','7','8','9']">
-                    <button type="button" class="h-[clamp(4.5rem,11vh,6.5rem)] rounded-3xl bg-zinc-100 text-4xl font-black tabular-nums shadow-[inset_0_-3px_0_rgb(0_0_0/0.06)] transition select-none active:scale-95 active:bg-brand-500 active:text-white" @click="$store.terminal.press(d)" x-text="d"></button>
-                </template>
-                <button type="button" class="h-[clamp(4.5rem,11vh,6.5rem)] rounded-3xl text-lg font-bold text-zinc-500 transition select-none active:scale-95 active:bg-zinc-100" @click="$store.terminal.mode = 'saver'">Ləğv</button>
-                <button type="button" class="h-[clamp(4.5rem,11vh,6.5rem)] rounded-3xl bg-zinc-100 text-4xl font-black shadow-[inset_0_-3px_0_rgb(0_0_0/0.06)] transition select-none active:scale-95 active:bg-brand-500 active:text-white" @click="$store.terminal.press('0')">0</button>
-                <button type="button" class="flex h-[clamp(4.5rem,11vh,6.5rem)] items-center justify-center rounded-3xl text-zinc-600 transition select-none active:scale-95 active:bg-zinc-100" @click="$store.terminal.back()" aria-label="Sil">
-                    <svg class="size-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2Z"/><path d="m18 9-6 6M12 9l6 6"/></svg>
-                </button>
+
+            <div>
+                <p class="text-3xl leading-tight font-black sm:text-4xl lg:text-5xl" x-text="$store.terminal.purpose === 'exit' ? 'Terminaldan çıxış' : 'PIN kodunuzu daxil edin'"></p>
+                <p class="mt-2 text-lg text-white/70" x-text="$store.terminal.purpose === 'exit' ? 'Admin PIN-i tələb olunur' : 'Sifarişlər sizin adınıza yazılacaq'"></p>
+                <div class="mt-8 flex gap-4" :class="$store.terminal.error && 'animate-[shake_.3s]'">
+                    <template x-for="n in 4">
+                        <span class="size-7 rounded-full transition-colors sm:size-9" :class="$store.terminal.pin.length >= n ? 'bg-white' : 'bg-white/20'"></span>
+                    </template>
+                </div>
+                <p class="mt-5 min-h-7 text-xl font-bold text-red-200" x-text="$store.terminal.error"></p>
             </div>
-        </div>
+
+            <button type="button" class="flex items-center gap-3 self-start rounded-2xl bg-white/10 px-6 py-4 text-lg font-bold transition-colors select-none active:bg-white/25" @click="$store.terminal.mode = 'saver'">
+                <svg class="size-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                Geri
+            </button>
+        </section>
+
+        <section class="grid min-h-0 flex-1 grid-cols-3 grid-rows-4 gap-2 p-2 sm:gap-3 sm:p-4 lg:p-6">
+            <template x-for="d in ['1','2','3','4','5','6','7','8','9']">
+                <button type="button" class="rounded-2xl bg-white/[0.07] text-[clamp(2.5rem,7vh,4.5rem)] font-bold tabular-nums transition-colors select-none active:bg-brand-500" @click="$store.terminal.press(d)" x-text="d"></button>
+            </template>
+            <button type="button" class="rounded-2xl text-[clamp(1.1rem,2.6vh,1.6rem)] font-bold text-white/60 transition-colors select-none active:bg-white/10" @click="$store.terminal.pin = ''; $store.terminal.error = ''">Təmizlə</button>
+            <button type="button" class="rounded-2xl bg-white/[0.07] text-[clamp(2.5rem,7vh,4.5rem)] font-bold transition-colors select-none active:bg-brand-500" @click="$store.terminal.press('0')">0</button>
+            <button type="button" class="flex items-center justify-center rounded-2xl text-white/70 transition-colors select-none active:bg-white/10" @click="$store.terminal.back()" aria-label="Sil">
+                <svg class="size-[clamp(2.25rem,6vh,3.5rem)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2Z"/><path d="m18 9-6 6M12 9l6 6"/></svg>
+            </button>
+        </section>
     </div>
 
     <button type="button" x-show="$store.terminal.mode === 'saver'" class="absolute top-4 right-4 rounded-full bg-black/40 px-5 py-3 text-sm font-semibold text-white/80 backdrop-blur active:bg-black/60" @click.stop="$store.terminal.openPin('exit')">Terminaldan çıx</button>

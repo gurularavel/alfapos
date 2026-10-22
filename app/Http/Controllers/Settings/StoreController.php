@@ -26,7 +26,6 @@ class StoreController extends Controller
             'email' => ['nullable', 'email'],
             'currency' => ['required', 'string', 'max:10'],
             'timezone' => ['required', 'timezone'],
-            'service_charge' => ['required', 'numeric', 'min:0', 'max:100'],
             'daily_sales_goal' => ['required', 'numeric', 'min:0'],
             'logo' => ['nullable', 'image', 'max:2048'],
         ]);

@@ -33,6 +33,9 @@ class OrderService
             ->get()
             ->keyBy('id');
 
+        // Vergi biznes səviyyəsində söndürülübsə sətirlər vergisiz yazılır (qiymət dəyişmir)
+        $taxEnabled = $this->tenancy->tenant()?->is_tax_enabled ?? true;
+
         $lines = [];
         foreach ($cart as $row) {
             $item = $items->get($row['menu_item_id'] ?? null);
@@ -55,7 +58,7 @@ class OrderService
                 'addons' => $addons->map(fn ($a) => ['id' => $a->id, 'title' => $a->title, 'price' => (float) $a->price])->all() ?: null,
                 'price' => round($unit, 2),
                 'quantity' => max(1, (int) ($row['quantity'] ?? 1)),
-                'tax_rate' => (float) ($item->tax?->rate ?? 0),
+                'tax_rate' => $taxEnabled ? (float) ($item->tax?->rate ?? 0) : 0.0,
                 'tax_type' => $item->tax?->type ?? 'exclusive',
                 'notes' => isset($row['notes']) ? mb_substr($row['notes'], 0, 100) : null,
             ];
@@ -66,9 +69,9 @@ class OrderService
 
     /**
      * Cəmləri hesablayır. Exclusive vergi üstə gəlir, inclusive vergi qiymətin içindədir.
-     * Servis haqqı (endirimdən sonrakı məbləğin faizi) tenant ayarından gəlir.
+     * Servis haqqı endirimdən sonrakı məbləğin faizidir; faiz Tenant::serviceRateFor() ilə müəyyən olunur.
      */
-    public function totals(iterable $lines, ?string $discountType, float $discountValue, Tenant $tenant): array
+    public function totals(iterable $lines, ?string $discountType, float $discountValue, float $serviceRate): array
     {
         $subTotal = 0.0;
         $tax = 0.0;
@@ -91,7 +94,7 @@ class OrderService
             default => 0.0,
         };
 
-        $service = ($subTotal - $discount) * (float) $tenant->service_charge / 100;
+        $service = ($subTotal - $discount) * $serviceRate / 100;
 
         return [
             'sub_total' => round($subTotal, 2),
@@ -100,6 +103,13 @@ class OrderService
             'service_charge_total' => round($service, 2),
             'total' => round($subTotal - $discount + $exclusiveTax + $service, 2),
         ];
+    }
+
+    /** Saxlanmış sifarişin cəmləri (servis haqqı qaydası ilə). */
+    public function orderTotals(Order $order, iterable $lines, Tenant $tenant): array
+    {
+        return $this->totals($lines, $order->discount_type, (float) $order->discount_value,
+            $tenant->serviceRateFor($order->delivery_type, $order->no_service_charge));
     }
 
     public function nextToken(): int
@@ -131,6 +141,7 @@ class OrderService
                 'draft_reference' => $data['draft_reference'] ?? null,
                 'discount_type' => $data['discount_type'] ?? null,
                 'discount_value' => $data['discount_value'] ?? 0,
+                'no_service_charge' => (bool) ($data['no_service_charge'] ?? false),
                 'notes' => $data['notes'] ?? null,
                 'created_by' => app(PosTerminal::class)->effectiveId(),
             ]);
@@ -159,7 +170,7 @@ class OrderService
             $sum = ['sub_total' => 0, 'discount_total' => 0, 'tax_total' => 0, 'service_charge_total' => 0, 'total' => 0];
             foreach ($orders as $order) {
                 $lines = $order->items->where('status', '!=', 'cancelled');
-                foreach ($this->totals($lines, $order->discount_type, (float) $order->discount_value, $tenant) as $k => $v) {
+                foreach ($this->orderTotals($order, $lines, $tenant) as $k => $v) {
                     $sum[$k] += $v;
                 }
             }

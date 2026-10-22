@@ -15,6 +15,7 @@ export default (data) => ({
     discountType: 'percentage',
     discountValue: 0,
     notes: '',
+    noServiceCharge: false,
     draftId: null,
 
     // modallar
@@ -217,13 +218,22 @@ export default (data) => ({
     },
 
     clear() {
-        Object.assign(this, { cart: [], customer: null, tableId: '', discountValue: 0, notes: '', draftId: null, deliveryType: 'dinein' });
+        Object.assign(this, { cart: [], customer: null, tableId: '', discountValue: 0, notes: '', draftId: null, deliveryType: 'dinein', noServiceCharge: false });
         this.persist();
     },
 
     resetForLock() {
         this.clear();
         Object.assign(this, { picker: null, modal: null, search: '', category: null, customerQuery: '', customerResults: [], draftReference: '' });
+    },
+
+    /** Servis haqqı bu sifarişə aiddirmi (ayara və xidmət növünə görə) — kassir onu ləğv edə bilər. */
+    get serviceApplies() {
+        return this.service.enabled && (!this.service.dineinOnly || this.deliveryType === 'dinein');
+    },
+
+    get serviceRate() {
+        return this.serviceApplies && !this.noServiceCharge ? this.service.rate : 0;
     },
 
     // ---- cəmlər (server ilə eyni formul) ----
@@ -238,7 +248,7 @@ export default (data) => ({
         tax += exclusive;
         const dv = Number(this.discountValue) || 0;
         const discount = this.discountType === 'percentage' ? (sub * Math.min(100, dv)) / 100 : Math.min(sub, dv);
-        const service = ((sub - discount) * this.serviceCharge) / 100;
+        const service = ((sub - discount) * this.serviceRate) / 100;
         return { sub, discount, tax, service, total: sub - discount + exclusive + service };
     },
 
@@ -278,6 +288,7 @@ export default (data) => ({
             store_table_id: this.deliveryType === 'dinein' && this.tableId ? Number(this.tableId) : null,
             discount_type: Number(this.discountValue) > 0 ? this.discountType : null,
             discount_value: Number(this.discountValue) || 0,
+            no_service_charge: this.serviceApplies && this.noServiceCharge,
             notes: this.notes || null,
             draft_id: this.draftId,
             draft_reference: action === 'draft' ? this.draftReference : null,

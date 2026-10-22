@@ -36,7 +36,7 @@ class OrderController extends Controller
             ->map(function ($group) use ($service, $tenant) {
                 $first = $group->first();
                 $unpaid = $group->where('payment_status', 'pending');
-                $due = $unpaid->sum(fn ($o) => $service->totals($o->items->where('status', '!=', 'cancelled'), $o->discount_type, (float) $o->discount_value, $tenant)['total']);
+                $due = $unpaid->sum(fn ($o) => $service->orderTotals($o, $o->items->where('status', '!=', 'cancelled'), $tenant)['total']);
 
                 return [
                     'key' => $first->store_table_id ? 't'.$first->store_table_id : 'o'.$first->id,

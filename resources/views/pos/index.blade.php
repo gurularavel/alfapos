@@ -128,8 +128,19 @@
                     <dt><button class="text-brand-600 hover:underline" @click="modal = 'discount'">Endirim <span x-show="discountValue > 0" x-text="discountType === 'percentage' ? '(' + discountValue + '%)' : ''"></span></button></dt>
                     <dd class="text-red-600" x-text="'−' + money(totals.discount)"></dd>
                 </div>
-                <div class="flex justify-between"><dt class="text-zinc-500">Vergi</dt><dd x-text="money(totals.tax)"></dd></div>
-                <div class="flex justify-between" x-show="serviceCharge > 0"><dt class="text-zinc-500">Servis haqqı (<span x-text="serviceCharge"></span>%)</dt><dd x-text="money(totals.service)"></dd></div>
+                <div class="flex justify-between" x-show="taxEnabled"><dt class="text-zinc-500">Vergi</dt><dd x-text="money(totals.tax)"></dd></div>
+                <div class="flex items-center justify-between" x-show="serviceApplies">
+                    <dt>
+                        <label class="flex cursor-pointer items-center gap-2 text-zinc-500" title="Bu sifariş üçün servis haqqını aç/söndür">
+                            <button type="button" role="switch" :aria-checked="!noServiceCharge" @click="noServiceCharge = !noServiceCharge"
+                                    class="relative h-5 w-9 rounded-full transition" :class="noServiceCharge ? 'bg-zinc-300' : 'bg-brand-500'">
+                                <span class="absolute top-0.5 size-4 rounded-full bg-white shadow transition-all" :class="noServiceCharge ? 'left-0.5' : 'left-[18px]'"></span>
+                            </button>
+                            <span x-text="'Servis haqqı (' + service.rate + '%)'"></span>
+                        </label>
+                    </dt>
+                    <dd :class="noServiceCharge && 'text-zinc-400 line-through'" x-text="money(noServiceCharge ? (totals.sub - totals.discount) * service.rate / 100 : totals.service)"></dd>
+                </div>
                 <div class="flex justify-between border-t border-dashed border-zinc-200 pt-1.5 text-base font-black"><dt>Ödəniləcək</dt><dd x-text="money(totals.total)"></dd></div>
             </dl>
             <input x-model="notes" class="input mt-2 py-2" placeholder="Sifariş qeydi (istəyə bağlı)" maxlength="255">
@@ -203,8 +214,8 @@
         <dl class="space-y-1.5 rounded-xl bg-zinc-50 p-4 text-sm">
             <div class="flex justify-between"><dt>Ara cəm</dt><dd x-text="money(totals.sub)"></dd></div>
             <div class="flex justify-between"><dt>Endirim</dt><dd x-text="'−' + money(totals.discount)"></dd></div>
-            <div class="flex justify-between"><dt>Vergi</dt><dd x-text="money(totals.tax)"></dd></div>
-            <div class="flex justify-between"><dt>Servis haqqı</dt><dd x-text="money(totals.service)"></dd></div>
+            <div class="flex justify-between" x-show="taxEnabled"><dt>Vergi</dt><dd x-text="money(totals.tax)"></dd></div>
+            <div class="flex justify-between" x-show="totals.service > 0"><dt>Servis haqqı</dt><dd x-text="money(totals.service)"></dd></div>
             <div class="flex justify-between border-t border-zinc-200 pt-2 text-xl font-black"><dt>Cəm</dt><dd x-text="money(totals.total)"></dd></div>
         </dl>
         <p class="label mt-4">Ödəniş növü</p>

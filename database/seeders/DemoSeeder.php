@@ -66,7 +66,7 @@ class DemoSeeder extends Seeder
 
         $admin = app(TenantProvisioner::class)->create('Demo Restoran', 'Demo Admin', $this->email('demo'), $this->password('demo'), '+994501234567');
         $tenant = $admin->tenant;
-        $tenant->update(['plan_id' => \App\Models\Plan::where('slug', 'pro')->value('id') ?? $tenant->plan_id, 'address' => 'Bakı, Nizami küç. 10', 'service_charge' => 5, 'daily_sales_goal' => 1000, 'is_qr_order_enabled' => true]);
+        $tenant->update(['plan_id' => \App\Models\Plan::where('slug', 'pro')->value('id') ?? $tenant->plan_id, 'address' => 'Bakı, Nizami küç. 10', 'service_charge' => 5, 'is_service_charge_enabled' => true, 'service_charge_dinein_only' => false, 'daily_sales_goal' => 1000, 'is_qr_order_enabled' => true]);
         app(Tenancy::class)->set($tenant);
         auth()->setUser($admin);
 

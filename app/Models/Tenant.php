@@ -19,6 +19,9 @@ class Tenant extends Model
             'is_qr_menu_enabled' => 'boolean',
             'is_qr_order_enabled' => 'boolean',
             'is_feedback_enabled' => 'boolean',
+            'is_tax_enabled' => 'boolean',
+            'is_service_charge_enabled' => 'boolean',
+            'service_charge_dinein_only' => 'boolean',
             'print_settings' => 'array',
             'terminal_settings' => 'array',
             'service_charge' => 'decimal:2',
@@ -66,6 +69,22 @@ class Tenant extends Model
     public function printSetting(string $key, mixed $default = null): mixed
     {
         return data_get($this->print_settings, $key, $default);
+    }
+
+    /**
+     * Sifarişə tətbiq olunan servis haqqı faizi: söndürülübsə, "yalnız zalda" seçilib və sifariş zal deyilsə,
+     * və ya kassir bu sifariş üçün ləğv edibsə — 0.
+     */
+    public function serviceRateFor(string $deliveryType, bool $waived = false): float
+    {
+        if (! $this->is_service_charge_enabled || $waived) {
+            return 0.0;
+        }
+        if ($this->service_charge_dinein_only && $deliveryType !== 'dinein') {
+            return 0.0;
+        }
+
+        return (float) $this->service_charge;
     }
 
     public const TERMINAL_DEFAULTS = [
