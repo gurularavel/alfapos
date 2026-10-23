@@ -82,7 +82,7 @@ class TurnstileTest extends TestCase
 
     public function test_register_is_gated_by_its_own_action(): void
     {
-        $data = ['business_name' => 'Yeni Kafe', 'name' => 'Sahib', 'email' => 'yeni@kafe.az', 'password' => 'Secret123!', 'password_confirmation' => 'Secret123!', 'cf-turnstile-response' => 'token'];
+        $data = ['business_name' => 'Yeni Kafe', 'name' => 'Sahib', 'email' => 'yeni@kafe.az', 'password' => 'Secret123!', 'password_confirmation' => 'Secret123!', 'terms' => '1', 'cf-turnstile-response' => 'token'];
 
         Http::fake([Turnstile::VERIFY_URL => Http::sequence()
             ->push(['success' => true, 'action' => 'login', 'hostname' => 'alfapos.app'])

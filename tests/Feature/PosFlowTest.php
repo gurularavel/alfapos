@@ -188,18 +188,41 @@ class PosFlowTest extends TestCase
     {
         $this->post(route('register'), [
             'business_name' => 'Yeni Kafe', 'name' => 'Sahib', 'email' => 'new@pos.test',
-            'password' => 'secret123', 'password_confirmation' => 'secret123',
+            'password' => 'secret123', 'password_confirmation' => 'secret123', 'terms' => '1',
         ])->assertRedirect(route('dashboard'));
 
         $user = User::where('email', 'new@pos.test')->first();
         $this->assertTrue($user->isAdmin());
         $this->assertSame(3, PaymentType::withoutGlobalScopes()->where('tenant_id', $user->tenant_id)->count());
         $this->assertTrue($user->tenant->hasActiveSubscription());
+        $this->assertNotNull($user->terms_accepted_at);
+    }
+
+    public function test_registration_requires_accepting_terms(): void
+    {
+        $this->get(route('register'))->assertOk()->assertSee('name="terms"', false);
+
+        $this->post(route('register'), [
+            'business_name' => 'Kafe', 'name' => 'Sahib', 'email' => 'noterms@pos.test',
+            'password' => 'secret123', 'password_confirmation' => 'secret123',
+        ])->assertSessionHasErrors(['terms' => 'Qeydiyyat üçün İstifadə şərtləri və Məxfilik siyasəti ilə razılaşmalısınız.']);
+
+        $this->assertDatabaseMissing('users', ['email' => 'noterms@pos.test']);
+        $this->assertDatabaseMissing('tenants', ['name' => 'Kafe']);
+    }
+
+    public function test_cookie_policy_page_and_banner(): void
+    {
+        $this->get(route('cookies'))->assertOk()->assertSee('Cookie siyasəti')->assertSee('alfapos_terminal')->assertDontSee('{email}');
+
+        foreach ([route('home'), route('login'), route('register')] as $url) {
+            $this->get($url)->assertOk()->assertSee('aria-label="Cookie bildirişi"', false)->assertSee(route('cookies'));
+        }
     }
 
     public function test_registration_phone_accepts_digits_only_and_is_normalized(): void
     {
-        $data = ['business_name' => 'Kafe', 'name' => 'Sahib', 'email' => 'phone@pos.test', 'password' => 'secret123', 'password_confirmation' => 'secret123'];
+        $data = ['business_name' => 'Kafe', 'name' => 'Sahib', 'email' => 'phone@pos.test', 'password' => 'secret123', 'password_confirmation' => 'secret123', 'terms' => '1'];
 
         $this->post(route('register'), [...$data, 'phone' => '+994 50 abc 45 67'])->assertSessionHasErrors('phone');
         $this->assertDatabaseMissing('users', ['email' => 'phone@pos.test']);

@@ -153,6 +153,42 @@ Bu şərtlər Azərbaycan Respublikasının qanunvericiliyi ilə tənzimlənir.
 MD,
         ]);
 
+        SitePage::firstOrCreate(['slug' => 'cookies'], [
+            'title' => 'Cookie siyasəti',
+            'description' => 'AlfaPOS saytında və xidmətində istifadə olunan cookie-lər və brauzer yaddaşı.',
+            'body' => <<<'MD'
+Cookie — saytın brauzerinizdə saxladığı kiçik mətn faylıdır. **{şirkət}** şirkətinin **AlfaPOS** xidməti (alfapos.app saytı, idarəetmə paneli, POS, QR menyu və müştəri ekranı) yalnız xidmətin işləməsi və təhlükəsizliyi üçün **zəruri** cookie-lərdən istifadə edir.
+
+## Hansı cookie-lərdən istifadə edirik
+
+| Cookie | Nə üçün | Müddət |
+|---|---|---|
+| alfapos-session | Giriş sessiyası: panelə daxil olduğunuzu yadda saxlayır | Sessiya bitənə qədər |
+| XSRF-TOKEN | Formaların saxtalaşdırılmasından (CSRF) qorunma | Sessiya bitənə qədər |
+| remember_web_… | "Məni xatırla" seçilibsə, yenidən parol soruşulmur | Çıxış edənə qədər |
+| alfapos_terminal | Cihazın hansı kassa/terminal olduğunu yadda saxlayır (yalnız terminal kimi qurulmuş cihazlarda) | 5 il |
+| cookie_consent | Bu bildirişi oxuduğunuzu yadda saxlayır | 1 il |
+
+Sayt Cloudflare şəbəkəsi ilə qorunur. Cloudflare botlardan və hücumlardan qorunmaq üçün öz təhlükəsizlik cookie-lərini (məsələn, __cf_bm) yarada bilər; giriş və qeydiyyat formalarındakı "insan olduğunuzu təsdiqləyin" yoxlaması (Cloudflare Turnstile) da bu məqsədlə işləyir.
+
+## Brauzer yaddaşı (localStorage)
+
+POS ekranı yarımçıq səbəti, seçilmiş müştəri ekranını və tam ekran rejimini brauzerin yaddaşında saxlayır ki, səhifə yenilənəndə itməsin. Bu məlumat serverə göndərilmir və yalnız həmin cihazda qalır.
+
+## Nələrdən istifadə etmirik
+
+Reklam, izləmə (tracking) və ya üçüncü tərəf analitika cookie-lərindən istifadə etmirik; məlumatlarınızı reklam məqsədilə heç kimə ötürmürük.
+
+## Cookie-ləri necə idarə etmək olar
+
+Cookie-ləri brauzerin ayarlarından silə və ya bloklaya bilərsiniz. Zəruri cookie-lər bloklanarsa, panelə daxil olmaq və POS-dan istifadə etmək mümkün olmayacaq.
+
+## Əlaqə
+
+Suallarınız üçün: {email}, {telefon}. Fərdi məlumatların emalı haqqında ətraflı — Məxfilik siyasətində.
+MD,
+        ]);
+
         if (Faq::exists()) {
             return;
         }

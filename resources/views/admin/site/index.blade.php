@@ -52,7 +52,7 @@
                     <p class="mt-1 text-sm text-zinc-500">Yenilənib: {{ $page->updated_at->format('d.m.Y H:i') }} · {{ mb_strlen($page->body) }} simvol</p>
                     <div class="mt-4 flex gap-2">
                         <a href="{{ route('admin.site.pages.edit', $page->slug) }}" class="btn-primary btn-sm"><x-icon name="edit" class="size-4" /> Redaktə et</a>
-                        <a href="{{ route(['about' => 'about', 'privacy' => 'privacy', 'terms' => 'terms'][$page->slug]) }}" target="_blank" class="btn-secondary btn-sm">Bax</a>
+                        <a href="{{ route($page->slug) }}" target="_blank" class="btn-secondary btn-sm">Bax</a>
                     </div>
                 </div>
             @endforeach

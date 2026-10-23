@@ -27,10 +27,12 @@
                 <a href="{{ route('contact') }}" class="hover:text-brand-700">Əlaqə</a>
                 <a href="{{ route('privacy') }}" class="hover:text-brand-700">Məxfilik siyasəti</a>
                 <a href="{{ route('terms') }}" class="hover:text-brand-700">İstifadə şərtləri</a>
+                <a href="{{ route('cookies') }}" class="hover:text-brand-700">Cookie siyasəti</a>
             </nav>
             <p class="mt-2 text-center text-xs text-zinc-400">© {{ date('Y') }} {{ site('company_name') }} · {{ site('phone') }} · AlfaPOS v{{ config('app.version') }}</p>
         </div>
     </div>
 </div>
+<x-cookie-banner />
 </body>
 </html>

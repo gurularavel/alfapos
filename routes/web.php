@@ -36,6 +36,7 @@ Route::view('/sual-cavab', 'pages.faq')->name('faq');
 Route::view('/yenilikler', 'pages.changelog')->name('changelog');
 Route::view('/mexfilik-siyaseti', 'pages.privacy')->name('privacy');
 Route::view('/istifade-sertleri', 'pages.terms')->name('terms');
+Route::view('/cookie-siyaseti', 'pages.cookies')->name('cookies');
 
 // Müştəriyə baxan ekran (girişsiz, gizli token ilə)
 Route::get('/d/{token}', [CustomerDisplayController::class, 'show'])->name('display.show');

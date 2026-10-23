@@ -5,10 +5,10 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
-/** Saytın məzmun səhifələri (Haqqımızda, Məxfilik siyasəti, İstifadə şərtləri) — Markdown. */
+/** Saytın məzmun səhifələri (Haqqımızda, Məxfilik siyasəti, İstifadə şərtləri, Cookie siyasəti) — Markdown. */
 class SitePage extends Model
 {
-    public const SLUGS = ['about' => 'Haqqımızda', 'privacy' => 'Məxfilik siyasəti', 'terms' => 'İstifadə şərtləri'];
+    public const SLUGS = ['about' => 'Haqqımızda', 'privacy' => 'Məxfilik siyasəti', 'terms' => 'İstifadə şərtləri', 'cookies' => 'Cookie siyasəti'];
 
     protected $guarded = ['id'];
 

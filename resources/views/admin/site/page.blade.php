@@ -17,7 +17,7 @@
      }" x-init="refresh(); $watch('body', () => refresh())">
     <x-page-header :title="(\App\Models\SitePage::SLUGS[$page->slug] ?? $page->slug).' — redaktə'" subtitle="Mətn Markdown formatındadır; sağda saytda necə görünəcəyi göstərilir.">
         <a href="{{ route('admin.site.index', ['tab' => 'pages']) }}" class="btn-secondary">← Səhifələr</a>
-        <a href="{{ route(['about' => 'about', 'privacy' => 'privacy', 'terms' => 'terms'][$page->slug]) }}" target="_blank" class="btn-secondary">Saytda bax</a>
+        <a href="{{ route($page->slug) }}" target="_blank" class="btn-secondary">Saytda bax</a>
     </x-page-header>
 
     <form method="POST" action="{{ route('admin.site.pages.update', $page->slug) }}" class="space-y-4">

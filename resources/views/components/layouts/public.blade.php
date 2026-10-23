@@ -64,6 +64,7 @@
                 <li><a href="{{ route('contact') }}" class="hover:text-brand-700">Əlaqə</a></li>
                 <li><a href="{{ route('privacy') }}" class="hover:text-brand-700">Məxfilik siyasəti</a></li>
                 <li><a href="{{ route('terms') }}" class="hover:text-brand-700">İstifadə şərtləri</a></li>
+                <li><a href="{{ route('cookies') }}" class="hover:text-brand-700">Cookie siyasəti</a></li>
             </ul>
         </div>
         <div>
@@ -84,5 +85,6 @@
         </div>
     </div>
 </footer>
+<x-cookie-banner />
 </body>
 </html>

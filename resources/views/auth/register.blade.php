@@ -37,7 +37,13 @@
                     <input id="password_confirmation" name="password_confirmation" type="password" class="input" required autocomplete="new-password">
                 </div>
             </div>
-            <p class="text-xs text-zinc-500">Hesab yaratmaqla <a href="{{ route('terms') }}" target="_blank" class="font-semibold text-brand-700 underline">İstifadə şərtləri</a> və <a href="{{ route('privacy') }}" target="_blank" class="font-semibold text-brand-700 underline">Məxfilik siyasəti</a> ilə razılaşırsınız.</p>
+            <div>
+                <label class="flex items-start gap-2.5 text-sm text-zinc-600">
+                    <input type="checkbox" name="terms" value="1" class="mt-0.5 size-4 shrink-0 rounded border-zinc-300 text-brand-500" required @checked(old('terms'))>
+                    <span><a href="{{ route('terms') }}" target="_blank" class="font-semibold text-brand-700 underline">İstifadə şərtləri</a> və <a href="{{ route('privacy') }}" target="_blank" class="font-semibold text-brand-700 underline">Məxfilik siyasəti</a> ilə tanış oldum və razıyam.</span>
+                </label>
+                @error('terms')<p class="field-error">{{ $message }}</p>@enderror
+            </div>
             @if (App\Rules\Turnstile::enabled())
                 <div>
                     <div class="cf-turnstile" data-sitekey="{{ config('services.turnstile.site_key') }}" data-action="register" data-language="az" data-size="flexible"></div>

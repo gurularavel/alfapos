@@ -58,6 +58,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'scopes' => 'array',
             'is_active' => 'boolean',
+            'terms_accepted_at' => 'datetime',
         ];
     }
 

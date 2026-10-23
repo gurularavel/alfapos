@@ -46,9 +46,14 @@ class AuthController extends Controller
             'email' => ['required', 'email', 'max:190', 'unique:users,email'],
             'phone' => ['nullable', 'string', 'max:30', 'regex:/^\+?[0-9 ()\-]{9,20}$/'],
             'password' => ['required', 'confirmed', Password::min(8)],
-        ], ['phone.regex' => 'Telefon nömrəsi yalnız rəqəmlərdən ibarət olmalıdır, məs. +994 50 123 45 67.']);
+            'terms' => ['accepted'],
+        ], [
+            'phone.regex' => 'Telefon nömrəsi yalnız rəqəmlərdən ibarət olmalıdır, məs. +994 50 123 45 67.',
+            'terms.accepted' => 'Qeydiyyat üçün İstifadə şərtləri və Məxfilik siyasəti ilə razılaşmalısınız.',
+        ]);
 
         $user = $provisioner->create($data['business_name'], $data['name'], $data['email'], $data['password'], self::normalizePhone($data['phone'] ?? null));
+        $user->forceFill(['terms_accepted_at' => now()])->save();
 
         Auth::login($user);
         $request->session()->regenerate();
