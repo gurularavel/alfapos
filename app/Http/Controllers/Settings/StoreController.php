@@ -114,6 +114,41 @@ class StoreController extends Controller
         return [$invoice, $order];
     }
 
+    /**
+     * Windows üçün başlatma faylı: POS-u Chrome (yoxdursa Edge) ilə --kiosk-printing rejimində açır —
+     * çeklər çap pəncərəsi olmadan defolt printerə gedir. Ayrıca profil: açıq Chrome pəncərələri parametri pozmasın.
+     * Fayl ASCII-dir (cmd kod səhifəsi Azərbaycan hərflərini korlayır).
+     */
+    public function printLauncher()
+    {
+        $lines = [
+            '@echo off',
+            'rem AlfaPOS - quick printing: receipts go straight to the default Windows printer, no print dialog.',
+            'set "URL='.route('pos').'"',
+            'set "PROFILE=%LOCALAPPDATA%\AlfaPOS-Kassa"',
+            'set "B=%ProgramFiles%\Google\Chrome\Application\chrome.exe"',
+            'if exist "%B%" goto run',
+            'set "B=%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe"',
+            'if exist "%B%" goto run',
+            'set "B=%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe"',
+            'if exist "%B%" goto run',
+            'set "B=%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe"',
+            'if exist "%B%" goto run',
+            'set "B=%ProgramFiles%\Microsoft\Edge\Application\msedge.exe"',
+            'if exist "%B%" goto run',
+            'echo Google Chrome or Microsoft Edge was not found.',
+            'pause',
+            'exit /b 1',
+            ':run',
+            'start "" "%B%" --kiosk-printing --user-data-dir="%PROFILE%" --start-maximized --app=%URL%',
+        ];
+
+        return response(implode("\r\n", $lines)."\r\n", 200, [
+            'Content-Type' => 'application/octet-stream',
+            'Content-Disposition' => 'attachment; filename="AlfaPOS-Kassa.bat"',
+        ]);
+    }
+
     public function updatePrint(Request $request)
     {
         $data = $request->validate([

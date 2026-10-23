@@ -98,7 +98,7 @@
         </div>
         <x-slot:footer>
             <button class="btn-secondary" @click="pay = null">Bağla</button>
-            <button class="btn-primary" @click="post(@js(route('orders.pay')), { order_ids: pay.unpaid_ids, payment_type_id: paymentTypeId }).then(r => { if (r) { pay = null; $store.terminal.afterOrder(); printUrl(@js(route('invoices.receipt', '__ID__')).replace('__ID__', r.invoice_id)) } })">Ödənişi təsdiqlə</button>
+            <button class="btn-primary" @click="post(@js(route('orders.pay')), { order_ids: pay.unpaid_ids, payment_type_id: paymentTypeId }).then(r => { if (r) { pay = null; $store.terminal.afterOrder(); @js($autoPrintReceipt) && printUrl(@js(route('invoices.receipt', '__ID__')).replace('__ID__', r.invoice_id)) } })">Ödənişi təsdiqlə</button>
         </x-slot:footer>
     </x-modal>
 </div>

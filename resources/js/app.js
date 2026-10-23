@@ -45,9 +45,37 @@ window.money = (v, currency = window.APP_CURRENCY || '₼') =>
     `${Number(v || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).replace(/,/g, ' ')} ${currency}`;
 
 /** Yeni pəncərədə çap səhifəsi açır (qəbz, token). */
+/**
+ * Sürətli çap: sənəd görünməyən iframe-də açılır və dərhal çap olunur (ayrıca pəncərə yoxdur).
+ * Növbə ilə: mətbəx çeki və qəbz eyni anda gəlsə, biri bitəndən sonra digəri çap olunur.
+ * Brauzer --kiosk-printing ilə açılıbsa, dialoq da çıxmır — sənəd birbaşa defolt printerə gedir.
+ */
+const printQueue = [];
+let printing = false;
+const nextPrint = () => {
+    if (printing || !printQueue.length) return;
+    printing = true;
+    const frame = document.createElement('iframe');
+    frame.setAttribute('aria-hidden', 'true');
+    frame.style.cssText = 'position:fixed;left:-10000px;top:0;width:80mm;height:200mm;border:0';
+    let finished = false;
+    const done = () => {
+        if (finished) return;
+        finished = true;
+        printing = false;
+        setTimeout(() => frame.remove(), 2000);
+        nextPrint();
+    };
+    frame.addEventListener('load', () => {
+        frame.contentWindow.addEventListener('afterprint', done);
+        setTimeout(done, 60000); // dialoq açıq qalıbsa növbə ilişməsin
+    });
+    frame.src = printQueue.shift();
+    document.body.appendChild(frame);
+};
 window.printUrl = (url) => {
-    const w = window.open(url, 'print', 'width=420,height=640');
-    if (!w) window.location.href = url;
+    printQueue.push(url);
+    nextPrint();
 };
 
 /**

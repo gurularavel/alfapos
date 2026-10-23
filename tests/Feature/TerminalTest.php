@@ -86,10 +86,10 @@ class TerminalTest extends TestCase
         $this->get(route('settings.print'))->assertOk()->assertSee('Nümunəni çap et');
         $this->get(route('settings.print.preview', ['type' => 'receipt', 'paper_width' => 58, 'header' => 'TEST BAŞLIQ', 'footer' => 'Sağ olun', 'show_store_details' => 1, 'show_customer_details' => 1, 'show_notes' => 1]))
             ->assertOk()->assertSee('TEST BAŞLIQ')->assertSee('Sağ olun')->assertSee('58mm')->assertSee('Elvin Məmmədov')
-            ->assertSee('NÜMUNƏ-0001')->assertDontSee('window.print(), 300');
+            ->assertSee('NÜMUNƏ-0001')->assertDontSee('window.print(), 50');
         $this->get(route('settings.print.preview', ['type' => 'kot', 'paper_width' => 80, 'kot_show_prices' => 0]))
             ->assertOk()->assertSee('MƏTBƏX ÇEKİ')->assertSee('#27')->assertSee('Şəkərsiz');
-        $this->get(route('settings.print.preview', ['type' => 'receipt', 'print' => 1]))->assertOk()->assertSee('window.print(), 300', false);
+        $this->get(route('settings.print.preview', ['type' => 'receipt', 'print' => 1]))->assertOk()->assertSee('window.print(), 50', false);
 
         $this->assertSame([$orders, $invoices], [\App\Models\Order::count(), \App\Models\Invoice::count()]);
         $this->assertNotSame('TEST BAŞLIQ', $this->admin->tenant->fresh()->printSetting('header'));
@@ -141,6 +141,9 @@ class TerminalTest extends TestCase
     {
         $this->get(route('settings.terminal'))->assertOk();
         $this->assertTrue($this->admin->tenant->terminalSetting('sound_add_item'));
+        // Mətbəxə göndərəndən sonra terminal defolt olaraq kilidlənmir
+        $this->assertFalse($this->admin->tenant->terminalSetting('lock_after_order'));
+        $this->get(route('pos'))->assertViewHas('posData', fn ($d) => $d['terminal']['lockAfterOrder'] === false);
 
         // Səs açarları göndərilməyəndə (checkbox söndürülüb) false olur
         $this->put(route('settings.terminal.update'), ['lock_timeout' => 45, 'lock_after_order' => 1, 'sound_new_order' => 1])->assertSessionHasNoErrors();

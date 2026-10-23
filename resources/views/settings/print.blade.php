@@ -34,7 +34,7 @@
             <div><label class="label">Qəbz sonluğu</label><input name="footer" value="{{ $store->printSetting('footer') }}" class="input"></div>
             <div class="grid gap-2 sm:grid-cols-2">
                 @foreach (['show_store_details' => 'Mağaza məlumatlarını göstər', 'show_customer_details' => 'Müştəri məlumatlarını göstər', 'show_notes' => 'Qeydləri göstər', 'print_token' => 'Mətbəx çekini (token) avtomatik çap et', 'kot_show_prices' => 'Mətbəx çekində qiymət', 'auto_print' => 'Ödənişdən sonra avtomatik çap'] as $flag => $label)
-                    <label class="flex items-center gap-2 rounded-lg border border-zinc-200 px-3 py-2 text-sm"><input type="checkbox" name="{{ $flag }}" value="1" @checked($store->printSetting($flag)) class="rounded text-brand-500"> {{ $label }}</label>
+                    <label class="flex items-center gap-2 rounded-lg border border-zinc-200 px-3 py-2 text-sm"><input type="checkbox" name="{{ $flag }}" value="1" @checked($store->printSetting($flag, in_array($flag, ['print_token', 'auto_print', 'show_store_details', 'show_customer_details', 'show_notes']))) class="rounded text-brand-500"> {{ $label }}</label>
                 @endforeach
             </div>
             <button class="btn-primary">Yadda saxla</button>
@@ -52,6 +52,25 @@
                 <iframe :src="src" title="Çek nümunəsi" class="h-[70vh] w-full bg-zinc-200"></iframe>
             </div>
             <p class="text-xs text-zinc-500">Nümunə məlumatlarla göstərilir — heç nə bazaya yazılmır. Mağaza adı, ünvan və loqo "Mağaza məlumatları"ndan, vergi və servis haqqı öz ayarlarından götürülür.</p>
+        </div>
+    </div>
+
+    <div class="card card-pad mt-6">
+        <div class="flex flex-wrap items-start justify-between gap-4">
+            <div class="max-w-3xl">
+                <h2 class="text-lg font-extrabold">Dialoqsuz (sürətli) çap</h2>
+                <p class="mt-1 text-sm text-zinc-600">AlfaPOS çekləri ayrıca pəncərə açmadan dərhal çapa göndərir. Brauzerin çap pəncərəsi isə təhlükəsizlik səbəbindən yalnız brauzerin özündə söndürülür — bunun üçün kassanı aşağıdakı faylla açın: çeklər heç bir sual vermədən birbaşa printerə gedəcək.</p>
+                <ol class="mt-3 list-decimal space-y-1.5 pl-5 text-sm text-zinc-700">
+                    <li>Çek printerini Windows-da <b>defolt printer</b> edin: Parametrlər → Bluetooth və cihazlar → Printerlər → printer → <i>Defolt olaraq təyin et</i>. ("Windows defolt printeri idarə etsin" söndürülməlidir.)</li>
+                    <li><b>Başlatma faylını</b> yükləyin və iş masasına qoyun. Kassanı həmişə bu faylla açın (Chrome, yoxdursa Edge ayrıca pəncərədə açılır; ilk dəfə daxil olun — giriş yadda qalır).</li>
+                    <li><b>Sınaq çapı</b> edin: çap pəncərəsi çıxmadan çek gəlməlidir.</li>
+                </ol>
+                <p class="mt-3 text-xs text-zinc-500">Mac / Linux: brauzeri <code class="rounded bg-zinc-100 px-1">--kiosk-printing --app={{ route('pos') }}</code> parametri ilə başladın. Pəncərə yenə çıxırsa, bütün Chrome pəncərələrini bağlayıb faylla yenidən açın.</p>
+            </div>
+            <div class="flex flex-col gap-2">
+                <a href="{{ route('settings.print.launcher') }}" class="btn-primary"><x-icon name="download" class="size-4" /> Başlatma faylı (Windows)</a>
+                <button type="button" class="btn-secondary" onclick="printUrl(@js(route('settings.print.preview', ['print' => 1])))"><x-icon name="printer" class="size-4" /> Sınaq çapı</button>
+            </div>
         </div>
     </div>
 </x-layouts.app>

@@ -178,6 +178,7 @@ Route::middleware('auth')->group(function () {
             Route::get('/print', [Settings\StoreController::class, 'editPrint'])->name('print');
             Route::put('/print', [Settings\StoreController::class, 'updatePrint'])->name('print.update');
             Route::get('/print/preview', [Settings\StoreController::class, 'printPreview'])->name('print.preview');
+            Route::get('/print/launcher', [Settings\StoreController::class, 'printLauncher'])->name('print.launcher');
             Route::get('/terminal', [Settings\TerminalController::class, 'edit'])->name('terminal');
             Route::put('/terminal', [Settings\TerminalController::class, 'update'])->name('terminal.update');
             Route::delete('/terminal/images/{index}', [Settings\TerminalController::class, 'destroyImage'])->whereNumber('index')->name('terminal.images.destroy');

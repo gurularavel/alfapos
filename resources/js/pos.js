@@ -195,7 +195,7 @@ export default (data) => ({
             const r = await api(this.routes.pay, { method: 'POST', body: { order_ids: sheet.group.unpaid_ids, payment_type_id: paymentTypeId } });
             toast(`${sheet.table.title}: hesab bağlandı`);
             this.tableSheet = null;
-            printUrl(this.routes.receipt.replace('__ID__', r.invoice_id));
+            if (this.autoPrintReceipt) printUrl(this.routes.receipt.replace('__ID__', r.invoice_id));
             const table = this.tables.find((t) => t.id === sheet.table.id);
             if (table) table.busy = false;
             await this.loadBoard();
@@ -484,6 +484,8 @@ export default (data) => ({
                 if (item) item.stock = stock;
             }
             if (action !== 'draft' && this.autoPrintKot) printUrl(this.routes.token.replace('__ID__', r.order.id));
+            // Ödənişdən sonra qəbz dərhal çap olunur — əlavə "Qəbz" düyməsi gözlənilmir
+            if (action === 'pay' && r.invoice_id && this.autoPrintReceipt) printUrl(this.routes.receipt.replace('__ID__', r.invoice_id));
             if (action === 'draft') {
                 toast(r.message);
                 this.modal = null;

@@ -56,6 +56,7 @@ class PosController extends Controller
                 'taxEnabled' => $tenant->is_tax_enabled,
                 // Çap ayarı "Token çap et": mətbəxə göndəriləndə KOT avtomatik çap olunur (əlavə sifarişlər də ayrıca)
                 'autoPrintKot' => (bool) $tenant->printSetting('print_token', true),
+                'autoPrintReceipt' => (bool) $tenant->printSetting('auto_print', true),
                 'currency' => $tenant->currency,
                 'deliveryTypes' => Order::DELIVERY_TYPES,
                 'terminal' => $terminal->state(),

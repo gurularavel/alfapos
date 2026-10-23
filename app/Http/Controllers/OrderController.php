@@ -26,6 +26,7 @@ class OrderController extends Controller
             'terminal' => $terminal->state(),
             'tables' => StoreTable::orderBy('floor')->orderByRaw('LENGTH(title)')->orderBy('title')->get(['id', 'title', 'floor']),
             'autoPrintKot' => (bool) $tenancy->tenant()->printSetting('print_token', true),
+            'autoPrintReceipt' => (bool) $tenancy->tenant()->printSetting('auto_print', true),
         ]);
     }
 

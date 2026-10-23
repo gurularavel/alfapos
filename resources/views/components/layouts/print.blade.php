@@ -23,6 +23,7 @@
 <body>
 @unless ($preview)<div class="actions"><button onclick="window.print()">Çap et</button> <button onclick="window.close()" style="background:#777">Bağla</button></div>@endunless
 <div class="paper">{{ $slot }}</div>
-@if ($autoprint && ! request()->boolean('noprint'))<script>window.addEventListener('load', () => setTimeout(() => window.print(), 300));</script>@endif
+{{-- Yüklənən kimi çap (loqo/QR şəkilləri load-dan sonra hazırdır); iframe-də açılanda ayrıca pəncərə olmur --}}
+@if ($autoprint && ! request()->boolean('noprint'))<script>window.addEventListener('load', () => setTimeout(() => window.print(), 50));</script>@endif
 </body>
 </html>

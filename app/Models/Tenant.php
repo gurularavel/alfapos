@@ -90,7 +90,7 @@ class Tenant extends Model
     public const TERMINAL_DEFAULTS = [
         'images' => [],
         'lock_timeout' => 20,
-        'lock_after_order' => true,
+        'lock_after_order' => false, // sifarişdən sonra avtomatik kilid — defolt söndürülüb (Ayarlar → Terminal)
         'sound_add_item' => true,   // POS-da məhsul səbətə əlavə olunanda qısa səs
         'sound_new_order' => true,  // mətbəxdə yeni sifariş və POS-da yeni QR sifariş siqnalı
     ];
