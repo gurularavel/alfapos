@@ -12,6 +12,12 @@ class MenuItem extends Model
 {
     use BelongsToTenant;
 
+    protected static function booted(): void
+    {
+        // Admin siyahısında axtarış üçün normallaşdırılmış ad ("chay" → "Çay")
+        static::saving(fn (MenuItem $item) => $item->search_key = search_index($item->title));
+    }
+
     protected $guarded = ['id', 'tenant_id'];
 
     protected function casts(): array

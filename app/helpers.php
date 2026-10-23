@@ -66,3 +66,25 @@ if (! function_exists('query_date')) {
         return Carbon::parse($default);
     }
 }
+
+if (! function_exists('search_key')) {
+    /**
+     * Axtarış açarı: "Çay", "cay", "chay" eyni olsun (resources/js/search.js ilə eyni qayda).
+     * $schwa: "ə" hərfinin yazılışı — "e" (defolt) və ya "a".
+     */
+    function search_key(?string $value, string $schwa = 'e'): string
+    {
+        $value = mb_strtolower(str_replace('İ', 'i', (string) $value));
+        $value = strtr($value, ['ç' => 'c', 'ş' => 's', 'ğ' => 'g', 'ı' => 'i', 'ö' => 'o', 'ü' => 'u', 'ə' => $schwa]);
+
+        return trim(str_replace(['ch', 'sh', 'gh', 'kh', 'zh'], ['c', 's', 'g', 'x', 'j'], $value));
+    }
+}
+
+if (! function_exists('search_index')) {
+    /** Bazada saxlanılan axtarış mətni: "ə"-nin hər iki yazılışı ("xemir | xamir"), sorğu search_key() ilə LIKE axtarılır. */
+    function search_index(?string $value): string
+    {
+        return implode(' | ', array_unique([search_key($value), search_key($value, 'a')]));
+    }
+}

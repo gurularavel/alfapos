@@ -1,3 +1,5 @@
+import { matchesSearch } from './search';
+
 /**
  * Personal yeməyi formu: yemək seçimi və səbət. Hazır stokla izlənən yeməklər (stock !== null)
  * qalan porsiyadan çox seçilə bilməz.
@@ -10,8 +12,7 @@ export default (menu = [], userId = '') => ({
     category: null,
 
     get filtered() {
-        const q = this.search.trim().toLowerCase();
-        return this.menu.filter((m) => (!this.category || m.category_id === this.category) && (!q || m.title.toLowerCase().includes(q)));
+        return this.menu.filter((m) => (!this.category || m.category_id === this.category) && matchesSearch(m.title, this.search));
     },
     get total() {
         return this.cart.reduce((s, l) => s + l.item.price * l.quantity, 0);

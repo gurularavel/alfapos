@@ -20,7 +20,7 @@ class MenuItemController extends Controller
     public function index(Request $request)
     {
         $items = MenuItem::with(['category:id,title', 'tax:id,title'])->withCount(['variants', 'addons'])
-            ->when($request->query('q'), fn ($q, $s) => $q->where('title', 'like', "%{$s}%"))
+            ->when($request->query('q'), fn ($q, $s) => $q->where('search_key', 'like', '%'.search_key($s).'%'))
             ->when($request->query('category'), fn ($q, $c) => $q->where('category_id', $c))
             ->orderBy('title')->paginate(30)->withQueryString();
 

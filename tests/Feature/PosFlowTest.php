@@ -220,6 +220,22 @@ class PosFlowTest extends TestCase
         }
     }
 
+    public function test_menu_search_ignores_azerbaijani_letters_and_latin_spellings(): void
+    {
+        $this->actAs($this->admin());
+        MenuItem::where('title', 'Plov')->update(['title' => 'Şah plov']); // search_key yalnız model saxlananda yenilənir
+        MenuItem::where('title', 'Şah plov')->first()->save();
+
+        foreach (['chay', 'cay', 'ÇAY', 'damlik', 'demlik'] as $query) {
+            $this->get(route('settings.menu-items.index', ['q' => $query]))->assertOk()->assertSee('Çay (dəmlik)');
+        }
+        foreach (['shah', 'sah plov', 'ŞAH'] as $query) {
+            $this->get(route('settings.menu-items.index', ['q' => $query]))->assertOk()->assertSee('Şah plov');
+        }
+        $this->get(route('settings.menu-items.index', ['q' => 'chay']))->assertDontSee('Şah plov');
+        $this->assertSame('cay (demlik) | cay (damlik)', search_index('Çay (dəmlik)'));
+    }
+
     public function test_registration_phone_accepts_digits_only_and_is_normalized(): void
     {
         $data = ['business_name' => 'Kafe', 'name' => 'Sahib', 'email' => 'phone@pos.test', 'password' => 'secret123', 'password_confirmation' => 'secret123', 'terms' => '1'];
