@@ -51,9 +51,9 @@ class ChangelogAndAlertsTest extends TestCase
 
         $this->post(route('admin.site.changelog.store'), ['version' => '1.9', 'released_at' => '2026-11-01', 'title' => 'X', 'new' => 'a'])
             ->assertSessionHasErrors(['version' => 'Versiya 1.8.0 formatında olmalıdır.']);
-        $this->post(route('admin.site.changelog.store'), ['version' => '1.9.0', 'released_at' => '2026-11-01', 'title' => 'X', 'new' => "
+        $this->post(route('admin.site.changelog.store'), ['version' => '1.9.0', 'released_at' => '2026-11-01', 'title' => 'X', 'new' => '
  - 
-"])
+'])
             ->assertSessionHasErrors(['new' => 'Ən azı bir dəyişiklik yazın.']);
         $this->post(route('admin.site.changelog.store'), ['version' => '1.8.0', 'released_at' => '2026-11-01', 'title' => 'X', 'new' => 'a'])
             ->assertSessionHasErrors('version');
@@ -109,16 +109,33 @@ class ChangelogAndAlertsTest extends TestCase
         $this->assertSame(0, StockAlert::open()->where('title', 'Süd')->count());
     }
 
-    public function test_bell_is_shown_to_stock_staff_only(): void
+    public function test_stock_alerts_are_shown_to_admin_and_cashier_only(): void
     {
         $this->owner();
         $this->get(route('dashboard'))->assertOk()->assertSee('aria-label="Bildirişlər"', false)->assertSee('window.STOCK_ALERT_URLS', false);
 
-        $this->actingAs(User::where('email', 'metbex@pos.test')->first());
+        $this->actingAs(User::where('email', 'kassir@pos.test')->first());
+        $this->get(route('pos'))->assertOk()->assertSee('aria-label="Bildirişlər"', false);
         $this->getJson(route('notifications.index'))->assertOk();
+        $this->postJson(route('notifications.read'))->assertOk();
+
+        $this->actingAs(User::where('email', 'metbex@pos.test')->first());
+        $this->get(route('kitchen'))->assertOk()->assertDontSee('aria-label="Bildirişlər"', false);
+        $this->getJson(route('notifications.index'))->assertForbidden();
+
+        $manager = User::where('email', 'kassir@pos.test')->first()->replicate()->forceFill(['email' => 'menecer@pos.test', 'pin_hash' => null, 'role' => 'manager', 'scopes' => User::ROLES['manager'][1]]);
+        $manager->save();
+        $this->actingAs($manager);
+        $this->getJson(route('notifications.index'))->assertForbidden();
+    }
+
+    public function test_cashier_alerts_do_not_link_to_pages_they_cannot_open(): void
+    {
+        // Demo: burger çörəyi minimumdan aşağıdır — admin anbar səhifəsinə keçə bilir, kassir yox
+        $this->owner();
+        $this->getJson(route('notifications.index'))->assertJsonPath('items.0.url', route('inventory.index', ['status' => 'low']));
 
         $this->actingAs(User::where('email', 'kassir@pos.test')->first());
-        $this->get(route('pos'))->assertOk()->assertDontSee('aria-label="Bildirişlər"', false);
-        $this->getJson(route('notifications.index'))->assertForbidden();
+        $this->getJson(route('notifications.index'))->assertOk()->assertJsonPath('items.0.url', null);
     }
 }

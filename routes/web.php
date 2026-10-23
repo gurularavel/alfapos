@@ -24,6 +24,7 @@ use App\Http\Controllers\StockAlertController;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\TerminalController;
 use App\Http\Controllers\UserController;
+use App\Models\SitePage;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'landing')->name('home');
@@ -69,8 +70,8 @@ Route::middleware('auth')->group(function () {
         Route::get('site', [Admin\SiteController::class, 'index'])->name('site.index');
         Route::put('site/settings', [Admin\SiteController::class, 'updateSettings'])->name('site.settings');
         Route::post('site/preview', [Admin\SiteController::class, 'preview'])->name('site.preview');
-        Route::get('site/pages/{slug}', [Admin\SiteController::class, 'editPage'])->whereIn('slug', array_keys(\App\Models\SitePage::SLUGS))->name('site.pages.edit');
-        Route::put('site/pages/{slug}', [Admin\SiteController::class, 'updatePage'])->whereIn('slug', array_keys(\App\Models\SitePage::SLUGS))->name('site.pages.update');
+        Route::get('site/pages/{slug}', [Admin\SiteController::class, 'editPage'])->whereIn('slug', array_keys(SitePage::SLUGS))->name('site.pages.edit');
+        Route::put('site/pages/{slug}', [Admin\SiteController::class, 'updatePage'])->whereIn('slug', array_keys(SitePage::SLUGS))->name('site.pages.update');
         Route::post('site/faqs', [Admin\SiteController::class, 'storeFaq'])->name('site.faqs.store');
         Route::put('site/faqs/{faq}', [Admin\SiteController::class, 'updateFaq'])->name('site.faqs.update');
         Route::delete('site/faqs/{faq}', [Admin\SiteController::class, 'destroyFaq'])->name('site.faqs.destroy');
@@ -160,8 +161,8 @@ Route::middleware('auth')->group(function () {
         });
 
         Route::get('/feedbacks', [FeedbackController::class, 'index'])->middleware('scope:FEEDBACK')->name('feedbacks.index');
-        Route::get('/notifications', [StockAlertController::class, 'index'])->middleware('scope:INVENTORY,KITCHEN')->name('notifications.index');
-        Route::post('/notifications/read', [StockAlertController::class, 'read'])->middleware('scope:INVENTORY,KITCHEN')->name('notifications.read');
+        Route::get('/notifications', [StockAlertController::class, 'index'])->middleware('can:stock-alerts')->name('notifications.index');
+        Route::post('/notifications/read', [StockAlertController::class, 'read'])->middleware('can:stock-alerts')->name('notifications.read');
         Route::get('/returns', [ReturnController::class, 'index'])->middleware('scope:APPROVE,REPORTS')->name('returns.index');
         Route::get('/reports', [ReportController::class, 'index'])->middleware('scope:REPORTS')->name('reports.index');
         Route::get('/reports/{report}', [ReportController::class, 'show'])->middleware('scope:REPORTS')->name('reports.show');

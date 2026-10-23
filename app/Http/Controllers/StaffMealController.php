@@ -12,7 +12,6 @@ use App\Support\PosTerminal;
 use App\Support\Tenancy;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -22,8 +21,8 @@ class StaffMealController extends Controller
 {
     public function index(Request $request, Tenancy $tenancy, PosTerminal $terminal): View
     {
-        $from = Carbon::parse($request->query('from', today()->toDateString()))->startOfDay();
-        $to = Carbon::parse($request->query('to', today()->toDateString()))->endOfDay();
+        $from = query_date($request->query('from'), today()->toDateString())->startOfDay();
+        $to = query_date($request->query('to'), today()->toDateString())->endOfDay();
 
         $meals = $terminal->scopeToBranch(StaffMeal::with(['items', 'creator:id,name']))
             ->whereBetween('created_at', [$from, $to])->latest('id')->get();

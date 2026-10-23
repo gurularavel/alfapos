@@ -29,6 +29,7 @@ class AppServiceProvider extends ServiceProvider
     {
         Gate::define('superadmin', fn (User $user) => $user->isSuperAdmin());
         Gate::define('scope', fn (User $user, string $scope) => $user->hasScope($scope));
+        Gate::define('stock-alerts', fn (User $user) => $user->canSeeStockAlerts());
 
         Paginator::useTailwind();
 

@@ -1,6 +1,9 @@
 <?php
 
+use App\Models\SiteSetting;
 use App\Support\Tenancy;
+use Carbon\Exceptions\InvalidFormatException;
+use Illuminate\Support\Carbon;
 
 if (! function_exists('money')) {
     /** Məbləği tenant valyutası ilə formatlayır: 1234.5 → "1 234.50 ₼". */
@@ -29,9 +32,9 @@ if (! function_exists('site')) {
     {
         static $values = null;
         if ($values === null || app()->runningUnitTests()) {
-            $values = \App\Models\SiteSetting::values();
+            $values = SiteSetting::values();
             foreach (['phone', 'city_phone', 'whatsapp'] as $field) {
-                $values[$field.'_intl'] = \App\Models\SiteSetting::intl($values[$field]);
+                $values[$field.'_intl'] = SiteSetting::intl($values[$field]);
             }
         }
 
@@ -44,5 +47,22 @@ if (! function_exists('qty')) {
     function qty(float|int|string|null $value): string
     {
         return rtrim(rtrim(number_format((float) $value, 4, '.', ''), '0'), '.');
+    }
+}
+
+if (! function_exists('query_date')) {
+    /**
+     * Filtr tarixi (?from=, ?to=): səhv və ya massiv dəyər gəlsə 500 əvəzinə defolt tarix götürülür.
+     */
+    function query_date(mixed $value, string $default): Carbon
+    {
+        if (is_string($value) && $value !== '') {
+            try {
+                return Carbon::parse($value);
+            } catch (InvalidFormatException) {
+            }
+        }
+
+        return Carbon::parse($default);
     }
 }

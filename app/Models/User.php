@@ -97,6 +97,12 @@ class User extends Authenticatable
         return $this->role === 'admin';
     }
 
+    /** Stok bildirişləri (zəng, zolaq, siyahı) yalnız admin və kassirə görünür. */
+    public function canSeeStockAlerts(): bool
+    {
+        return in_array($this->role, ['admin', 'cashier'], true);
+    }
+
     public function hasScope(string $scope): bool
     {
         return $this->isAdmin() || in_array($scope, $this->scopes ?? [], true);

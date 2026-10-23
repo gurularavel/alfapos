@@ -13,11 +13,11 @@ export default (config) => ({
     thanksTimer: null,
 
     init() {
-        const echo = createEcho();
-        if (echo) {
+        createEcho().then((echo) => {
+            if (!echo) return;
             trackConnection(echo, this);
             echo.channel(this.channel).listen('.display.updated', (state) => this.apply(state));
-        }
+        });
         // Ehtiyat: Reverb bağlı deyilsə vəziyyəti soruşuruq; bağlıdırsa da ara-sıra (ekranın "online" görünməsi üçün)
         let tick = 0;
         setInterval(() => {

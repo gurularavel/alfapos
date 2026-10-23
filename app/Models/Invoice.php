@@ -15,11 +15,14 @@ class Invoice extends Model
     /**
      * Hər çekə bir dəfə qoşulur: çekdəki sifarişlərin növü, masası və sayı (alias "io").
      * Çekin məbləğini sifariş sətirlərinə qoşub toplamaq əlavə sifarişli masalarda onu təkrarlayardı.
+     * Alt sorğu yalnız bu ana qədər süzülmüş çeklərin sifarişlərini qruplaşdırır (əks halda biznesin bütün sifarişlərini).
      */
     public function scopeWithOrderInfo(Builder $query): void
     {
+        $invoiceIds = (clone $query)->select('invoices.id')->toBase();
+
         $query->joinSub(
-            Order::query()->whereNotNull('invoice_id')->groupBy('invoice_id')
+            Order::query()->whereIn('invoice_id', $invoiceIds)->groupBy('invoice_id')
                 ->selectRaw('invoice_id, MIN(delivery_type) as delivery_type, MIN(store_table_id) as store_table_id, COUNT(*) as orders_count'),
             'io', 'io.invoice_id', '=', 'invoices.id',
         );

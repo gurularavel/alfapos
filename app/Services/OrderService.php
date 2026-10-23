@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Support\Realtime;
 use App\Models\AuditLog;
 use App\Models\Invoice;
 use App\Models\MenuItem;
@@ -10,6 +9,7 @@ use App\Models\Order;
 use App\Models\StoreTable;
 use App\Models\Tenant;
 use App\Support\PosTerminal;
+use App\Support\Realtime;
 use App\Support\Tenancy;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -124,7 +124,8 @@ class OrderService
 
     public function nextToken(): int
     {
-        $last = Order::whereDate('created_at', today())->lockForUpdate()->max('token_no');
+        // Aralıq ilə (tenant_id, created_at) indeksi işləyir: yalnız bu günün sətirləri kilidlənir, bütün cədvəl yox
+        $last = Order::where('created_at', '>=', today())->lockForUpdate()->max('token_no');
 
         return ($last ?? 0) + 1;
     }

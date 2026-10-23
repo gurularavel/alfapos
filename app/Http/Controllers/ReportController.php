@@ -12,9 +12,10 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Reservation;
 use App\Models\StaffMeal;
+use App\Models\StockMovement;
 use App\Models\Terminal;
+use App\Models\User;
 use App\Support\Tenancy;
-use Illuminate\Database\Query\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -66,8 +67,8 @@ class ReportController extends Controller
     {
         abort_unless(isset(self::REPORTS[$report]), 404);
 
-        $from = Carbon::parse($request->query('from', today()->subDays(29)->toDateString()))->startOfDay();
-        $to = Carbon::parse($request->query('to', today()->toDateString()))->endOfDay();
+        $from = query_date($request->query('from'), today()->subDays(29)->toDateString())->startOfDay();
+        $to = query_date($request->query('to'), today()->toDateString())->endOfDay();
         $tid = $tenancy->id();
         // Yalnız bu biznesin filial/terminalı qəbul olunur (global scope)
         $this->branchId = Branch::find($request->integer('branch_id'))?->id;
@@ -188,8 +189,8 @@ class ReportController extends Controller
                 InventoryItem::whereColumn('quantity', '<=', 'min_quantity')->orderBy('quantity')->get()
                     ->map(fn ($i) => [$i->title, rtrim(rtrim($i->quantity, '0'), '.'), rtrim(rtrim($i->min_quantity, '0'), '.'), $i->unit])->all(), null],
             'stock-movements' => [['Tarix', 'Məhsul', 'Tip', 'Miqdar', 'Qeyd'],
-                \App\Models\StockMovement::with('item')->whereBetween('created_at', [$from, $to])->latest()->limit(500)->get()
-                    ->map(fn ($m) => [$m->created_at->format('d.m.Y H:i'), $m->item?->title, \App\Models\StockMovement::TYPES[$m->type] ?? $m->type, rtrim(rtrim($m->quantity, '0'), '.').' '.$m->item?->unit, $m->note])->all(), null],
+                StockMovement::with('item')->whereBetween('created_at', [$from, $to])->latest()->limit(500)->get()
+                    ->map(fn ($m) => [$m->created_at->format('d.m.Y H:i'), $m->item?->title, StockMovement::TYPES[$m->type] ?? $m->type, rtrim(rtrim($m->quantity, '0'), '.').' '.$m->item?->unit, $m->note])->all(), null],
             'tax-summary' => $this->grouped($paid()->selectRaw('DATE(created_at) k, SUM(tax_total) c, SUM(service_charge_total) t')->groupBy('k')->orderBy('k'), ['Tarix', 'Vergi', 'Servis haqqı'], null, true),
             'sales-by-branch' => $this->grouped($paid()->leftJoin('branches', 'branches.id', '=', 'invoices.branch_id')
                 ->selectRaw("COALESCE(branches.name, 'Filialsız') k, COUNT(*) c, SUM(invoices.total) t")->groupBy('k')->orderByDesc('t'), ['Filial', 'Çek', 'Gəlir']),
@@ -258,7 +259,7 @@ class ReportController extends Controller
             ->whereIn('orders.created_by', $returns->keys())
             ->groupBy('orders.created_by')->selectRaw('orders.created_by u, SUM(order_items.price * order_items.quantity) t')->pluck('t', 'u');
 
-        $rows = \App\Models\User::whereIn('id', $returns->keys())->get(['id', 'name'])
+        $rows = User::whereIn('id', $returns->keys())->get(['id', 'name'])
             ->map(function ($u) use ($returns, $ordered) {
                 $r = $returns[$u->id];
                 $share = ($ordered[$u->id] ?? 0) > 0 ? round($r->amount / $ordered[$u->id] * 100, 1) : 0;

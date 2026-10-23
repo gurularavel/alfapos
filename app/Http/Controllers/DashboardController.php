@@ -2,13 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Branch;
 use App\Models\Feedback;
 use App\Models\InventoryItem;
-use App\Models\ItemReturn;
 use App\Models\Invoice;
+use App\Models\ItemReturn;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Reservation;
+use App\Models\StoreTable;
+use App\Models\User;
 use App\Support\Tenancy;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -18,23 +21,34 @@ class DashboardController extends Controller
     public function __invoke(Tenancy $tenancy)
     {
         $today = today();
-        $paid = fn (Carbon $day) => Invoice::where('invoices.status', 'paid')->whereDate('invoices.created_at', $day);
+        // whereDate() indeksdən istifadə etmir (DATE(created_at) hər sətirdə hesablanır) — gün aralığı ilə süzürük
+        $range = fn (Carbon $from, ?Carbon $to = null) => [$from->copy()->startOfDay(), ($to ?? $from)->copy()->endOfDay()];
+        $paid = fn (Carbon $day) => Invoice::where('invoices.status', 'paid')->whereBetween('invoices.created_at', $range($day));
 
-        $revenueToday = (float) $paid($today)->sum('total');
-        $revenueYesterday = (float) $paid($today->copy()->subDay())->sum('total');
-        $ordersToday = Order::whereDate('created_at', $today)->where('status', '!=', 'draft')->count();
-        $ordersYesterday = Order::whereDate('created_at', $today->copy()->subDay())->where('status', '!=', 'draft')->count();
+        // Son 7 günün cəmləri bir sorğu ilə: trend, bu gün / dünən, vergi və servis haqqı
+        $daily = Invoice::where('status', 'paid')->whereBetween('created_at', $range($today->copy()->subDays(6), $today))
+            ->groupBy('d')->selectRaw('DATE(created_at) as d, SUM(total) as total, SUM(tax_total) as tax, SUM(service_charge_total) as service')
+            ->get()->keyBy('d');
+        $dayTotal = fn (Carbon $day, string $column = 'total') => (float) ($daily[$day->toDateString()]->{$column} ?? 0);
+        $revenueToday = $dayTotal($today);
+        $revenueYesterday = $dayTotal($today->copy()->subDay());
 
-        $trend = collect(range(6, 0))->map(function ($daysAgo) use ($paid, $today) {
+        $orderCounts = Order::whereBetween('created_at', $range($today->copy()->subDay(), $today))
+            ->groupBy('d')->selectRaw("DATE(created_at) as d, SUM(status <> 'draft') as orders, SUM(status = 'cancelled') as cancelled")
+            ->get()->keyBy('d');
+        $ordersToday = (int) ($orderCounts[$today->toDateString()]->orders ?? 0);
+        $ordersYesterday = (int) ($orderCounts[$today->copy()->subDay()->toDateString()]->orders ?? 0);
+
+        $trend = collect(range(6, 0))->map(function ($daysAgo) use ($dayTotal, $today) {
             $day = $today->copy()->subDays($daysAgo);
 
-            return ['label' => $day->translatedFormat('D, d M'), 'value' => (float) $paid($day)->sum('total')];
+            return ['label' => $day->translatedFormat('D, d M'), 'value' => $dayTotal($day)];
         });
 
         $topItems = OrderItem::query()
             ->join('orders', 'orders.id', '=', 'order_items.order_id')
             ->where('orders.tenant_id', $tenancy->id())
-            ->whereDate('orders.created_at', $today)
+            ->whereBetween('orders.created_at', $range($today))
             ->whereNotIn('order_items.status', ['cancelled'])
             ->groupBy('order_items.title')
             ->select('order_items.title', DB::raw('SUM(order_items.quantity) as qty'), DB::raw('SUM(order_items.quantity * order_items.price) as amount'))
@@ -46,7 +60,7 @@ class DashboardController extends Controller
             ->leftJoin('menu_items', 'menu_items.id', '=', 'order_items.menu_item_id')
             ->leftJoin('categories', 'categories.id', '=', 'menu_items.category_id')
             ->where('orders.tenant_id', $tenancy->id())
-            ->whereDate('orders.created_at', $today)
+            ->whereBetween('orders.created_at', $range($today))
             ->whereNotIn('orders.status', ['draft', 'cancelled'])
             ->where('order_items.status', '!=', 'cancelled')
             ->groupBy('categories.id', 'categories.title')
@@ -57,7 +71,7 @@ class DashboardController extends Controller
         $paidByType = $paid($today)->withOrderInfo()->groupBy('io.delivery_type')
             ->selectRaw('io.delivery_type, COUNT(*) as checks, SUM(io.orders_count) as orders, SUM(invoices.total) as total')
             ->get()->keyBy('delivery_type');
-        $openByType = Order::whereDate('created_at', $today)->whereNull('invoice_id')->whereNotIn('status', ['draft', 'cancelled'])
+        $openByType = Order::whereBetween('created_at', $range($today))->whereNull('invoice_id')->whereNotIn('status', ['draft', 'cancelled'])
             ->groupBy('delivery_type')->selectRaw('delivery_type, COUNT(*) as orders')->pluck('orders', 'delivery_type');
         $orderTypes = collect(Order::DELIVERY_TYPES)->map(fn ($label, $type) => (object) [
             'type' => $type,
@@ -92,7 +106,7 @@ class DashboardController extends Controller
             ->selectRaw("invoices.branch_id, COALESCE(branches.name, 'Filialsız') as name, COUNT(*) as checks, SUM(invoices.total) as total")
             ->orderByDesc('total')->get();
 
-        $staffSales = $this->staffSales($today, $tenancy->id());
+        $staffSales = $this->staffSales($range($today), $tenancy->id());
 
         // Bu gün masalar üzrə satış (hər çek bir dəfə) + hazırda dolu masalar
         $occupied = Order::active()->whereNotNull('store_table_id') // POS masa xəritəsi ilə eyni qayda
@@ -106,7 +120,7 @@ class DashboardController extends Controller
             ->orderByDesc('total')->get()
             ->each(fn ($row) => $row->open_total = $occupied[$row->id] ?? null);
         $tableStats = (object) [
-            'tables' => \App\Models\StoreTable::count(),
+            'tables' => StoreTable::count(),
             'used' => $tableSales->count(),
             'occupied' => $occupied->count(),
             'total' => (float) $tableSales->sum('total'),
@@ -130,7 +144,7 @@ class DashboardController extends Controller
         ]);
 
         // Bu gün ləğv və qaytarmalar (fırıldağa nəzarət): kimin sifarişlərindən nə qədər silinib
-        $todayReturns = ItemReturn::with('orderCreator:id,name')->whereDate('created_at', $today)->get();
+        $todayReturns = ItemReturn::with('orderCreator:id,name')->whereBetween('created_at', $range($today))->get();
         $returnStats = (object) [
             'count' => $todayReturns->count(),
             'amount' => (float) $todayReturns->sum('amount'),
@@ -140,8 +154,6 @@ class DashboardController extends Controller
                 ->map(fn ($g, $name) => (object) ['name' => $name, 'count' => $g->count(), 'amount' => (float) $g->sum('amount')])
                 ->sortByDesc('amount')->take(3)->values(),
         ];
-
-        $todayInvoices = $paid($today);
 
         return view('dashboard', [
             'revenueToday' => $revenueToday,
@@ -161,14 +173,14 @@ class DashboardController extends Controller
             'tableStats' => $tableStats,
             'hourly' => $hourly,
             'returnStats' => $returnStats,
-            'branchCount' => \App\Models\Branch::count(),
+            'branchCount' => Branch::count(),
             'lowStock' => InventoryItem::whereColumn('quantity', '<=', 'min_quantity')->orderBy('quantity')->limit(5)->get(),
             'feedbacks' => Feedback::latest()->limit(3)->get(),
-            'reservations' => Reservation::with('table')->whereDate('reserved_at', $today)->where('status', 'booked')->orderBy('reserved_at')->get(),
+            'reservations' => Reservation::with('table')->whereBetween('reserved_at', $range($today))->where('status', 'booked')->orderBy('reserved_at')->get(),
             'activeOrders' => Order::active()->count(),
-            'cancelledToday' => Order::whereDate('created_at', $today)->where('status', 'cancelled')->count(),
-            'taxToday' => (float) (clone $todayInvoices)->sum('tax_total'),
-            'serviceToday' => (float) (clone $todayInvoices)->sum('service_charge_total'),
+            'cancelledToday' => (int) ($orderCounts[$today->toDateString()]->cancelled ?? 0),
+            'taxToday' => $dayTotal($today, 'tax'),
+            'serviceToday' => $dayTotal($today, 'service'),
         ]);
     }
 
@@ -176,23 +188,24 @@ class DashboardController extends Controller
      * Bu gün işçilər üzrə: qəbul etdiyi sifarişlər (sifarişin müəllifi — ofisiant/kassir) və
      * kassaya yığdığı çeklər (çekin müəllifi — kassir). Ləğv olunmuş sifariş/məhsullar sayılmır.
      */
-    protected function staffSales(Carbon $day, int $tenantId)
+    /** @param  array{0: Carbon, 1: Carbon}  $day */
+    protected function staffSales(array $day, int $tenantId)
     {
         $orders = Order::query()
-            ->whereDate('orders.created_at', $day)->whereNotIn('orders.status', ['draft', 'cancelled'])->whereNotNull('orders.created_by')
+            ->whereBetween('orders.created_at', $day)->whereNotIn('orders.status', ['draft', 'cancelled'])->whereNotNull('orders.created_by')
             ->groupBy('orders.created_by')
             ->selectRaw("orders.created_by as user_id, COUNT(*) as orders, SUM((SELECT COALESCE(SUM(oi.price * oi.quantity), 0) FROM order_items oi WHERE oi.order_id = orders.id AND oi.status != 'cancelled')) as orders_total")
             ->get()->keyBy('user_id');
 
         $collected = Invoice::query()
-            ->where('status', 'paid')->whereDate('created_at', $day)->whereNotNull('created_by')
+            ->where('status', 'paid')->whereBetween('created_at', $day)->whereNotNull('created_by')
             ->groupBy('created_by')
             ->selectRaw('created_by as user_id, COUNT(*) as checks, SUM(total) as collected')
             ->get()->keyBy('user_id');
 
         $ids = $orders->keys()->merge($collected->keys())->unique();
 
-        return \App\Models\User::where('tenant_id', $tenantId)->whereIn('id', $ids)->get(['id', 'name', 'role', 'designation', 'tenant_id'])
+        return User::where('tenant_id', $tenantId)->whereIn('id', $ids)->get(['id', 'name', 'role', 'designation', 'tenant_id'])
             ->map(fn ($u) => (object) [
                 'name' => $u->name,
                 'role' => $u->roleLabel(),

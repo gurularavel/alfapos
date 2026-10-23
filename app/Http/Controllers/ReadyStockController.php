@@ -7,6 +7,7 @@ use App\Models\InventoryItem;
 use App\Models\MenuItem;
 use App\Models\ReadyStockMovement;
 use App\Services\StockService;
+use App\Support\Tenancy;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -20,7 +21,7 @@ class ReadyStockController extends Controller
         $items = MenuItem::with(['category:id,title', 'recipeItems' => fn ($q) => $q->whereNull('variant_id')->whereNull('addon_id')->with('inventoryItem')])
             ->where('track_stock', true)->orderBy('title')->get();
 
-        $today = ReadyStockMovement::whereDate('created_at', today())->whereIn('menu_item_id', $items->pluck('id'))
+        $today = ReadyStockMovement::where('created_at', '>=', today())->whereIn('menu_item_id', $items->pluck('id'))
             // Ləğv qaytarmaları öz mənbəyindən (satış / personal) çıxılır
             ->selectRaw("menu_item_id, CASE WHEN type = 'return' THEN IF(staff_meal_id IS NULL, 'sale', 'staff') ELSE type END as kind, SUM(quantity) as qty")
             ->groupBy('menu_item_id', 'kind')->get()
@@ -44,7 +45,7 @@ class ReadyStockController extends Controller
     public function track(Request $request, StockService $stock): RedirectResponse
     {
         $data = $request->validate([
-            'menu_item_id' => ['required', Rule::exists('menu_items', 'id')->where('tenant_id', app(\App\Support\Tenancy::class)->id())],
+            'menu_item_id' => ['required', Rule::exists('menu_items', 'id')->where('tenant_id', app(Tenancy::class)->id())],
             'stock_min' => ['nullable', 'numeric', 'min:0'],
             'portions' => ['nullable', 'numeric', 'min:0', 'max:100000'],
         ]);

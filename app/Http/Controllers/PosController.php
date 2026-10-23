@@ -178,7 +178,7 @@ class PosController extends Controller
     public function qrOrders()
     {
         return app(PosTerminal::class)->scopeToBranch(Order::with('items', 'table'))->where('source', 'qr')->where('status', 'created')
-            ->whereDate('created_at', today())->latest()->get()
+            ->where('created_at', '>=', today())->latest()->get()
             ->map(fn (Order $o) => [
                 'id' => $o->id, 'token_no' => $o->token_no, 'table' => $o->table?->label(),
                 'time' => $o->created_at->format('H:i'), 'notes' => $o->notes,

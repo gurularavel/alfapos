@@ -35,8 +35,8 @@
             ['audit-logs.index', 'Audit log', 'history', 'ADMIN', 'audit-logs.*'],
             ['settings.index', 'Ayarlar', 'settings', 'SETTINGS', 'settings.*'],
         ];
-    // Stok bildirişləri: anbar / mətbəx icazəsi olanlara (terminal rejimində yox)
-    $stockAlerts = isset($tenant) && ! $user->isSuperAdmin() && ($user->hasScope('INVENTORY') || $user->hasScope('KITCHEN')) && ! app(\App\Support\PosTerminal::class)->active();
+    // Stok bildirişləri: yalnız admin və kassirə (terminal rejimində yox)
+    $stockAlerts = isset($tenant) && $user->canSeeStockAlerts() && ! app(\App\Support\PosTerminal::class)->active();
     $nav = array_filter($nav, fn ($n) => $n[3] === null || ($n[3] === 'ADMIN' ? $user->isAdmin() : collect(explode(',', $n[3]))->contains(fn ($s) => $user->hasScope($s))));
 @endphp
 <body @class(['h-full bg-canvas font-sans text-ink antialiased', 'pos-full terminal-mode' => app(\App\Support\PosTerminal::class)->active()]) x-data="{ nav: false }">

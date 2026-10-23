@@ -1,12 +1,20 @@
-import Echo from 'laravel-echo';
-import Pusher from 'pusher-js';
+let echoPromise = null;
 
-/** Reverb bağlantısı; açar build-də yoxdursa (Reverb söndürülüb) null qaytarır. */
+/**
+ * Reverb bağlantısı (Promise); açar build-də yoxdursa (Reverb söndürülüb) null.
+ * Echo + Pusher ayrıca chunk-dır: yalnız canlı yeniləmə lazım olan ekranlarda yüklənir
+ * (landing, giriş, QR menyu kimi ictimai səhifələr onu endirmir).
+ */
 export function createEcho() {
     const key = import.meta.env.VITE_REVERB_APP_KEY;
-    if (!key) return null;
-    if (window.Echo) return window.Echo;
+    if (!key) return Promise.resolve(null);
 
+    return (echoPromise ??= Promise.all([import('laravel-echo'), import('pusher-js')])
+        .then(([{ default: Echo }, { default: Pusher }]) => connect(Echo, Pusher, key))
+        .catch(() => null));
+}
+
+function connect(Echo, Pusher, key) {
     window.Pusher = Pusher;
     window.Echo = new Echo({
         broadcaster: 'reverb',
@@ -35,11 +43,11 @@ export function trackConnection(echo, store) {
 export function startRealtime(Alpine) {
     const tenantId = document.querySelector('meta[name="tenant-id"]')?.content;
     if (!tenantId) return;
-    const echo = createEcho();
-    if (!echo) return;
-
-    trackConnection(echo, Alpine.store('rt'));
-    echo.private(`tenant.${tenantId}`).listen('.order.changed', (e) => {
-        window.dispatchEvent(new CustomEvent('rt:order', { detail: e }));
+    createEcho().then((echo) => {
+        if (!echo) return;
+        trackConnection(echo, Alpine.store('rt'));
+        echo.private(`tenant.${tenantId}`).listen('.order.changed', (e) => {
+            window.dispatchEvent(new CustomEvent('rt:order', { detail: e }));
+        });
     });
 }

@@ -5,12 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\ItemReturn;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\User;
 use App\Services\ApprovalService;
 use App\Services\ReturnService;
 use App\Support\Tenancy;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -64,8 +64,8 @@ class ReturnController extends Controller
 
     public function index(Request $request): View
     {
-        $from = Carbon::parse($request->query('from', today()->toDateString()))->startOfDay();
-        $to = Carbon::parse($request->query('to', today()->toDateString()))->endOfDay();
+        $from = query_date($request->query('from'), today()->toDateString())->startOfDay();
+        $to = query_date($request->query('to'), today()->toDateString())->endOfDay();
 
         $returns = ItemReturn::with(['order:id,token_no,store_table_id', 'order.table:id,title', 'orderCreator:id,name', 'requester:id,name', 'approver:id,name', 'paymentType:id,title'])
             ->whereBetween('created_at', [$from, $to])
@@ -85,7 +85,7 @@ class ReturnController extends Controller
                 'waste_cost' => (float) $returns->sum('cost'),
                 'after_bill' => $returns->where('after_bill', true)->count(),
             ],
-            'staff' => \App\Models\User::whereIn('id', ItemReturn::whereBetween('created_at', [$from, $to])->whereNotNull('order_creator_id')->distinct()->pluck('order_creator_id'))->orderBy('name')->get(['id', 'name']),
+            'staff' => User::whereIn('id', ItemReturn::whereBetween('created_at', [$from, $to])->whereNotNull('order_creator_id')->distinct()->pluck('order_creator_id'))->orderBy('name')->get(['id', 'name']),
         ]);
     }
 }

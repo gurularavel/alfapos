@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Http\Controllers\ReportController;
+use App\Models\Customer;
 use App\Models\InventoryItem;
 use App\Models\Invoice;
 use App\Models\MenuItem;
@@ -48,7 +50,7 @@ class PosFlowTest extends TestCase
         $item = MenuItem::first();
         $table = StoreTable::first();
         $invoice = Invoice::first();
-        $customer = \App\Models\Customer::first();
+        $customer = Customer::first();
 
         $urls = [
             route('dashboard'), route('pos'), route('orders.index'), route('orders.board'), route('kitchen'), route('kitchen.feed'),
@@ -61,12 +63,22 @@ class PosFlowTest extends TestCase
             route('settings.payment-types.index'), route('settings.menu-items.index'), route('settings.menu-items.create'),
             route('settings.menu-items.edit', $item), route('pos.drafts'), route('pos.qr'), route('pos.customers', ['q' => 'El']),
         ];
-        foreach (array_keys(\App\Http\Controllers\ReportController::REPORTS) as $report) {
+        foreach (array_keys(ReportController::REPORTS) as $report) {
             $urls[] = route('reports.show', $report);
         }
 
         foreach ($urls as $url) {
             $this->get($url)->assertOk();
+        }
+    }
+
+    public function test_date_filtered_pages_ignore_malformed_dates(): void
+    {
+        $this->actAs($this->admin());
+
+        foreach ([route('reports.show', 'sales-summary'), route('returns.index'), route('staff-meals.index')] as $url) {
+            $this->get($url.'?from=garbage&to=31.02.x')->assertOk();
+            $this->get($url.'?from[]=1&to[]=2')->assertOk();
         }
     }
 

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Customer;
+use App\Models\Invoice;
 use App\Support\Tenancy;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -11,9 +12,18 @@ class CustomerController extends Controller
 {
     public function index(Request $request)
     {
-        $customers = Customer::withCount('invoices')->withSum(['invoices' => fn ($q) => $q->where('status', 'paid')], 'total')
+        $customers = Customer::query()
             ->when($request->query('q'), fn ($q, $s) => $q->where(fn ($w) => $w->where('name', 'like', "%{$s}%")->orWhere('phone', 'like', "%{$s}%")->orWhere('email', 'like', "%{$s}%")))
             ->latest()->paginate(25)->withQueryString();
+        // Çek sayı / cəmi yalnız səhifədəki müştərilər üçün, bir sorğu ilə. Korrelyasiyalı alt sorğu (withCount) çeklərin
+        // çoxu "gəlmə müştəri" (customer_id NULL) olduğundan customer_id indeksini seçmir və biznesin bütün çeklərini oxuyurdu.
+        $stats = Invoice::whereIn('customer_id', $customers->pluck('id'))->groupBy('customer_id')
+            ->selectRaw("customer_id, COUNT(*) as invoices_count, SUM(CASE WHEN status = 'paid' THEN total END) as invoices_sum_total")
+            ->get()->keyBy('customer_id');
+        $customers->getCollection()->each(fn (Customer $c) => $c->forceFill([
+            'invoices_count' => (int) ($stats[$c->id]->invoices_count ?? 0),
+            'invoices_sum_total' => $stats[$c->id]->invoices_sum_total ?? null,
+        ]));
 
         return view('customers.index', compact('customers'));
     }
