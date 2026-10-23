@@ -33,6 +33,10 @@ export default (data) => ({
     busy: false,
     full: false,
 
+    // admin: POS-un içində menyunu redaktə (məhsula toxunanda səbət yox, redaktə pəncərəsi)
+    editMode: false,
+    itemEditor: null,
+
     // masa planı
     view: null,
     board: {},
@@ -69,7 +73,7 @@ export default (data) => ({
         // Terminal kilidlənəndə səbət və açıq pəncərələr təmizlənir
         window.addEventListener('terminal-lock', () => this.resetForLock());
         // PIN-dən sonra "POS / Masalar" seçimi; masalar açıqdırsa siqnalla yenilənir
-        window.addEventListener('terminal-unlocked', () => (this.view = 'home'));
+        window.addEventListener('terminal-unlocked', () => this.openTables());
         window.addEventListener('rt:order', () => this.loadBoard());
         this.$watch('tableId', () => this.loadBoard());
         this.loadBoard();
@@ -88,7 +92,7 @@ export default (data) => ({
     },
 
     // ---- masa planı ----
-    // view: null (POS) | 'home' (PIN-dən sonra POS/Masalar seçimi) | 'tables' (zal planı)
+    // view: null (POS) | 'tables' (zal planı — PIN-dən sonra birbaşa açılır)
     chairs,
 
     openTables() {
@@ -190,20 +194,40 @@ export default (data) => ({
         printUrl(`${this.routes.bill}?ids=${this.tableSheet.group.unpaid_ids.join(',')}`);
     },
 
-    async closeBill(paymentTypeId) {
+    /** Masanın hesabını bağlama ekranı (tam ekran, bölünmüş ödəniş: yarısı nağd, yarısı kart və s.). */
+    closeTableBill() {
         const sheet = this.tableSheet;
-        try {
-            const r = await api(this.routes.pay, { method: 'POST', body: { order_ids: sheet.group.unpaid_ids, payment_type_id: paymentTypeId } });
-            toast(`${sheet.table.title}: hesab bağlandı`);
-            this.tableSheet = null;
-            if (this.autoPrintReceipt) printUrl(this.routes.receipt.replace('__ID__', r.invoice_id));
-            const table = this.tables.find((t) => t.id === sheet.table.id);
-            if (table) table.busy = false;
-            await this.loadBoard();
-            Alpine.store('terminal')?.afterOrder();
-        } catch (e) {
-            toast(e.message, 'error');
-        }
+        Alpine.store('checkout').show({
+            title: sheet.table.label,
+            subtitle: `${sheet.group.orders.length} sifariş`,
+            due: sheet.group.due,
+            types: this.paymentTypes,
+            submit: (payments) => this.closeBill(sheet, payments),
+        });
+    },
+
+    /** Xəta olarsa ekran açıq qalır və xətanı göstərir (throw). */
+    async closeBill(sheet, payments) {
+        const r = await api(this.routes.pay, { method: 'POST', body: { order_ids: sheet.group.unpaid_ids, payments } });
+        toast(`${sheet.table.title}: hesab bağlandı`);
+        this.tableSheet = null;
+        if (this.autoPrintReceipt) printUrl(this.routes.receipt.replace('__ID__', r.invoice_id));
+        const table = this.tables.find((t) => t.id === sheet.table.id);
+        if (table) table.busy = false;
+        await this.loadBoard();
+        Alpine.store('terminal')?.afterOrder();
+    },
+
+    /** Səbətdən ödəniş: eyni tam ekran (sifariş yaradılır, çek kəsilir, mətbəxə gedir). */
+    openCheckout() {
+        if (!this.cart.length) return toast('Səbət boşdur', 'error');
+        Alpine.store('checkout').show({
+            title: this.selectedTable ? this.selectedTable.label : this.deliveryTypes[this.deliveryType],
+            subtitle: `${this.count} məhsul` + (this.customer ? ` · ${this.customer.name}` : ''),
+            due: this.totals.total,
+            types: this.paymentTypes,
+            submit: (payments) => this.submit('pay', payments),
+        });
     },
 
     // ---- onlayn ödəniş (Kapital Bank): müştəri masadakı ödəniş QR-ı ilə ödəyir ----
@@ -336,7 +360,33 @@ export default (data) => ({
 
     get filtered() {
         // "cay" / "chay" da "Çay"-ı tapır (search.js)
-        return this.items.filter((i) => (!this.category || i.category_id === this.category) && matchesSearch(i.title, this.search));
+        // Gizlədilmiş məhsullar yalnız admin redaktə rejimində görünür
+        return this.items.filter((i) => (i.enabled || this.editMode) && (!this.category || i.category_id === this.category) && matchesSearch(i.title, this.search));
+    },
+
+    // ---- menyunun redaktəsi (admin) ----
+    editItem(item) {
+        this.itemEditor = { id: item.id, title: item.title, price: item.price, category_id: item.category_id ?? '', is_enabled: item.enabled, variants: item.variants.length + item.addons.length > 0 };
+    },
+
+    async saveItem() {
+        const e = this.itemEditor;
+        this.busy = true;
+        try {
+            const r = await api(this.routes.itemUpdate.replace('__ID__', e.id), {
+                method: 'PUT',
+                body: { title: e.title, price: Number(e.price), category_id: e.category_id || null, is_enabled: !!e.is_enabled },
+            });
+            const index = this.items.findIndex((i) => i.id === e.id);
+            if (index >= 0) this.items.splice(index, 1, r.item);
+            this.items.sort((a, b) => a.title.localeCompare(b.title, 'az'));
+            toast(r.message);
+            this.itemEditor = null;
+        } catch (err) {
+            toast(err.message, 'error');
+        } finally {
+            this.busy = false;
+        }
     },
 
     // ---- səbət ----
@@ -356,6 +406,7 @@ export default (data) => ({
     },
 
     open(item) {
+        if (this.editMode) return this.editItem(item);
         if (!this.hasStock(item)) return;
         if (!item.variants.length && !item.addons.length) {
             this.addSound();
@@ -428,7 +479,7 @@ export default (data) => ({
 
     resetForLock() {
         this.clear();
-        Object.assign(this, { picker: null, modal: null, search: '', category: null, customerQuery: '', customerResults: [], draftReference: '', view: null, tableSheet: null, transferFrom: null });
+        Object.assign(this, { editMode: false, itemEditor: null, picker: null, modal: null, search: '', category: null, customerQuery: '', customerResults: [], draftReference: '', view: null, tableSheet: null, transferFrom: null });
     },
 
     /** Servis haqqı bu sifarişə aiddirmi (ayara və xidmət növünə görə) — kassir onu ləğv edə bilər. */
@@ -505,17 +556,18 @@ export default (data) => ({
             notes: this.notes || null,
             draft_id: this.draftId,
             draft_reference: action === 'draft' ? this.draftReference : null,
-            payment_type_id: action === 'pay' ? this.paymentTypeId : null,
+            payment_type_id: null,
         };
     },
 
-    async submit(action) {
+    /** payments verilibsə (ödəniş ekranından) xəta atılır ki, ekran açıq qalıb onu göstərsin. */
+    async submit(action, payments = null) {
         if (!this.cart.length) return toast('Səbət boşdur', 'error');
         this.busy = true;
         try {
             const totalsBefore = this.displayPayload.totals;
             // Endirim / servis haqqından imtina menecer təsdiqi istəyə bilər (server approver_pin xətası qaytarır)
-            const r = await withApproval('Endirimi təsdiqləyin', (pin) => api(this.routes.store, { method: 'POST', body: { ...this.payload(action), approver_pin: pin } }));
+            const r = await withApproval('Endirimi təsdiqləyin', (pin) => api(this.routes.store, { method: 'POST', body: { ...this.payload(action), payments, approver_pin: pin } }));
             if (action !== 'draft') this.finishDisplay(action, r.order.token_no, totalsBefore);
             // Mətbəxə ayrıca çek: hər göndərilən sifariş (əlavə sifariş də) yalnız öz məhsulları ilə çap olunur
             for (const [id, stock] of Object.entries(r.stock ?? {})) {
@@ -540,6 +592,7 @@ export default (data) => ({
                 Alpine.store('terminal')?.afterOrder();
             }
         } catch (e) {
+            if (payments) throw e;
             toast(e.message, 'error');
         } finally {
             this.busy = false;

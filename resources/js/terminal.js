@@ -3,6 +3,8 @@
  * Kilidli ekranda ekran qoruyucu göstərilir; toxunanda PIN soruşulur. Hərəkətsizlikdən
  * (lockTimeout saniyə) sonra ekran yenidən kilidlənir. Server tərəfi də eyni qaydanı yoxlayır.
  */
+const WARN_SECONDS = 5;
+
 export default (state) => ({
     ...state,
     mode: 'saver', // saver | pin
@@ -13,6 +15,8 @@ export default (state) => ({
     slide: 0,
     now: new Date(),
     lastActivity: Date.now(),
+    // Kilidə WARN_SECONDS qalanda "Sistemdə qalırsınız?" pəncərəsi; seçim edilməsə vaxt bitəndə kilidlənir
+    warning: false,
     lastPing: Date.now(),
 
     init() {
@@ -30,12 +34,14 @@ export default (state) => ({
     },
 
     apply(next) {
-        for (const key of ['active', 'locked', 'operator', 'canPay', 'canSeeStock', 'lockTimeout', 'lockAfterOrder', 'images']) {
+        for (const key of ['active', 'locked', 'operator', 'canPay', 'canSeeStock', 'isAdmin', 'lockTimeout', 'lockAfterOrder', 'images']) {
             if (key in next) this[key] = next[key];
         }
     },
 
     activity() {
+        // Xəbərdarlıq açıqdırsa təsadüfi toxunuş sayılmır — işçi "Qalıram" və ya "Blokla" seçməlidir
+        if (this.warning) return;
         this.lastActivity = Date.now();
         // Serverə "hələ işləyirəm" siqnalı (ən çox 10 saniyədə bir)
         if (this.active && !this.locked && Date.now() - this.lastPing > 10000) {
@@ -46,7 +52,9 @@ export default (state) => ({
 
     tick() {
         this.now = new Date();
-        if (this.active && !this.locked && Date.now() - this.lastActivity > this.lockTimeout * 1000) this.lock();
+        if (!this.active || this.locked) return;
+        if (Date.now() - this.lastActivity > this.lockTimeout * 1000) return this.lock();
+        if (!this.warning && this.lockTimeout > WARN_SECONDS && this.idleLeft <= WARN_SECONDS) this.warning = true;
     },
 
     // Brauzerlərin çoxunda "az" Intl lokalı yoxdur — tarixi özümüz formatlayırıq
@@ -64,7 +72,15 @@ export default (state) => ({
         return Math.max(0, Math.ceil(this.lockTimeout - (this.now - this.lastActivity) / 1000));
     },
 
+    /** "Qalıram": taymer yenidən başlayır, serverdə də sessiya uzadılır. */
+    stay() {
+        this.warning = false;
+        this.lastActivity = this.lastPing = Date.now();
+        api(this.routes.ping).then((r) => r?.locked && this.markLocked()).catch(() => {});
+    },
+
     markLocked() {
+        this.warning = false;
         this.locked = true;
         this.operator = null;
         this.mode = 'saver';

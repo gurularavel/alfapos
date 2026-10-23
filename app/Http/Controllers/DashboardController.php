@@ -83,9 +83,10 @@ class DashboardController extends Controller
         ])->values();
 
         // Bu gün ödəniş növləri üzrə (Hesabatlar → Ödəniş növləri ilə eyni qayda) + dünənlə müqayisə
-        $byPayment = fn (Carbon $day) => $paid($day)->leftJoin('payment_types', 'payment_types.id', '=', 'invoices.payment_type_id')
-            ->groupBy('invoices.payment_type_id', 'payment_types.title', 'payment_types.icon')
-            ->selectRaw("invoices.payment_type_id, COALESCE(payment_types.title, 'Digər') as title, COALESCE(payment_types.icon, 'other') as icon, COUNT(*) as checks, SUM(invoices.total) as total")
+        $byPayment = fn (Carbon $day) => $paid($day)->join('invoice_payments', 'invoice_payments.invoice_id', '=', 'invoices.id')
+            ->leftJoin('payment_types', 'payment_types.id', '=', 'invoice_payments.payment_type_id')
+            ->groupBy('invoice_payments.payment_type_id', 'payment_types.title', 'payment_types.icon')
+            ->selectRaw("invoice_payments.payment_type_id, COALESCE(payment_types.title, 'Digər') as title, COALESCE(payment_types.icon, 'other') as icon, COUNT(DISTINCT invoices.id) as checks, SUM(invoice_payments.amount) as total")
             ->get();
         $paymentYesterday = $byPayment($today->copy()->subDay())->pluck('total', 'payment_type_id');
         $paymentMix = $byPayment($today)->sortByDesc('total')->values()

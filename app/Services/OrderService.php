@@ -214,12 +214,21 @@ class OrderService
         return $sum;
     }
 
-    public function pay(Collection $orders, int $paymentTypeId, ?int $customerId = null, bool $complete = true): Invoice
+    /**
+     * Hesabı bağlayır. $payments: bir ödəniş növünün id-si (bütün məbləğ) və ya bölünmüş ödəniş —
+     * [['payment_type_id' => 1, 'amount' => 20, 'tendered' => 50], ['payment_type_id' => 2, 'amount' => 22.6]].
+     * Bölünmüş ödənişdə cəm çekin məbləğinə bərabər olmalıdır (server özü hesablayır); tendered — nağdda verilən pul.
+     *
+     * @param  int|list<array{payment_type_id: int, amount: float|string, tendered?: float|string|null}>  $payments
+     */
+    public function pay(Collection $orders, int|array $payments, ?int $customerId = null, bool $complete = true): Invoice
     {
         $tenant = $this->tenancy->tenant();
 
-        return DB::transaction(function () use ($orders, $paymentTypeId, $customerId, $complete, $tenant) {
+        return DB::transaction(function () use ($orders, $payments, $customerId, $complete, $tenant) {
             $sum = $this->billSums($orders, $tenant);
+            $lines = $this->paymentLines($payments, $sum['total']);
+            $primary = collect($lines)->sortByDesc('amount')->first();
 
             $invoice = Invoice::create($sum + [
                 'number' => $this->nextInvoiceNumber(),
@@ -227,10 +236,13 @@ class OrderService
                 'terminal_id' => ($device = app(PosTerminal::class)->device())?->id,
                 'branch_id' => $device?->branch_id ?? $orders->first()->branch_id,
                 'customer_id' => $customerId ?? $orders->first()->customer_id,
-                'payment_type_id' => $paymentTypeId,
+                'payment_type_id' => $primary['payment_type_id'],
                 'status' => 'paid',
                 'created_by' => app(PosTerminal::class)->effectiveId(),
             ]);
+            foreach ($lines as $line) {
+                $invoice->payments()->create($line);
+            }
 
             foreach ($orders as $order) {
                 $order->update([
@@ -248,6 +260,39 @@ class OrderService
 
             return $invoice;
         });
+    }
+
+    /**
+     * @param  int|list<array{payment_type_id: int, amount: float|string, tendered?: float|string|null}>  $payments
+     * @return list<array{payment_type_id: int, amount: float, tendered: ?float}>
+     */
+    protected function paymentLines(int|array $payments, float $total): array
+    {
+        if (is_int($payments)) {
+            return [['payment_type_id' => $payments, 'amount' => $total, 'tendered' => null]];
+        }
+
+        $lines = array_values(array_map(fn ($p) => [
+            'payment_type_id' => (int) $p['payment_type_id'],
+            'amount' => round((float) $p['amount'], 2),
+            'tendered' => isset($p['tendered']) && $p['tendered'] !== '' ? round((float) $p['tendered'], 2) : null,
+        ], $payments));
+        // Tək sətir: məbləğ həmişə serverin hesabladığı cəmdir (müştəri tərəfində yuvarlaqlaşdırma fərqi ödənişi bloklamasın)
+        if (count($lines) === 1) {
+            $lines[0]['amount'] = $total;
+        }
+
+        $paid = round(array_sum(array_column($lines, 'amount')), 2);
+        if (! $lines || abs($paid - $total) > 0.009) {
+            throw ValidationException::withMessages(['payments' => 'Ödənişlərin cəmi ('.money($paid).') hesabın məbləğinə ('.money($total).') bərabər deyil. Hesab dəyişmiş ola bilər — yenidən açın.']);
+        }
+        foreach ($lines as $line) {
+            if ($line['amount'] <= 0 || ($line['tendered'] !== null && $line['tendered'] < $line['amount'])) {
+                throw ValidationException::withMessages(['payments' => 'Ödəniş məbləği yanlışdır.']);
+            }
+        }
+
+        return $lines;
     }
 
     public function cancel(Order $order, ?string $reason = null): void

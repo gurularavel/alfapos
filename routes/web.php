@@ -100,6 +100,7 @@ Route::middleware('auth')->group(function () {
             Route::get('/pos/qr-orders', [PosController::class, 'qrOrders'])->name('pos.qr');
             Route::get('/pos/customers', [PosController::class, 'searchCustomers'])->name('pos.customers');
             Route::post('/pos/customers', [PosController::class, 'storeCustomer'])->name('pos.customers.store');
+            Route::put('/pos/items/{menuItem}', [PosController::class, 'updateItem'])->name('pos.items.update');
             Route::post('/pos/display/{display}/push', [CustomerDisplayController::class, 'push'])->middleware('throttle:240,1')->name('pos.display.push');
         });
 

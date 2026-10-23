@@ -53,9 +53,15 @@ class Invoice extends Model
         return $this->belongsTo(Customer::class);
     }
 
+    /** Əsas (ən böyük məbləğli) ödəniş növü; bütün sətirlər — payments(). */
     public function paymentType(): BelongsTo
     {
         return $this->belongsTo(PaymentType::class);
+    }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(InvoicePayment::class);
     }
 
     public function branch(): BelongsTo

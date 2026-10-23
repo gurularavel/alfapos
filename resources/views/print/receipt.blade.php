@@ -54,7 +54,19 @@
             @endif
         @endif
         <tr class="lg b"><td>CƏM</td><td class="r">{{ money($invoice->total) }}</td></tr>
-        <tr><td>Ödəniş</td><td class="r">{{ $invoice->paymentType?->title }}</td></tr>
+        @php($payments = $invoice->exists ? $invoice->payments->load('paymentType') : collect())
+        @if ($payments->count() > 1)
+            {{-- Bölünmüş ödəniş: hər növ ayrıca --}}
+            @foreach ($payments as $payment)
+                <tr><td>{{ $payment->paymentType?->title ?? 'Ödəniş' }}</td><td class="r">{{ money($payment->amount) }}</td></tr>
+            @endforeach
+        @else
+            <tr><td>Ödəniş</td><td class="r">{{ $invoice->paymentType?->title }}</td></tr>
+        @endif
+        @foreach ($payments->whereNotNull('tendered') as $payment)
+            <tr><td>Alınıb ({{ $payment->paymentType?->title }})</td><td class="r">{{ money($payment->tendered) }}</td></tr>
+            <tr class="b"><td>Qalıq</td><td class="r">{{ money($payment->change()) }}</td></tr>
+        @endforeach
     </table>
     @if ($invoice->status === 'void')<hr><div class="c b lg">LƏĞV EDİLİB</div>@endif
     @if ($invoice->refunded_total > 0)<hr><table><tr class="b"><td>Qaytarılıb</td><td class="r">−{{ money($invoice->refunded_total) }}</td></tr><tr><td>Xalis</td><td class="r">{{ money($invoice->total - $invoice->refunded_total) }}</td></tr></table>@endif

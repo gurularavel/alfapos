@@ -169,6 +169,8 @@ class PosTerminal
             'locked' => $this->locked(),
             'operator' => $op ? ['id' => $op->id, 'name' => $op->name, 'role' => $op->roleLabel()] : null,
             'canPay' => (bool) $this->effectiveUser()?->hasScope('PAYMENTS'),
+            // POS-un içində menyunu redaktə etmək (yalnız admin)
+            'isAdmin' => (bool) $this->effectiveUser()?->isAdmin(),
             // Stok qalığı (POS kartlarındakı porsiya sayı) yalnız admin və kassirə — terminalda PIN ilə açan işçiyə görə
             'canSeeStock' => (bool) $this->effectiveUser()?->canSeeStockAlerts(),
             'device' => ($d = $this->device()) ? ['id' => $d->id, 'name' => $d->name, 'branch' => $d->branch?->name, 'branch_id' => $d->branch_id] : null,

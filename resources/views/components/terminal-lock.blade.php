@@ -75,3 +75,16 @@
 
     <button type="button" x-show="$store.terminal.mode === 'saver'" class="absolute top-4 right-4 rounded-full bg-black/40 px-5 py-3 text-sm font-semibold text-white/80 backdrop-blur active:bg-black/60" @click.stop="$store.terminal.openPin('exit')">Terminaldan çıx</button>
 </div>
+
+{{-- Hərəkətsizlik xəbərdarlığı: kilidə 5 saniyə qalmış (seçim edilməsə vaxt bitəndə kilidlənir) --}}
+<div x-data x-cloak x-show="$store.terminal.warning" x-transition.opacity.duration.150ms class="no-print fixed inset-0 z-[90] flex items-center justify-center bg-black/60 p-4" role="alertdialog" aria-modal="true" aria-labelledby="idle-title">
+    <div class="w-full max-w-md rounded-3xl bg-white p-6 text-center shadow-2xl sm:p-8">
+        <div class="mx-auto flex size-20 items-center justify-center rounded-full bg-amber-100 text-4xl font-black text-amber-700 tabular-nums" x-text="$store.terminal.idleLeft"></div>
+        <p id="idle-title" class="mt-4 text-2xl font-black">Sistemdə qalırsınız?</p>
+        <p class="mt-1 text-zinc-500"><span x-text="$store.terminal.operator?.name ?? ''"></span>, ekran <span class="font-bold" x-text="$store.terminal.idleLeft"></span> saniyə sonra kilidlənəcək.</p>
+        <div class="mt-6 grid grid-cols-2 gap-3">
+            <button type="button" class="btn-secondary py-4 text-lg" @click="$store.terminal.lock()"><x-icon name="logout" class="size-5" /> Blokla</button>
+            <button type="button" class="btn-primary py-4 text-lg" @click="$store.terminal.stay()" x-init="$watch('$store.terminal.warning', (v) => v && $nextTick(() => $el.focus()))">Qalıram</button>
+        </div>
+    </div>
+</div>

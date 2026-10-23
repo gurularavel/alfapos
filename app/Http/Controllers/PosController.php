@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AuditLog;
 use App\Models\Category;
 use App\Models\Customer;
 use App\Models\CustomerDisplay;
@@ -9,12 +10,15 @@ use App\Models\MenuItem;
 use App\Models\Order;
 use App\Models\PaymentType;
 use App\Models\StoreTable;
+use App\Models\Tenant;
 use App\Services\ApprovalService;
 use App\Services\OrderService;
 use App\Support\PosTerminal;
 use App\Support\Tenancy;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class PosController extends Controller
 {
@@ -22,21 +26,8 @@ class PosController extends Controller
     {
         $tenant = $tenancy->tenant();
 
-        $items = MenuItem::with(['variants:id,menu_item_id,title,price', 'addons:id,menu_item_id,title,price', 'tax:id,rate,type', 'category:id,title'])
-            ->where('is_enabled', true)->orderBy('title')->get()
-            ->map(fn (MenuItem $m) => [
-                'id' => $m->id,
-                'title' => $m->title,
-                'price' => (float) $m->price,
-                'image' => $m->imageUrl(),
-                'category_id' => $m->category_id,
-                'category' => $m->category?->title,
-                'tax_rate' => $tenant->is_tax_enabled ? (float) ($m->tax?->rate ?? 0) : 0.0,
-                'tax_type' => $m->tax?->type ?? 'exclusive',
-                'variants' => $m->variants->map(fn ($v) => ['id' => $v->id, 'title' => $v->title, 'price' => (float) $v->price]),
-                'addons' => $m->addons->map(fn ($a) => ['id' => $a->id, 'title' => $a->title, 'price' => (float) $a->price]),
-                'stock' => $m->track_stock ? (float) $m->stock_quantity : null, // hazır porsiya (izlənmirsə null)
-            ]);
+        // Gizlədilmiş məhsullar da göndərilir: admin POS-da "Menyunu redaktə et" rejimində onları yenidən aça bilsin
+        $items = MenuItem::with(self::ITEM_RELATIONS)->orderBy('title')->get()->map(fn (MenuItem $m) => $this->itemData($m, $tenant));
 
         $busyTables = Order::active()->whereNotNull('store_table_id')->pluck('store_table_id')->unique();
 
@@ -81,11 +72,53 @@ class PosController extends Controller
                     'pay' => route('orders.pay'),
                     'bill' => route('orders.bill'),
                     'transfer' => route('orders.transfer'),
+                    'itemUpdate' => route('pos.items.update', '__ID__'),
                     'onlineStore' => route('orders.online.store'),
                     'onlineShow' => route('orders.online.show', '__ID__'),
                     'onlineCancel' => route('orders.online.cancel', '__ID__'),
                 ],
             ],
+        ]);
+    }
+
+    protected const ITEM_RELATIONS = ['variants:id,menu_item_id,title,price', 'addons:id,menu_item_id,title,price', 'tax:id,rate,type', 'category:id,title'];
+
+    /** POS kartı üçün məhsul məlumatı. */
+    protected function itemData(MenuItem $m, Tenant $tenant): array
+    {
+        return [
+            'id' => $m->id,
+            'title' => $m->title,
+            'price' => (float) $m->price,
+            'image' => $m->imageUrl(),
+            'category_id' => $m->category_id,
+            'category' => $m->category?->title,
+            'enabled' => (bool) $m->is_enabled,
+            'tax_rate' => $tenant->is_tax_enabled ? (float) ($m->tax?->rate ?? 0) : 0.0,
+            'tax_type' => $m->tax?->type ?? 'exclusive',
+            'variants' => $m->variants->map(fn ($v) => ['id' => $v->id, 'title' => $v->title, 'price' => (float) $v->price]),
+            'addons' => $m->addons->map(fn ($a) => ['id' => $a->id, 'title' => $a->title, 'price' => (float) $a->price]),
+            'stock' => $m->track_stock ? (float) $m->stock_quantity : null, // hazır porsiya (izlənmirsə null)
+        ];
+    }
+
+    /** Admin POS-un içində məhsulu redaktə edir: ad, qiymət, kateqoriya, POS / QR menyuda göstərilmə. */
+    public function updateItem(Request $request, MenuItem $menuItem, Tenancy $tenancy, PosTerminal $terminal)
+    {
+        abort_unless($terminal->effectiveUser()?->isAdmin(), 403, 'Məhsulları yalnız admin redaktə edə bilər.');
+
+        $data = $request->validate([
+            'title' => ['required', 'string', 'max:120'],
+            'price' => ['required', 'numeric', 'min:0', 'max:999999'],
+            'category_id' => ['nullable', Rule::exists('categories', 'id')->where('tenant_id', $tenancy->id())],
+            'is_enabled' => ['required', 'boolean'],
+        ]);
+        $menuItem->update($data);
+        AuditLog::record('menu_item.updated_in_pos', $menuItem, $menuItem->getChanges());
+
+        return response()->json([
+            'message' => $menuItem->is_enabled ? "{$menuItem->title} yeniləndi." : "{$menuItem->title} menyuda gizlədildi.",
+            'item' => $this->itemData($menuItem->load(self::ITEM_RELATIONS), $tenancy->tenant()),
         ]);
     }
 
@@ -114,29 +147,37 @@ class PosController extends Controller
             'notes' => ['nullable', 'string', 'max:255'],
             'draft_reference' => ['nullable', 'string', 'max:60'],
             'draft_id' => ['nullable', 'integer'],
-            'payment_type_id' => ['required_if:action,pay', 'nullable', Rule::exists('payment_types', 'id')->where('tenant_id', app(Tenancy::class)->id())],
+            ...OrderController::paymentRules(required: false),
             'approver_pin' => ['nullable', 'string'],
         ]);
 
         abort_if($data['action'] === 'pay' && ! $terminal->effectiveUser()?->hasScope('PAYMENTS'), 403, 'Ödəniş qəbul etmək icazəniz yoxdur. Sifarişi mətbəxə göndərin.');
+        if ($data['action'] === 'pay' && empty($data['payment_type_id']) && empty($data['payments'])) {
+            throw ValidationException::withMessages(['payment_type_id' => 'Ödəniş növünü seçin.']);
+        }
 
         // Endirim və servis haqqından imtina pulu azaldır — menecer təsdiqi ilə (qaralamada hələ lazım deyil)
         $discounted = (float) ($data['discount_value'] ?? 0) > 0 || ! empty($data['no_service_charge']);
         $data['discount_approved_by'] = $discounted && $data['action'] !== 'draft' ? $approval->approve($data['approver_pin'] ?? null)->id : null;
 
-        // Qaralamadan davam edilirsə, köhnə qaralamanı silirik
-        if (! empty($data['draft_id'])) {
-            Order::where('status', 'draft')->whereKey($data['draft_id'])->delete();
-        }
+        // Bir tranzaksiya: ödəniş alınmasa (məs. bölünmüş məbləğ uyğun gəlmir) sifariş də yaranmır, mətbəxə getmir
+        [$order, $invoice] = DB::transaction(function () use ($data, $service) {
+            // Qaralamadan davam edilirsə, köhnə qaralamanı silirik
+            if (! empty($data['draft_id'])) {
+                Order::where('status', 'draft')->whereKey($data['draft_id'])->delete();
+            }
 
-        $order = $service->create($data['cart'], [
-            ...$data,
-            'status' => $data['action'] === 'draft' ? 'draft' : 'created',
-        ]);
+            $order = $service->create($data['cart'], [
+                ...$data,
+                'status' => $data['action'] === 'draft' ? 'draft' : 'created',
+            ]);
 
-        $invoice = $data['action'] === 'pay'
-            ? $service->pay(collect([$order]), (int) $data['payment_type_id'], $data['customer_id'] ?? null, complete: false)
-            : null;
+            $invoice = $data['action'] === 'pay'
+                ? $service->pay(collect([$order]), $data['payments'] ?? (int) $data['payment_type_id'], $data['customer_id'] ?? null, complete: false)
+                : null;
+
+            return [$order, $invoice];
+        });
 
         return response()->json([
             'message' => match ($data['action']) {

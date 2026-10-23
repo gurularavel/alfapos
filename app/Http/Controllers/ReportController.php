@@ -140,8 +140,10 @@ class ReportController extends Controller
             'voids' => [['Faktura', 'Tarix', 'Səbəb', 'Məbləğ'],
                 Invoice::where('status', 'void')->whereBetween('updated_at', [$from, $to])->tap($inv)->latest()->get()
                     ->map(fn ($i) => [$i->number, $i->updated_at->format('d.m.Y H:i'), $i->void_reason, money($i->total)])->all(), null],
-            'payment-summary' => $this->grouped($paid()->join('payment_types', 'payment_types.id', '=', 'invoices.payment_type_id')
-                ->selectRaw('payment_types.title k, COUNT(*) c, SUM(invoices.total) t')->groupBy('k')->orderByDesc('t'), ['Ödəniş növü', 'Çek', 'Məbləğ']),
+            // Bölünmüş ödənişdə çekin hər hissəsi öz növünə yazılır (yarısı nağd, yarısı kart)
+            'payment-summary' => $this->grouped($paid()->join('invoice_payments', 'invoice_payments.invoice_id', '=', 'invoices.id')
+                ->join('payment_types', 'payment_types.id', '=', 'invoice_payments.payment_type_id')
+                ->selectRaw('payment_types.title k, COUNT(DISTINCT invoices.id) c, SUM(invoice_payments.amount) t')->groupBy('k')->orderByDesc('t'), ['Ödəniş növü', 'Çek', 'Məbləğ']),
             'item-sales' => $this->grouped($items()->selectRaw('order_items.title k, SUM(order_items.quantity) c, SUM(order_items.quantity*order_items.price) t')->groupBy('k')->orderByDesc('c'), ['Məhsul', 'Miqdar', 'Məbləğ']),
             'category-sales' => $this->grouped($items()->leftJoin('menu_items', 'menu_items.id', '=', 'order_items.menu_item_id')->leftJoin('categories', 'categories.id', '=', 'menu_items.category_id')
                 ->selectRaw("COALESCE(categories.title, '—') k, SUM(order_items.quantity) c, SUM(order_items.quantity*order_items.price) t")->groupBy('k')->orderByDesc('t'), ['Kateqoriya', 'Miqdar', 'Məbləğ']),

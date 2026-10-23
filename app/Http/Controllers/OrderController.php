@@ -23,7 +23,7 @@ class OrderController extends Controller
     public function index(PosTerminal $terminal, Tenancy $tenancy)
     {
         return view('orders.index', [
-            'paymentTypes' => PaymentType::where('is_active', true)->get(['id', 'title']),
+            'paymentTypes' => PaymentType::where('is_active', true)->get(['id', 'title', 'icon']),
             'terminal' => $terminal->state(),
             'tables' => StoreTable::orderBy('floor')->orderByRaw('LENGTH(title)')->orderBy('title')->get(['id', 'title', 'floor']),
             'autoPrintKot' => (bool) $tenancy->tenant()->printSetting('print_token', true),
@@ -95,7 +95,7 @@ class OrderController extends Controller
         $data = $request->validate([
             'order_ids' => ['required', 'array', 'min:1'],
             'order_ids.*' => ['integer'],
-            'payment_type_id' => ['required', Rule::exists('payment_types', 'id')->where('tenant_id', app(Tenancy::class)->id())],
+            ...self::paymentRules(),
         ]);
         abort_unless($terminal->effectiveUser()?->hasScope('PAYMENTS'), 403, 'Ödəniş qəbul etmək icazəniz yoxdur.');
 
@@ -103,9 +103,27 @@ class OrderController extends Controller
             ->where('status', '!=', 'cancelled')->get();
         abort_if($orders->isEmpty(), 422, 'Ödəniləcək sifariş tapılmadı.');
 
-        $invoice = $service->pay($orders, (int) $data['payment_type_id']);
+        $invoice = $service->pay($orders, $data['payments'] ?? (int) $data['payment_type_id']);
 
         return response()->json(['message' => 'Ödəniş qəbul edildi.', 'invoice_id' => $invoice->id]);
+    }
+
+    /**
+     * Tək ödəniş növü (payment_type_id) və ya bölünmüş ödəniş (payments: növ + məbləğ, nağdda verilən pul).
+     *
+     * @return array<string, array<int, mixed>>
+     */
+    public static function paymentRules(bool $required = true): array
+    {
+        $type = Rule::exists('payment_types', 'id')->where('tenant_id', app(Tenancy::class)->id());
+
+        return [
+            'payment_type_id' => [$required ? 'required_without:payments' : 'nullable', 'nullable', $type],
+            'payments' => ['nullable', 'array', 'min:1', 'max:6'],
+            'payments.*.payment_type_id' => ['required', $type],
+            'payments.*.amount' => ['required', 'numeric', 'min:0.01', 'max:9999999'],
+            'payments.*.tendered' => ['nullable', 'numeric', 'min:0', 'max:9999999'],
+        ];
     }
 
     public function status(Request $request, Order $order)

@@ -7,6 +7,8 @@ import customerDisplay from './display';
 import { planEditor } from './floorplan';
 import staffMeal from './staff-meal';
 import stockAlerts from './stock-alerts';
+import checkout from './checkout';
+import calculator from './calculator';
 import { approvalStore, returnsStore, withApproval } from './returns';
 
 Alpine.plugin(collapse);
@@ -179,6 +181,9 @@ Alpine.store('rt', { connected: false });
 // Menecer təsdiqi (PIN) və ləğv / qaytarma pəncərələri — layout-dakı komponentlər istifadə edir
 window.withApproval = withApproval;
 Alpine.store('approval', approvalStore());
+// Hesabı bağlama ekranı (bölünmüş ödəniş) — POS və Sifarişlər səhifələrindəki <x-checkout-screen />
+Alpine.store('checkout', checkout());
+Alpine.store('calc', calculator());
 if (window.RETURN_ROUTES) Alpine.store('returns', returnsStore(window.RETURN_ROUTES));
 // Stok bildirişləri (anbar / mətbəx icazəsi olanlar üçün layout ünvanları ötürür)
 if (window.STOCK_ALERT_URLS) Alpine.store('alerts', stockAlerts(window.STOCK_ALERT_URLS));

@@ -24,6 +24,10 @@
             </button>
             <button class="btn-secondary btn-sm" @click="openTables()"><x-icon name="table" class="size-4" /> Masalar</button>
             <a href="{{ route('orders.index') }}" class="btn-secondary btn-sm"><x-icon name="orders" class="size-4" /> Sifarişlər</a>
+            <button class="btn-secondary btn-sm" @click="$store.calc.toggle()" title="Kalkulyator"><x-icon name="percent" class="size-4" /> Kalkulyator</button>
+            <button x-show="$store.terminal.isAdmin" x-cloak class="btn-secondary btn-sm" :class="editMode && 'border-amber-400 bg-amber-50 text-amber-800'" @click="editMode = !editMode; picker = null" title="Məhsulun adını, qiymətini, kateqoriyasını dəyiş və ya gizlət">
+                <x-icon name="edit" class="size-4" /> <span x-text="editMode ? 'Redaktəni bitir' : 'Menyunu redaktə et'"></span>
+            </button>
             <button class="btn-secondary btn-sm" @click="modal = 'display'" :class="display && 'border-brand-400 text-brand-700'">
                 <x-icon name="online" class="size-4" /> <span x-text="display ? display.name : 'Müştəri ekranı'"></span>
             </button>
@@ -54,15 +58,18 @@
         </div>
 
         <div class="min-h-0 flex-1 overflow-y-auto p-3">
+            <p x-show="editMode" x-cloak class="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-800">Redaktə rejimi: məhsula toxunun — ad, qiymət, kateqoriya, göstər/gizlət. Gizli məhsullar solğun görünür.</p>
             <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
                 <template x-for="item in filtered" :key="item.id">
-                    <button @click="open(item)" class="group relative flex flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white text-left transition hover:border-brand-300 hover:shadow-sm" :class="stockLeft(item) <= 0 && 'opacity-60 grayscale'">
+                    <button @click="open(item)" class="group relative flex flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white text-left transition hover:border-brand-300 hover:shadow-sm" :class="(stockLeft(item) <= 0 || !item.enabled) && 'opacity-60 grayscale', editMode && 'ring-2 ring-amber-300'">
                         <div class="relative aspect-[4/3] bg-gradient-to-br from-brand-50 to-zinc-100">
                             <template x-if="item.image"><img :src="item.image" :alt="item.title" class="absolute inset-0 size-full object-cover" loading="lazy"></template>
                             <template x-if="!item.image"><span class="absolute inset-0 flex items-center justify-center text-3xl font-black text-brand-300" x-text="item.title.slice(0, 1)"></span></template>
                             <span x-show="item.category" x-text="item.category" class="absolute top-2 left-2 rounded-md bg-brand-500/90 px-2 py-0.5 text-[11px] font-bold text-white"></span>
                             <template x-if="item.stock !== null && $store.terminal?.canSeeStock"><span class="absolute top-2 right-2 rounded-md px-2 py-0.5 text-[11px] font-bold text-white shadow" :class="stockLeft(item) > 0 ? 'bg-zinc-900/75' : 'bg-red-600'" x-text="stockLeft(item) > 0 ? stockLeft(item) + ' porsiya' : 'Bitib'"></span></template>
-                            <span class="absolute right-2 bottom-2 flex size-8 items-center justify-center rounded-full bg-brand-500 text-white shadow transition group-hover:scale-110"><x-icon name="plus" class="size-4" /></span>
+                            <span x-show="!editMode" class="absolute right-2 bottom-2 flex size-8 items-center justify-center rounded-full bg-brand-500 text-white shadow transition group-hover:scale-110"><x-icon name="plus" class="size-4" /></span>
+                            <span x-show="editMode" x-cloak class="absolute right-2 bottom-2 flex size-8 items-center justify-center rounded-full bg-amber-500 text-white shadow"><x-icon name="edit" class="size-4" /></span>
+                            <span x-show="!item.enabled" x-cloak class="absolute bottom-2 left-2 rounded-md bg-zinc-900/80 px-2 py-0.5 text-[11px] font-bold text-white">Gizli</span>
                         </div>
                         <div class="flex flex-1 flex-col p-3">
                             <p class="line-clamp-2 text-sm font-bold" x-text="item.title"></p>
@@ -180,7 +187,7 @@
         <div class="grid grid-cols-[auto_1fr] gap-2 border-t border-zinc-100 p-3">
             <button class="btn-secondary" :disabled="!cart.length || busy" @click="modal = 'draft'"><x-icon name="drafts" class="size-4" /> Qaralama</button>
             <button :class="$store.terminal.canPay ? 'btn-secondary' : 'btn-primary py-3 text-base'" :disabled="!cart.length || busy" @click="submit('kitchen')"><x-icon name="chef" class="size-4" /> Mətbəxə göndər</button>
-            <button x-show="$store.terminal.canPay" class="btn-primary col-span-2 py-3 text-base" :disabled="!cart.length || busy" @click="modal = 'pay'">
+            <button x-show="$store.terminal.canPay" class="btn-primary col-span-2 py-3 text-base" :disabled="!cart.length || busy" @click="openCheckout()">
                 <x-icon name="cash" class="size-5" /> Ödəniş al · <span x-text="money(totals.total)"></span>
             </button>
         </div>
@@ -240,25 +247,30 @@
         </x-slot:footer>
     </x-modal>
 
-    {{-- Ödəniş --}}
-    <x-modal show="modal === 'pay'" close="modal = null" title="Ödəniş al və mətbəxə göndər">
-        <dl class="space-y-1.5 rounded-xl bg-zinc-50 p-4 text-sm">
-            <div class="flex justify-between"><dt>Ara cəm</dt><dd x-text="money(totals.sub)"></dd></div>
-            <div class="flex justify-between"><dt>Endirim</dt><dd x-text="'−' + money(totals.discount)"></dd></div>
-            <div class="flex justify-between" x-show="taxEnabled"><dt>Vergi</dt><dd x-text="money(totals.tax)"></dd></div>
-            <div class="flex justify-between" x-show="totals.service > 0"><dt>Servis haqqı</dt><dd x-text="money(totals.service)"></dd></div>
-            <div class="flex justify-between text-amber-700" x-show="totals.topup > 0"><dt x-text="'Depozitə qədər fərq (min. ' + money(totals.deposit) + ')'"></dt><dd x-text="money(totals.topup)"></dd></div>
-            <div class="flex justify-between border-t border-zinc-200 pt-2 text-xl font-black"><dt>Cəm</dt><dd x-text="money(totals.total)"></dd></div>
-        </dl>
-        <p class="label mt-4">Ödəniş növü</p>
-        <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            <template x-for="p in paymentTypes" :key="p.id">
-                <button class="flex flex-col items-center gap-1 rounded-xl border px-3 py-3 text-sm font-bold transition" :class="paymentTypeId === p.id ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-zinc-200'" @click="paymentTypeId = p.id" x-text="p.title"></button>
-            </template>
-        </div>
+    {{-- Admin: məhsulun POS-un içində redaktəsi (ad, qiymət, kateqoriya, göstər / gizlət) --}}
+    <x-modal show="itemEditor" close="itemEditor = null" title="Məhsulu redaktə et" width="max-w-md">
+        <template x-if="itemEditor">
+            <form id="pos-item-form" class="space-y-4" @submit.prevent="saveItem()">
+                <div><label class="label" for="pos-item-title">Ad</label><input id="pos-item-title" x-model="itemEditor.title" class="input" maxlength="120" required></div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div><label class="label" for="pos-item-price">Qiymət</label><input id="pos-item-price" x-model="itemEditor.price" type="number" step="0.01" min="0" inputmode="decimal" class="input text-lg font-bold" required></div>
+                    <div><label class="label" for="pos-item-category">Kateqoriya</label>
+                        <select id="pos-item-category" x-model.number="itemEditor.category_id" class="input">
+                            <option value="">—</option>
+                            <template x-for="c in categories" :key="c.id"><option :value="c.id" x-text="c.title" :selected="c.id === itemEditor.category_id"></option></template>
+                        </select>
+                    </div>
+                </div>
+                <label class="flex items-center justify-between gap-3 rounded-xl border border-zinc-200 px-4 py-3">
+                    <span><span class="font-bold">Menyuda göstər</span><br><span class="text-sm text-zinc-500">Söndürülsə POS-da və QR menyuda görünmür (məs. bitib).</span></span>
+                    <input type="checkbox" x-model="itemEditor.is_enabled" class="size-6 rounded text-brand-500">
+                </label>
+                <p class="text-xs text-zinc-500" x-show="itemEditor.variants">Variant və əlavələrin qiymətləri, şəkil və resept — Ayarlar → Menyu.</p>
+            </form>
+        </template>
         <x-slot:footer>
-            <button class="btn-secondary" @click="modal = null">Ləğv</button>
-            <button class="btn-primary" :disabled="busy || !paymentTypeId" @click="submit('pay')">Ödənişi təsdiqlə</button>
+            <button class="btn-secondary" @click="itemEditor = null">Bağla</button>
+            <button class="btn-primary" form="pos-item-form" :disabled="busy">Yadda saxla</button>
         </x-slot:footer>
     </x-modal>
 
@@ -301,32 +313,6 @@
         <p x-show="!qrOrders.length" class="py-8 text-center text-sm text-zinc-500">Bu gün yeni QR sifariş yoxdur.</p>
         <x-slot:footer><a href="{{ route('orders.index') }}" class="btn-primary">Sifarişlər ekranına keç</a></x-slot:footer>
     </x-modal>
-
-    {{-- PIN-dən sonra: POS və ya Masalar (tam ekran, sensor üçün böyük düymələr) --}}
-    <div x-show="view === 'home'" x-cloak class="fixed inset-0 z-[60] flex flex-col bg-ink p-4 text-white [touch-action:manipulation] sm:p-8">
-        <div class="flex items-center justify-between">
-            <div>
-                <p class="text-sm font-semibold tracking-widest text-white/50 uppercase">Xoş gəldiniz</p>
-                <p class="text-3xl font-black sm:text-4xl" x-text="$store.terminal.operator?.name ?? ''"></p>
-                <p class="text-white/60" x-text="$store.terminal.operator?.role ?? ''"></p>
-            </div>
-            <button type="button" x-show="$store.terminal.active" class="flex items-center gap-2 rounded-2xl bg-white/10 px-5 py-4 text-lg font-bold active:bg-white/25" @click="$store.terminal.lock()">
-                <x-icon name="logout" class="size-6" /> Kilidlə
-            </button>
-        </div>
-        <div class="mt-6 grid min-h-0 flex-1 grid-cols-1 gap-4 sm:mt-8 sm:grid-cols-2 sm:gap-6">
-            <button type="button" class="flex flex-col items-center justify-center gap-5 rounded-3xl bg-brand-600 transition-colors select-none active:bg-brand-700" @click="view = null">
-                <x-icon name="pos" class="size-[clamp(4rem,14vh,9rem)]" />
-                <span class="text-[clamp(2rem,6vh,4rem)] leading-none font-black">POS</span>
-                <span class="text-lg text-white/70">Yeni sifariş, səbət, ödəniş</span>
-            </button>
-            <button type="button" class="flex flex-col items-center justify-center gap-5 rounded-3xl bg-white/[0.08] transition-colors select-none active:bg-white/20" @click="openTables()">
-                <x-icon name="table" class="size-[clamp(4rem,14vh,9rem)]" />
-                <span class="text-[clamp(2rem,6vh,4rem)] leading-none font-black">Masalar</span>
-                <span class="text-lg text-white/70">Zal planı — masanı seçin</span>
-            </button>
-        </div>
-    </div>
 
     {{-- Masa planı: yuxarıdan görünüş, oturacaqlar tutuma görə; masaya toxunanda POS həmin masa ilə açılır --}}
     <div x-show="view === 'tables'" x-cloak class="fixed inset-0 z-[60] flex flex-col bg-canvas [touch-action:manipulation]">
@@ -432,22 +418,13 @@
                             </div>
                         </template>
                     </div>
-                    <div x-show="!tableSheet.paying" class="grid grid-cols-2 gap-3 border-t border-zinc-100 p-4">
+                    <div class="grid grid-cols-2 gap-3 border-t border-zinc-100 p-4">
                         <button type="button" class="btn-secondary py-4 text-base" @click="pickTable(tableSheet.table)"><x-icon name="plus" class="size-5" /> Əlavə sifariş</button>
                         <button type="button" class="btn-secondary py-4 text-base" @click="printBill()"><x-icon name="printer" class="size-5" /> Hesab çeki</button>
                         <button type="button" x-show="onlinePayments && $store.terminal.canPay" class="btn-secondary col-span-2 border-sky-300 py-4 text-base text-sky-800" @click="sendOnline()"><x-icon name="online" class="size-5" /> <span x-text="tableSheet.group.online ? 'Onlayn ödənişə yenidən göndər' : 'Onlayn ödənişə göndər (QR)'"></span></button>
                         <button type="button" class="btn-secondary col-span-2 py-4 text-base" @click="startTransfer()"><x-icon name="arrow-right" class="size-5" /> Masanı köçür / birləşdir</button>
-                        <button type="button" x-show="$store.terminal.canPay" class="btn-primary col-span-2 py-5 text-lg" @click="tableSheet.paying = true"><x-icon name="cash" class="size-6" /> Hesabı bağla · <span x-text="money(tableSheet.group.due)"></span></button>
+                        <button type="button" x-show="$store.terminal.canPay" class="btn-primary col-span-2 py-5 text-lg" @click="closeTableBill()"><x-icon name="cash" class="size-6" /> Hesabı bağla · <span x-text="money(tableSheet.group.due)"></span></button>
                         <p x-show="!$store.terminal.canPay" class="col-span-2 text-center text-sm text-zinc-500">Hesabı kassir bağlayır — "Hesab çeki"ni müştəriyə aparın.</p>
-                    </div>
-                    <div x-show="tableSheet.paying" class="border-t border-zinc-100 p-4">
-                        <p class="mb-3 text-center font-bold">Ödəniş növü</p>
-                        <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                            <template x-for="p in paymentTypes" :key="p.id">
-                                <button type="button" class="rounded-2xl bg-brand-500 py-5 text-lg font-black text-white active:bg-brand-700" @click="closeBill(p.id)" x-text="p.title"></button>
-                            </template>
-                        </div>
-                        <button type="button" class="btn-ghost mt-3 w-full" @click="tableSheet.paying = false">← Geri</button>
                     </div>
                 </div>
             </template>
@@ -508,5 +485,7 @@
         </x-slot:footer>
     </x-modal>
 </div>
+<x-checkout-screen />
+<x-calculator />
 <x-terminal-lock :state="$posData['terminal']" />
 </x-layouts.app>

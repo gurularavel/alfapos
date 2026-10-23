@@ -72,10 +72,12 @@ class TerminalTest extends TestCase
         $this->assertSame('Ofisiant Nicat', Order::find($orderId)->creator->name);
     }
 
-    public function test_pos_has_home_and_table_map_with_table_details(): void
+    public function test_pos_has_table_map_checkout_screen_and_calculator(): void
     {
+        // PIN-dən sonra "POS / Masalar" seçimi yoxdur — zal planı birbaşa açılır (pos.js → terminal-unlocked)
         $this->get(route('pos'))->assertOk()
-            ->assertSee('Zal planı — masanı seçin')->assertSee('Yeni sifariş, səbət, ödəniş')
+            ->assertDontSee('Yeni sifariş, səbət, ödəniş')
+            ->assertSee('aria-label="Hesabı bağla"', false)->assertSee('aria-label="Kalkulyator"', false)
             ->assertViewHas('posData', fn ($d) => $d['routes']['board'] === route('orders.board')
                 && collect($d['tables'])->every(fn ($t) => isset($t['title'], $t['seats']) && array_key_exists('floor', $t)));
     }

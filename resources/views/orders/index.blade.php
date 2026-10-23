@@ -1,5 +1,20 @@
 <x-layouts.app title="Sifarişlər">
-<div x-data="{ ...poller(@js(route('orders.board')), 8000), pay: null, paymentTypeId: @js($paymentTypes->first()?->id) }">
+<div x-data="{
+    ...poller(@js(route('orders.board')), 8000),
+    {{-- Hesabı bağlama: tam ekran, bölünmüş ödəniş (checkout.js) --}}
+    pay(g) {
+        $store.checkout.show({
+            title: g.title, subtitle: g.orders.length + ' sifariş', due: g.due, types: @js($paymentTypes),
+            submit: async (payments) => {
+                const r = await api(@js(route('orders.pay')), { method: 'POST', body: { order_ids: g.unpaid_ids, payments } });
+                toast(r.message);
+                $store.terminal.afterOrder();
+                if (@js($autoPrintReceipt)) printUrl(@js(route('invoices.receipt', '__ID__')).replace('__ID__', r.invoice_id));
+                await this.load();
+            },
+        });
+    },
+}">
     <x-page-header title="Sifarişlər" subtitle="Aktiv və ödənilməmiş sifarişlər.">
         <x-live-badge />
         <template x-if="$store.terminal.active && $store.terminal.operator"><span class="badge-green py-1.5 text-sm" x-text="$store.terminal.operator.name + ' · ' + $store.terminal.operator.role"></span></template>
@@ -93,26 +108,13 @@
                     @if ($onlinePayments)
                         <button class="btn-secondary w-full border-sky-300 text-sky-800" x-show="g.is_table" @click="post(@js(route('orders.online.store')), { store_table_id: Number(g.key.slice(1)) })"><x-icon name="online" class="size-4" /> <span x-text="g.online ? 'Onlayn ödənişə yenidən göndər' : 'Onlayn ödənişə göndər (QR)'"></span></button>
                     @endif
-                    <button class="btn-primary w-full" @click="pay = g"><x-icon name="cash" class="size-4" /> Hesabı bağla · <span x-text="money(g.due)"></span></button>
+                    <button class="btn-primary w-full" @click="pay(g)"><x-icon name="cash" class="size-4" /> Hesabı bağla · <span x-text="money(g.due)"></span></button>
                 </div>
             </div>
         </template>
     </div>
 
-    <x-modal show="pay" close="pay = null" title="Hesabı bağla" width="max-w-sm">
-        <p class="text-center text-sm text-zinc-500" x-text="pay?.title"></p>
-        <p class="mb-4 text-center text-4xl font-black" x-text="money(pay?.due)"></p>
-        <p class="label">Ödəniş növü</p>
-        <div class="grid grid-cols-2 gap-2">
-            @foreach ($paymentTypes as $pt)
-                <button class="rounded-xl border px-3 py-3 text-sm font-bold" :class="paymentTypeId === {{ $pt->id }} ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-zinc-200'" @click="paymentTypeId = {{ $pt->id }}">{{ $pt->title }}</button>
-            @endforeach
-        </div>
-        <x-slot:footer>
-            <button class="btn-secondary" @click="pay = null">Bağla</button>
-            <button class="btn-primary" @click="post(@js(route('orders.pay')), { order_ids: pay.unpaid_ids, payment_type_id: paymentTypeId }).then(r => { if (r) { pay = null; $store.terminal.afterOrder(); @js($autoPrintReceipt) && printUrl(@js(route('invoices.receipt', '__ID__')).replace('__ID__', r.invoice_id)) } })">Ödənişi təsdiqlə</button>
-        </x-slot:footer>
-    </x-modal>
 </div>
+<x-checkout-screen />
 <x-terminal-lock :state="$terminal" />
 </x-layouts.app>
