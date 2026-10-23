@@ -1,3 +1,5 @@
+import Alpine from 'alpinejs';
+
 /**
  * Paneldəki stok bildirişləri (Alpine store): zəng, açılan siyahı və header altındakı yanıb-sönən zolaq eyni məlumatı oxuyur.
  * Hər dəqiqə yoxlanılır; Reverb bağlıdırsa da eyni tezlik (bildiriş qalıqdan hesablanır, ucuz sorğudur).
@@ -12,9 +14,18 @@ export default (urls) => ({
         this.load();
         setInterval(() => document.hidden || this.load(), 60000);
         document.addEventListener('visibilitychange', () => document.hidden || this.load());
+        // Terminalda başqa işçi PIN ilə açanda siyahı onun icazəsinə görə yenilənir
+        window.addEventListener('terminal-unlocked', () => this.load());
+    },
+
+    /** Terminal rejimində PIN ilə açan işçi admin / kassirdirsə; adi paneldə səhifə onsuz da yalnız onlara verilir. */
+    get allowed() {
+        const terminal = Alpine.store('terminal');
+        return !terminal?.active || (!terminal.locked && !!terminal.canSeeStock);
     },
 
     async load() {
+        if (!this.allowed) return;
         try {
             const r = await api(urls.index);
             Object.assign(this, { items: r.items, unread: r.unread, out: r.out });

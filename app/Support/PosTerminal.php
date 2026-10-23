@@ -6,6 +6,7 @@ use App\Models\Terminal;
 use App\Models\User;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Support\Facades\Cookie;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * POS terminal rejimi: cihaz bir hesabla daxil olur, ekran isə işçinin PIN-i ilə açılır.
@@ -168,11 +169,13 @@ class PosTerminal
             'locked' => $this->locked(),
             'operator' => $op ? ['id' => $op->id, 'name' => $op->name, 'role' => $op->roleLabel()] : null,
             'canPay' => (bool) $this->effectiveUser()?->hasScope('PAYMENTS'),
+            // Stok qalığı (POS kartlarındakı porsiya sayı) yalnız admin və kassirə — terminalda PIN ilə açan işçiyə görə
+            'canSeeStock' => (bool) $this->effectiveUser()?->canSeeStockAlerts(),
             'device' => ($d = $this->device()) ? ['id' => $d->id, 'name' => $d->name, 'branch' => $d->branch?->name, 'branch_id' => $d->branch_id] : null,
             'lockTimeout' => (int) $tenant?->terminalSetting('lock_timeout'),
             'lockAfterOrder' => (bool) $tenant?->terminalSetting('lock_after_order'),
             'images' => $tenant?->screensaverUrls() ?? [],
-            'store' => ['name' => $tenant?->name, 'logo' => $tenant?->logo ? \Illuminate\Support\Facades\Storage::disk('public')->url($tenant->logo) : null],
+            'store' => ['name' => $tenant?->name, 'logo' => $tenant?->logo ? Storage::disk('public')->url($tenant->logo) : null],
             'routes' => [
                 'unlock' => route('pos.terminal.unlock'),
                 'lock' => route('pos.terminal.lock'),

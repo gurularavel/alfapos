@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Support\Tenancy;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
 class TerminalTest extends TestCase
@@ -29,7 +30,7 @@ class TerminalTest extends TestCase
         $this->actingAs($this->admin);
     }
 
-    protected function order(string $action = 'kitchen'): \Illuminate\Testing\TestResponse
+    protected function order(string $action = 'kitchen'): TestResponse
     {
         return $this->postJson(route('pos.store'), [
             'action' => $action, 'delivery_type' => 'dinein', 'store_table_id' => StoreTable::where('title', 'Masa 4')->value('id'),
@@ -54,7 +55,8 @@ class TerminalTest extends TestCase
         $this->postJson(route('pos.terminal.unlock'), ['pin' => '9999'])->assertUnprocessable();
         $this->postJson(route('pos.terminal.unlock'), ['pin' => '2222'])->assertOk()
             ->assertJsonPath('state.operator.name', 'Ofisiant Nicat')
-            ->assertJsonPath('state.canPay', false);
+            ->assertJsonPath('state.canPay', false)
+            ->assertJsonPath('state.canSeeStock', false); // ofisiant hazır stok qalığını görmür
 
         $orderId = $this->order('kitchen')->assertOk()->json('order.id');
         $this->assertSame('Ofisiant Nicat', Order::find($orderId)->creator->name);
@@ -63,7 +65,7 @@ class TerminalTest extends TestCase
 
         // Kassir öz PIN-i ilə açıb hesabı bağlayır — çekdə kassir, sifarişdə ofisiant qalır
         $this->postJson(route('pos.terminal.lock'))->assertOk();
-        $this->postJson(route('pos.terminal.unlock'), ['pin' => '1111'])->assertOk()->assertJsonPath('state.canPay', true);
+        $this->postJson(route('pos.terminal.unlock'), ['pin' => '1111'])->assertOk()->assertJsonPath('state.canPay', true)->assertJsonPath('state.canSeeStock', true);
         $invoiceId = $this->postJson(route('orders.pay'), ['order_ids' => [$orderId], 'payment_type_id' => PaymentType::value('id')])
             ->assertOk()->json('invoice_id');
         $this->assertSame('Kassir Aynur', Invoice::find($invoiceId)->creator->name);
@@ -80,8 +82,8 @@ class TerminalTest extends TestCase
 
     public function test_print_settings_preview_uses_unsaved_values_and_writes_nothing(): void
     {
-        $orders = \App\Models\Order::count();
-        $invoices = \App\Models\Invoice::count();
+        $orders = Order::count();
+        $invoices = Invoice::count();
 
         $this->get(route('settings.print'))->assertOk()->assertSee('Nümunəni çap et');
         $this->get(route('settings.print.preview', ['type' => 'receipt', 'paper_width' => 58, 'header' => 'TEST BAŞLIQ', 'footer' => 'Sağ olun', 'show_store_details' => 1, 'show_customer_details' => 1, 'show_notes' => 1]))
@@ -91,8 +93,21 @@ class TerminalTest extends TestCase
             ->assertOk()->assertSee('MƏTBƏX ÇEKİ')->assertSee('#27')->assertSee('Şəkərsiz');
         $this->get(route('settings.print.preview', ['type' => 'receipt', 'print' => 1]))->assertOk()->assertSee('window.print(), 50', false);
 
-        $this->assertSame([$orders, $invoices], [\App\Models\Order::count(), \App\Models\Invoice::count()]);
+        $this->assertSame([$orders, $invoices], [Order::count(), Invoice::count()]);
         $this->assertNotSame('TEST BAŞLIQ', $this->admin->tenant->fresh()->printSetting('header'));
+    }
+
+    public function test_stock_alerts_in_terminal_follow_the_pin_operator(): void
+    {
+        $this->postJson(route('pos.terminal.enter'))->assertOk();
+        $this->getJson(route('notifications.index'))->assertForbidden(); // kilidli ekran
+
+        $this->postJson(route('pos.terminal.unlock'), ['pin' => '2222'])->assertOk();
+        $this->getJson(route('notifications.index'))->assertForbidden();
+
+        $this->postJson(route('pos.terminal.lock'))->assertOk();
+        $this->postJson(route('pos.terminal.unlock'), ['pin' => '1111'])->assertOk();
+        $this->getJson(route('notifications.index'))->assertOk()->assertJsonPath('items.0.url', null);
     }
 
     public function test_chef_pin_cannot_unlock_pos(): void

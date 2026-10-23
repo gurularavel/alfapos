@@ -2,7 +2,7 @@
 @push('scripts')
     <script>window.STOCK_ALERT_URLS = @js(['index' => route('notifications.index'), 'read' => route('notifications.read')]);</script>
 @endpush
-<div x-data class="relative" @click.outside="$store.alerts && ($store.alerts.open = false)">
+<div x-data x-show="$store.alerts?.allowed" class="relative" @click.outside="$store.alerts && ($store.alerts.open = false)">
     <button type="button" class="relative flex size-10 items-center justify-center rounded-xl hover:bg-zinc-100" aria-label="Bildirişlər"
             :class="$store.alerts?.unread && ($store.alerts.out ? 'text-red-600' : 'text-amber-600')"
             @click="$store.alerts.open = !$store.alerts.open">

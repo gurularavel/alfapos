@@ -30,7 +30,7 @@ export default (state) => ({
     },
 
     apply(next) {
-        for (const key of ['active', 'locked', 'operator', 'canPay', 'lockTimeout', 'lockAfterOrder', 'images']) {
+        for (const key of ['active', 'locked', 'operator', 'canPay', 'canSeeStock', 'lockTimeout', 'lockAfterOrder', 'images']) {
             if (key in next) this[key] = next[key];
         }
     },

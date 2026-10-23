@@ -29,7 +29,12 @@ class AppServiceProvider extends ServiceProvider
     {
         Gate::define('superadmin', fn (User $user) => $user->isSuperAdmin());
         Gate::define('scope', fn (User $user, string $scope) => $user->hasScope($scope));
-        Gate::define('stock-alerts', fn (User $user) => $user->canSeeStockAlerts());
+        // Terminalda cihazın hesabı yox, PIN ilə açan işçi yoxlanılır (ekran kilidlidirsə heç kim)
+        Gate::define('stock-alerts', function (User $user) {
+            $terminal = app(PosTerminal::class);
+
+            return $terminal->active() ? (bool) $terminal->operator()?->canSeeStockAlerts() : $user->canSeeStockAlerts();
+        });
 
         Paginator::useTailwind();
 

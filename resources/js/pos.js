@@ -312,7 +312,9 @@ export default (data) => ({
     hasStock(item, quantity = 1) {
         if (this.stockLeft(item) >= quantity) return true;
         const left = Math.max(0, this.stockLeft(item));
-        toast(left ? `${item.title}: hazır stokda cəmi ${left} porsiya qalıb` : `${item.title}: hazır stokda bitib`, 'error');
+        // Qalıq sayı yalnız admin / kassirə göstərilir (ofisiant yalnız "bitib" xəbərini görür)
+        const showCount = left && Alpine.store('terminal')?.canSeeStock;
+        toast(showCount ? `${item.title}: hazır stokda cəmi ${left} porsiya qalıb` : `${item.title}: hazır stokda ${left ? 'kifayət qədər yoxdur' : 'bitib'}`, 'error');
         return false;
     },
 
