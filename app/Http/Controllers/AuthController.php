@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Rules\Turnstile;
 use App\Services\TenantProvisioner;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -16,6 +17,7 @@ class AuthController extends Controller
 
     public function login(Request $request)
     {
+        $this->verifyHuman($request, 'login');
         $credentials = $request->validate([
             'email' => ['required', 'email'],
             'password' => ['required'],
@@ -37,6 +39,7 @@ class AuthController extends Controller
 
     public function register(Request $request, TenantProvisioner $provisioner)
     {
+        $this->verifyHuman($request, 'register');
         $data = $request->validate([
             'business_name' => ['required', 'string', 'max:120'],
             'name' => ['required', 'string', 'max:120'],
@@ -51,6 +54,14 @@ class AuthController extends Controller
         $request->session()->regenerate();
 
         return redirect()->route('dashboard')->with('success', 'Xoş gəldiniz! '.TenantProvisioner::TRIAL_DAYS.' günlük sınaq müddəti başladı.');
+    }
+
+    /** Cloudflare Turnstile: parol / qeydiyyat yoxlanmadan əvvəl (açarlar konfiqurasiya olunmayıbsa keçir). */
+    protected function verifyHuman(Request $request, string $action): void
+    {
+        if (Turnstile::enabled()) {
+            $request->validate(['cf-turnstile-response' => ['required', new Turnstile($action)]], ['cf-turnstile-response.required' => 'Robot olmadığınızı təsdiqləyin.']);
+        }
     }
 
     public function logout(Request $request)

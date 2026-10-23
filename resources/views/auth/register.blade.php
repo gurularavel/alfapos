@@ -38,6 +38,13 @@
                 </div>
             </div>
             <p class="text-xs text-zinc-500">Hesab yaratmaqla <a href="{{ route('terms') }}" target="_blank" class="font-semibold text-brand-700 underline">İstifadə şərtləri</a> və <a href="{{ route('privacy') }}" target="_blank" class="font-semibold text-brand-700 underline">Məxfilik siyasəti</a> ilə razılaşırsınız.</p>
+            @if (App\Rules\Turnstile::enabled())
+                <div>
+                    <div class="cf-turnstile" data-sitekey="{{ config('services.turnstile.site_key') }}" data-action="register" data-language="az" data-size="flexible"></div>
+                    @error('cf-turnstile-response')<p class="field-error">{{ $message }}</p>@enderror
+                </div>
+                @push('head')<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>@endpush
+            @endif
             <button class="btn-primary w-full py-3">Hesab yarat</button>
         </form>
         <p class="mt-5 text-center text-sm text-zinc-500">Hesabınız var? <a href="{{ route('login') }}" class="font-semibold text-brand-600 hover:underline">Daxil olun</a></p>

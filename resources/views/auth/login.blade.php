@@ -17,6 +17,13 @@
             <label class="flex items-center gap-2 text-sm text-zinc-600">
                 <input type="checkbox" name="remember" class="rounded border-zinc-300 text-brand-500"> Məni xatırla
             </label>
+            @if (App\Rules\Turnstile::enabled())
+                <div>
+                    <div class="cf-turnstile" data-sitekey="{{ config('services.turnstile.site_key') }}" data-action="login" data-language="az" data-size="flexible"></div>
+                    @error('cf-turnstile-response')<p class="field-error">{{ $message }}</p>@enderror
+                </div>
+                @push('head')<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>@endpush
+            @endif
             <button class="btn-primary w-full py-3">Daxil ol</button>
         </form>
 

@@ -35,4 +35,12 @@ return [
         ],
     ],
 
+    // Cloudflare Turnstile (giriş və qeydiyyat captcha-sı). Açarlar boşdursa yoxlama söndürülür.
+    'turnstile' => [
+        'site_key' => env('TURNSTILE_SITE_KEY'),
+        'secret_key' => env('TURNSTILE_SECRET_KEY'),
+        // Tokenin verildiyi sayt (siteverify cavabındakı hostname); boşdursa APP_URL-in hostu
+        'hostnames' => array_filter(explode(',', (string) env('TURNSTILE_HOSTNAMES', parse_url((string) env('APP_URL'), PHP_URL_HOST)))),
+    ],
+
 ];
