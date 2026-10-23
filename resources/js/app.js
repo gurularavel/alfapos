@@ -11,6 +11,41 @@ import { approvalStore, returnsStore, withApproval } from './returns';
 
 Alpine.plugin(collapse);
 
+/**
+ * Telefon maskası (x-phone): yalnız rəqəm və əvvəldə "+". Azərbaycan nömrəsi +994 50 123 45 67 kimi qruplaşdırılır,
+ * 0 ilə başlayan yerli nömrə (050...) +994-ə çevrilir. Server də eyni qaydanı yoxlayır.
+ */
+const formatPhone = (value) => {
+    // Hazır "+994 "-dən sonra yeni "+" yazılıbsa (xarici nömrə) nömrə oradan başlayır
+    if (value.lastIndexOf('+') > 0) value = value.slice(value.lastIndexOf('+'));
+    let digits = value.replace(/\D/g, '');
+    if (!digits) return value.trim().startsWith('+') ? '+' : '';
+    if (digits.startsWith('0')) digits = '994' + digits.slice(1);
+    // Fokusda "+994 " hazır gəlir: istifadəçi yenə +994 və ya 0 ilə yazsa təkrarlanmasın
+    if (digits.startsWith('994994')) digits = digits.slice(3);
+    if (digits.startsWith('9940')) digits = '994' + digits.slice(4);
+    if (!digits.startsWith('994')) return '+' + digits.slice(0, 15);
+    const groups = [3, 2, 3, 2, 2];
+    const parts = [];
+    let rest = digits.slice(0, 12);
+    for (const size of groups) {
+        if (!rest) break;
+        parts.push(rest.slice(0, size));
+        rest = rest.slice(size);
+    }
+    return '+' + parts.join(' ');
+};
+Alpine.directive('phone', (el) => {
+    const apply = () => {
+        const formatted = formatPhone(el.value);
+        if (formatted !== el.value) el.value = formatted;
+    };
+    el.addEventListener('input', apply);
+    el.addEventListener('focus', () => el.value || (el.value = '+994 '));
+    el.addEventListener('blur', () => el.value.replace(/\D/g, '') === '994' && (el.value = ''));
+    apply();
+});
+
 const csrf = () => document.querySelector('meta[name="csrf-token"]').content;
 
 /** JSON sorğu köməkçisi: xətada Laravel validasiya mesajını atır. */

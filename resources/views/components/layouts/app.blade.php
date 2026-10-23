@@ -24,6 +24,8 @@
             ['kitchen', 'Mətbəx', 'kitchen', 'KITCHEN', 'kitchen'],
             ['ready-stock.index', 'Hazır yemək', 'chef', 'KITCHEN,INVENTORY', 'ready-stock.*'],
             ['staff-meals.index', 'Personal yeməyi', 'utensils', 'STAFF_MEALS,KITCHEN', 'staff-meals.*'],
+            ['settings.menu-items.index', 'Menyu', 'note', 'SETTINGS', 'settings.menu-items.*'],
+            ['settings.categories.index', 'Kateqoriyalar', 'tag', 'SETTINGS', 'settings.categories.*'],
             ['reservations.index', 'Rezervlər', 'calendar', 'RESERVATIONS', 'reservations.*'],
             ['customers.index', 'Müştərilər', 'users', 'CUSTOMERS', 'customers.*'],
             ['invoices.index', 'Fakturalar', 'invoice', 'INVOICES', 'invoices.*'],
@@ -55,8 +57,10 @@
             </div>
         </div>
         <nav class="flex-1 space-y-0.5 overflow-y-auto px-4 pb-4">
+            {{-- Ən dəqiq uyğun gələn bənd aktivdir: Menyu səhifəsində "Ayarlar" (settings.*) yox, "Menyu" seçilir --}}
+            @php($activePattern = collect($nav)->pluck(4)->filter(fn ($p) => request()->routeIs($p))->sortByDesc(fn ($p) => strlen($p))->first())
             @foreach ($nav as [$route, $label, $icon, $scope, $pattern])
-                <a href="{{ route($route) }}" @class(['nav-link', 'active' => request()->routeIs($pattern)])>
+                <a href="{{ route($route) }}" @class(['nav-link', 'active' => $pattern === $activePattern])>
                     <x-icon :name="$icon" /> {{ $label }}
                 </a>
             @endforeach

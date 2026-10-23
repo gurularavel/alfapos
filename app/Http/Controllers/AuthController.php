@@ -44,16 +44,27 @@ class AuthController extends Controller
             'business_name' => ['required', 'string', 'max:120'],
             'name' => ['required', 'string', 'max:120'],
             'email' => ['required', 'email', 'max:190', 'unique:users,email'],
-            'phone' => ['nullable', 'string', 'max:30'],
+            'phone' => ['nullable', 'string', 'max:30', 'regex:/^\+?[0-9 ()\-]{9,20}$/'],
             'password' => ['required', 'confirmed', Password::min(8)],
-        ]);
+        ], ['phone.regex' => 'Telefon nömrəsi yalnız rəqəmlərdən ibarət olmalıdır, məs. +994 50 123 45 67.']);
 
-        $user = $provisioner->create($data['business_name'], $data['name'], $data['email'], $data['password'], $data['phone'] ?? null);
+        $user = $provisioner->create($data['business_name'], $data['name'], $data['email'], $data['password'], self::normalizePhone($data['phone'] ?? null));
 
         Auth::login($user);
         $request->session()->regenerate();
 
         return redirect()->route('dashboard')->with('success', 'Xoş gəldiniz! '.TenantProvisioner::TRIAL_DAYS.' günlük sınaq müddəti başladı.');
+    }
+
+    /** "+994 50 123 45 67" / "050 123 45 67" → "+994501234567" (maskadakı boşluqlar saxlanmır). */
+    public static function normalizePhone(?string $phone): ?string
+    {
+        $digits = preg_replace('/\D/', '', (string) $phone);
+        if ($digits === '' || $digits === '994') {
+            return null;
+        }
+
+        return '+'.(str_starts_with($digits, '0') ? '994'.substr($digits, 1) : $digits);
     }
 
     /** Cloudflare Turnstile: parol / qeydiyyat yoxlanmadan əvvəl (açarlar konfiqurasiya olunmayıbsa keçir). */

@@ -18,7 +18,7 @@
                 </div>
                 <div>
                     <label class="label" for="phone">Telefon</label>
-                    <input id="phone" name="phone" value="{{ old('phone') }}" class="input" placeholder="+994">
+                    <input id="phone" name="phone" value="{{ old('phone') }}" class="input" type="tel" inputmode="tel" autocomplete="tel" maxlength="20" placeholder="+994 50 123 45 67" x-data x-phone>
                 </div>
             </div>
             <div>

@@ -196,4 +196,27 @@ class PosFlowTest extends TestCase
         $this->assertSame(3, PaymentType::withoutGlobalScopes()->where('tenant_id', $user->tenant_id)->count());
         $this->assertTrue($user->tenant->hasActiveSubscription());
     }
+
+    public function test_registration_phone_accepts_digits_only_and_is_normalized(): void
+    {
+        $data = ['business_name' => 'Kafe', 'name' => 'Sahib', 'email' => 'phone@pos.test', 'password' => 'secret123', 'password_confirmation' => 'secret123'];
+
+        $this->post(route('register'), [...$data, 'phone' => '+994 50 abc 45 67'])->assertSessionHasErrors('phone');
+        $this->assertDatabaseMissing('users', ['email' => 'phone@pos.test']);
+
+        $this->post(route('register'), [...$data, 'phone' => '+994 50 123 45 67'])->assertRedirect(route('dashboard'));
+        $this->assertSame('+994501234567', User::where('email', 'phone@pos.test')->value('phone'));
+    }
+
+    public function test_sidebar_links_menu_and_categories_and_highlights_only_them(): void
+    {
+        $this->actAs($this->admin());
+
+        $this->get(route('dashboard'))->assertOk()
+            ->assertSee('href="'.route('settings.menu-items.index').'"', false)
+            ->assertSee('href="'.route('settings.categories.index').'"', false);
+        $this->get(route('settings.menu-items.index'))->assertOk()
+            ->assertSee('<a href="'.route('settings.menu-items.index').'" class="nav-link active">', false)
+            ->assertSee('<a href="'.route('settings.index').'" class="nav-link">', false);
+    }
 }
