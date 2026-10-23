@@ -26,10 +26,8 @@ class IdentifyTenant
         }
 
         if ($user?->tenant) {
-            $this->tenancy->set($user->tenant);
+            $this->tenancy->set($user->tenant); // saat qurşağını da tətbiq edir
             View::share('tenant', $user->tenant);
-            config(['app.timezone' => $user->tenant->timezone]);
-            date_default_timezone_set($user->tenant->timezone);
         }
 
         return $next($request);
