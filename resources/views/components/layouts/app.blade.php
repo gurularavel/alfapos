@@ -35,6 +35,8 @@
             ['audit-logs.index', 'Audit log', 'history', 'ADMIN', 'audit-logs.*'],
             ['settings.index', 'Ayarlar', 'settings', 'SETTINGS', 'settings.*'],
         ];
+    // Stok bildirişləri: anbar / mətbəx icazəsi olanlara (terminal rejimində yox)
+    $stockAlerts = isset($tenant) && ! $user->isSuperAdmin() && ($user->hasScope('INVENTORY') || $user->hasScope('KITCHEN')) && ! app(\App\Support\PosTerminal::class)->active();
     $nav = array_filter($nav, fn ($n) => $n[3] === null || ($n[3] === 'ADMIN' ? $user->isAdmin() : collect(explode(',', $n[3]))->contains(fn ($s) => $user->hasScope($s))));
 @endphp
 <body @class(['h-full bg-canvas font-sans text-ink antialiased', 'pos-full terminal-mode' => app(\App\Support\PosTerminal::class)->active()]) x-data="{ nav: false }">
@@ -76,6 +78,7 @@
             <p class="truncate font-bold text-zinc-700">{{ $tenant->name ?? 'Superadmin paneli' }}</p>
             <div class="ml-auto flex items-center gap-2">
                 @isset($tenant)
+                    @if ($stockAlerts)<x-stock-alert-bell />@endif
                     @if ($tenant->status === 'trial')
                         <a href="{{ route('subscription') }}" class="badge-amber hidden sm:inline-flex">Sınaq: {{ max(0, (int) now()->diffInDays($tenant->trial_ends_at, false)) }} gün qalıb</a>
                     @endif
@@ -85,6 +88,7 @@
                 @endisset
             </div>
         </header>
+        @if ($stockAlerts)<x-stock-alert-banner />@endif
 
         <main @class(['flex-1', 'p-4 sm:p-6' => ! $compact, 'p-3' => $compact])>
             @if (session('success'))

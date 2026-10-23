@@ -80,6 +80,23 @@ body.pos-full .pos-screen { height: calc(100dvh - 1.5rem); }
     75% { transform: translateX(8px); }
 }
 
+/* Stok bildirişləri: zəng yellənir, oxunmamış bildiriş və bildiriş zolağı yanıb-sönür */
+@keyframes bell-ring {
+    0%, 60%, 100% { transform: rotate(0); }
+    10%, 30% { transform: rotate(16deg); }
+    20%, 40% { transform: rotate(-16deg); }
+    50% { transform: rotate(6deg); }
+}
+@keyframes alert-blink {
+    0%, 100% { background-color: var(--blink-from, #fee2e2); }
+    50% { background-color: var(--blink-to, #ffffff); }
+}
+.bell-ring { animation: bell-ring 1.8s ease-in-out infinite; transform-origin: 50% 3px; }
+.alert-blink { animation: alert-blink 1.1s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+    .bell-ring, .alert-blink { animation: none; }
+}
+
 @media print {
     .no-print { display: none !important; }
 }

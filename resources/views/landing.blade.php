@@ -52,6 +52,26 @@
     </div>
 </section>
 
+@php($releases = \App\Models\ChangelogEntry::published()->limit(3)->get())
+@if ($releases->isNotEmpty())
+<section id="yenilikler" class="scroll-mt-20 border-t border-zinc-200">
+    <div class="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+        <div class="mb-8 flex flex-wrap items-end justify-between gap-4">
+            <div>
+                <p class="text-sm font-bold tracking-widest text-brand-600 uppercase">Yeniliklər · v{{ $releases->first()->version }}</p>
+                <h2 class="mt-2 text-3xl font-black sm:text-4xl">Sistem hər həftə yenilənir</h2>
+                <p class="mt-2 text-zinc-600">Son versiyalarda əlavə olunanlar və düzəlişlər.</p>
+            </div>
+            <a href="{{ route('changelog') }}" class="btn-secondary">Bütün versiyalar →</a>
+        </div>
+        <div class="grid gap-4 lg:grid-cols-3">
+            @foreach ($releases as $entry)
+                <x-changelog-release :entry="$entry" :latest="$loop->first" />
+            @endforeach
+        </div>
+    </div>
+</section>
+@endif
 <section class="mx-auto max-w-6xl px-4 py-16 sm:px-6">
     <div class="flex flex-col items-start justify-between gap-6 rounded-3xl bg-brand-700 p-8 text-white sm:p-12 lg:flex-row lg:items-center">
         <div>

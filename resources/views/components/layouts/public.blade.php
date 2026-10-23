@@ -17,6 +17,7 @@
             <a href="{{ route('home') }}#imkanlar" class="rounded-lg px-3 py-2 hover:bg-white">İmkanlar</a>
             <a href="{{ route('home') }}#qiymetler" class="rounded-lg px-3 py-2 hover:bg-white">Qiymətlər</a>
             <a href="{{ route('faq') }}" @class(['rounded-lg px-3 py-2 hover:bg-white', 'bg-white text-ink' => request()->routeIs('faq')])>Sual-cavab</a>
+            <a href="{{ route('changelog') }}" @class(['rounded-lg px-3 py-2 hover:bg-white', 'bg-white text-ink' => request()->routeIs('changelog')])>Yeniliklər</a>
             <a href="{{ route('about') }}" @class(['rounded-lg px-3 py-2 hover:bg-white', 'bg-white text-ink' => request()->routeIs('about')])>Haqqımızda</a>
             <a href="{{ route('contact') }}" @class(['rounded-lg px-3 py-2 hover:bg-white', 'bg-white text-ink' => request()->routeIs('contact')])>Əlaqə</a>
         </nav>
@@ -31,7 +32,7 @@
         </div>
     </div>
     <nav x-cloak x-show="menu" class="border-t border-zinc-200 px-4 py-2 md:hidden">
-        @foreach ([[route('home').'#imkanlar', 'İmkanlar'], [route('home').'#qiymetler', 'Qiymətlər'], [route('faq'), 'Sual-cavab'], [route('about'), 'Haqqımızda'], [route('contact'), 'Əlaqə'], [route('login'), 'Giriş']] as [$href, $label])
+        @foreach ([[route('home').'#imkanlar', 'İmkanlar'], [route('home').'#qiymetler', 'Qiymətlər'], [route('faq'), 'Sual-cavab'], [route('changelog'), 'Yeniliklər'], [route('about'), 'Haqqımızda'], [route('contact'), 'Əlaqə'], [route('login'), 'Giriş']] as [$href, $label])
             <a href="{{ $href }}" class="block rounded-lg px-3 py-2.5 font-semibold text-zinc-700">{{ $label }}</a>
         @endforeach
     </nav>
@@ -52,6 +53,7 @@
                 <li><a href="{{ route('home') }}#imkanlar" class="hover:text-brand-700">İmkanlar</a></li>
                 <li><a href="{{ route('home') }}#qiymetler" class="hover:text-brand-700">Qiymətlər</a></li>
                 <li><a href="{{ route('faq') }}" class="hover:text-brand-700">Sual-cavab</a></li>
+                <li><a href="{{ route('changelog') }}" class="hover:text-brand-700">Yeniliklər <span class="text-xs text-zinc-400">v{{ config('app.version') }}</span></a></li>
                 <li><a href="{{ route('register') }}" class="hover:text-brand-700">Pulsuz sınaq</a></li>
             </ul>
         </div>

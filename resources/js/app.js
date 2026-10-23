@@ -6,6 +6,7 @@ import { startRealtime } from './echo';
 import customerDisplay from './display';
 import { planEditor } from './floorplan';
 import staffMeal from './staff-meal';
+import stockAlerts from './stock-alerts';
 import { approvalStore, returnsStore, withApproval } from './returns';
 
 Alpine.plugin(collapse);
@@ -116,6 +117,8 @@ Alpine.store('rt', { connected: false });
 window.withApproval = withApproval;
 Alpine.store('approval', approvalStore());
 if (window.RETURN_ROUTES) Alpine.store('returns', returnsStore(window.RETURN_ROUTES));
+// Stok bildirişləri (anbar / mətbəx icazəsi olanlar üçün layout ünvanları ötürür)
+if (window.STOCK_ALERT_URLS) Alpine.store('alerts', stockAlerts(window.STOCK_ALERT_URLS));
 startRealtime(Alpine);
 
 /**

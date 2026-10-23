@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\ChangelogEntry;
 use App\Models\Faq;
 use App\Models\SitePage;
 use App\Models\SiteSetting;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 /** Superadmin: saytın əlaqə məlumatları, məzmun səhifələri və sual-cavab. */
 class SiteController extends Controller
@@ -15,11 +17,12 @@ class SiteController extends Controller
     public function index(Request $request)
     {
         return view('admin.site.index', [
-            'tab' => in_array($request->query('tab'), ['contacts', 'pages', 'faq']) ? $request->query('tab') : 'contacts',
+            'tab' => in_array($request->query('tab'), ['contacts', 'pages', 'faq', 'changelog']) ? $request->query('tab') : 'contacts',
             'values' => SiteSetting::values(),
             'pages' => SitePage::orderBy('id')->get(),
             'faqs' => Faq::orderBy('sort')->orderBy('id')->get(),
             'groups' => Faq::distinct()->orderBy('group')->pluck('group'),
+            'releases' => ChangelogEntry::orderByDesc('released_at')->orderByDesc('id')->get(),
         ]);
     }
 
@@ -104,6 +107,56 @@ class SiteController extends Controller
         }
 
         return redirect()->route('admin.site.index', ['tab' => 'faq']);
+    }
+
+    public function storeRelease(Request $request)
+    {
+        ChangelogEntry::create($this->releaseData($request));
+
+        return redirect()->route('admin.site.index', ['tab' => 'changelog'])->with('success', 'Versiya əlavə edildi.');
+    }
+
+    public function updateRelease(Request $request, ChangelogEntry $release)
+    {
+        $release->update($this->releaseData($request, $release));
+
+        return redirect()->route('admin.site.index', ['tab' => 'changelog'])->with('success', 'Versiya yeniləndi.');
+    }
+
+    public function destroyRelease(ChangelogEntry $release)
+    {
+        $release->delete();
+
+        return redirect()->route('admin.site.index', ['tab' => 'changelog'])->with('success', 'Versiya silindi.');
+    }
+
+    /** Hər növ üçün mətn sahəsi: bir sətir — bir dəyişiklik. */
+    protected function releaseData(Request $request, ?ChangelogEntry $release = null): array
+    {
+        $data = $request->validate([
+            'version' => ['required', 'string', 'max:20', 'regex:/^\d+\.\d+\.\d+$/', Rule::unique('changelog_entries', 'version')->ignore($release)],
+            'released_at' => ['required', 'date'],
+            'title' => ['required', 'string', 'max:255'],
+            'new' => ['nullable', 'string', 'max:5000'],
+            'improved' => ['nullable', 'string', 'max:5000'],
+            'fixed' => ['nullable', 'string', 'max:5000'],
+        ], ['version.regex' => 'Versiya 1.8.0 formatında olmalıdır.']);
+        $items = collect(array_keys(ChangelogEntry::TYPES))
+            ->flatMap(fn ($type) => collect(preg_split('/\R/', (string) ($data[$type] ?? '')))
+                ->map(fn ($line) => trim(ltrim(trim($line), '-•*')))->filter()
+                ->map(fn ($text) => ['type' => $type, 'text' => $text]))
+            ->values()->all();
+        if (! $items) {
+            throw ValidationException::withMessages(['new' => 'Ən azı bir dəyişiklik yazın.']);
+        }
+
+        return [
+            'version' => $data['version'],
+            'released_at' => $data['released_at'],
+            'title' => $data['title'],
+            'items' => $items,
+            'is_published' => $request->boolean('is_published'),
+        ];
     }
 
     protected function faqData(Request $request): array

@@ -20,6 +20,7 @@ use App\Http\Controllers\ReservationController;
 use App\Http\Controllers\ReturnController;
 use App\Http\Controllers\Settings;
 use App\Http\Controllers\StaffMealController;
+use App\Http\Controllers\StockAlertController;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\TerminalController;
 use App\Http\Controllers\UserController;
@@ -31,6 +32,7 @@ Route::view('/', 'landing')->name('home');
 Route::view('/haqqimizda', 'pages.about')->name('about');
 Route::view('/elaqe', 'pages.contact')->name('contact');
 Route::view('/sual-cavab', 'pages.faq')->name('faq');
+Route::view('/yenilikler', 'pages.changelog')->name('changelog');
 Route::view('/mexfilik-siyaseti', 'pages.privacy')->name('privacy');
 Route::view('/istifade-sertleri', 'pages.terms')->name('terms');
 
@@ -73,6 +75,9 @@ Route::middleware('auth')->group(function () {
         Route::put('site/faqs/{faq}', [Admin\SiteController::class, 'updateFaq'])->name('site.faqs.update');
         Route::delete('site/faqs/{faq}', [Admin\SiteController::class, 'destroyFaq'])->name('site.faqs.destroy');
         Route::post('site/faqs/{faq}/move', [Admin\SiteController::class, 'moveFaq'])->name('site.faqs.move');
+        Route::post('site/changelog', [Admin\SiteController::class, 'storeRelease'])->name('site.changelog.store');
+        Route::put('site/changelog/{release}', [Admin\SiteController::class, 'updateRelease'])->name('site.changelog.update');
+        Route::delete('site/changelog/{release}', [Admin\SiteController::class, 'destroyRelease'])->name('site.changelog.destroy');
     });
 
     Route::middleware('subscribed')->prefix('dashboard')->group(function () {
@@ -155,6 +160,8 @@ Route::middleware('auth')->group(function () {
         });
 
         Route::get('/feedbacks', [FeedbackController::class, 'index'])->middleware('scope:FEEDBACK')->name('feedbacks.index');
+        Route::get('/notifications', [StockAlertController::class, 'index'])->middleware('scope:INVENTORY,KITCHEN')->name('notifications.index');
+        Route::post('/notifications/read', [StockAlertController::class, 'read'])->middleware('scope:INVENTORY,KITCHEN')->name('notifications.read');
         Route::get('/returns', [ReturnController::class, 'index'])->middleware('scope:APPROVE,REPORTS')->name('returns.index');
         Route::get('/reports', [ReportController::class, 'index'])->middleware('scope:REPORTS')->name('reports.index');
         Route::get('/reports/{report}', [ReportController::class, 'show'])->middleware('scope:REPORTS')->name('reports.show');

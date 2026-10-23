@@ -5,7 +5,7 @@
     </x-page-header>
 
     <div class="mb-5 flex gap-1 rounded-xl bg-zinc-100 p-1 sm:inline-flex">
-        @foreach (['contacts' => 'Əlaqə və rekvizitlər', 'pages' => 'Səhifələr', 'faq' => 'Sual-cavab'] as $key => $label)
+        @foreach (['contacts' => 'Əlaqə və rekvizitlər', 'pages' => 'Səhifələr', 'faq' => 'Sual-cavab', 'changelog' => 'Yeniliklər'] as $key => $label)
             <a href="{{ route('admin.site.index', ['tab' => $key]) }}" @class(['rounded-lg px-4 py-2 text-sm font-bold', 'bg-white shadow-sm' => $tab === $key, 'text-zinc-500' => $tab !== $key])>{{ $label }}</a>
         @endforeach
     </div>
@@ -57,6 +57,57 @@
                 </div>
             @endforeach
         </div>
+    @endif
+
+    @if ($tab === 'changelog')
+        <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <p class="text-sm text-zinc-500">Saytda <a href="{{ route('changelog') }}" target="_blank" class="font-semibold text-brand-700 underline">/yenilikler</a> səhifəsində və ana səhifədə (son 3 versiya) görünür. Proqramın göstərdiyi versiya: <b>v{{ config('app.version') }}</b>.</p>
+            <button class="btn-primary" @click="edit = { id: null, version: '', released_at: @js(today()->toDateString()), title: '', new: '', improved: '', fixed: '', is_published: true }"><x-icon name="plus" class="size-4" /> Yeni versiya</button>
+        </div>
+        <div class="card overflow-x-auto">
+            <table class="table-base">
+                <thead><tr><th>Versiya</th><th>Tarix</th><th>Başlıq</th><th>Dəyişikliklər</th><th>Status</th><th></th></tr></thead>
+                <tbody>
+                @forelse ($releases as $release)
+                    @php($byType = collect($release->items)->groupBy('type'))
+                    <tr>
+                        <td class="font-mono font-bold">v{{ $release->version }}</td>
+                        <td class="whitespace-nowrap text-zinc-500">{{ $release->released_at->format('d.m.Y') }}</td>
+                        <td class="font-semibold">{{ $release->title }}</td>
+                        <td class="text-xs whitespace-nowrap">
+                            @foreach (\App\Models\ChangelogEntry::TYPES as $type => [$label, $badge])
+                                @if ($byType->has($type))<span class="{{ $badge }}">{{ $label }}: {{ $byType[$type]->count() }}</span>@endif
+                            @endforeach
+                        </td>
+                        <td>{!! $release->is_published ? '<span class="badge-green">Görünür</span>' : '<span class="badge-gray">Gizli</span>' !!}</td>
+                        <td class="text-right whitespace-nowrap">
+                            <button class="btn-ghost btn-sm" @click="edit = @js(['id' => $release->id, 'version' => $release->version, 'released_at' => $release->released_at->toDateString(), 'title' => $release->title, 'is_published' => $release->is_published] + collect(\App\Models\ChangelogEntry::TYPES)->mapWithKeys(fn ($v, $type) => [$type => $byType->get($type, collect())->pluck('text')->implode("\n")])->all())"><x-icon name="edit" class="size-4" /></button>
+                            <form method="POST" action="{{ route('admin.site.changelog.destroy', $release) }}" class="inline" onsubmit="return confirm('Versiya silinsin?')">@csrf @method('DELETE')<button class="btn-ghost btn-sm text-red-600"><x-icon name="trash" class="size-4" /></button></form>
+                        </td>
+                    </tr>
+                @empty
+                    <tr><td colspan="6"><x-empty icon="note" title="Versiya yoxdur" /></td></tr>
+                @endforelse
+                </tbody>
+            </table>
+        </div>
+
+        <x-modal show="edit" close="edit = null" title="Versiya" width="max-w-2xl">
+            <template x-if="edit"><form method="POST" :action="edit.id ? @js(url('admin/site/changelog')) + '/' + edit.id : @js(route('admin.site.changelog.store'))" id="release-form" class="space-y-3">
+                @csrf
+                <template x-if="edit.id"><input type="hidden" name="_method" value="PUT"></template>
+                <div class="grid gap-3 sm:grid-cols-[8rem_10rem_1fr]">
+                    <div><label class="label">Versiya *</label><input name="version" x-model="edit.version" class="input font-mono" placeholder="1.9.0" required></div>
+                    <div><label class="label">Tarix *</label><input type="date" name="released_at" x-model="edit.released_at" class="input" required></div>
+                    <div><label class="label">Başlıq *</label><input name="title" x-model="edit.title" class="input" required maxlength="255" placeholder="Məs. Çatdırılma modulu"></div>
+                </div>
+                @foreach (\App\Models\ChangelogEntry::TYPES as $type => [$label, $badge])
+                    <div><label class="label"><span class="{{ $badge }}">{{ $label }}</span> <span class="font-normal text-zinc-500">— hər sətir bir dəyişiklik</span></label><textarea name="{{ $type }}" x-model="edit.{{ $type }}" rows="{{ $type === 'new' ? 5 : 3 }}" class="input"></textarea></div>
+                @endforeach
+                <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="is_published" value="1" x-model="edit.is_published" class="rounded text-brand-500"> Saytda görünsün</label>
+            </form></template>
+            <x-slot:footer><button class="btn-secondary" @click="edit = null">Bağla</button><button class="btn-primary" form="release-form">Saxla</button></x-slot:footer>
+        </x-modal>
     @endif
 
     @if ($tab === 'faq')

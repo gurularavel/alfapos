@@ -16,7 +16,7 @@ return [
     'name' => env('APP_NAME', 'AlfaPOS'),
 
     // Məhsulun versiyası (POS ekran qoruyucusunda və saytın footer-ində göstərilir). Buraxılışda artırın.
-    'version' => '1.0.0',
+    'version' => '1.8.0',
 
     /*
     |--------------------------------------------------------------------------
