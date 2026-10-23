@@ -12,6 +12,7 @@
             ['settings.categories.index', 'tag', 'Kateqoriyalar', 'Menyu kateqoriyaları və sıralama.'],
             ['settings.taxes.index', 'percent', 'Vergi və servis haqqı', 'Vergini və servis haqqını aç/söndür, faiz, "yalnız zalda" qaydası, vergi dərəcələri.'],
             ['settings.payment-types.index', 'card', 'Ödəniş növləri', 'Nağd, kart, onlayn və digər ödəniş üsulları.'],
+            ['settings.online-payment', 'online', 'Onlayn ödəniş', 'Kapital Bank: müştəri masanın ödəniş QR-ı ilə hesabı kartla ödəyir.'],
             ['subscription', 'crown', 'Abunəlik', 'Planınız, limitlər və ödəniş tarixçəsi.'],
         ] as [$route, $icon, $title, $desc])
             <a href="{{ route($route) }}" class="card card-pad group flex gap-4 transition hover:border-brand-300">

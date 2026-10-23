@@ -80,7 +80,19 @@
                     <span x-text="'Depozit (min.) ' + money(g.deposit) + ' · sifariş ' + money(g.orders_total)"></span>
                     <span class="font-bold" x-text="g.deposit_topup > 0 ? '+' + money(g.deposit_topup) : 'qarşılanıb'"></span>
                 </div>
-                <div class="border-t border-zinc-100 p-3" x-show="g.unpaid_ids.length && $store.terminal.canPay">
+                {{-- Onlayn ödəniş (Kapital Bank): müştəri masadakı ödəniş QR-ı ilə ödəyir --}}
+                <div class="border-t border-sky-100 bg-sky-50 px-4 py-2 text-sm text-sky-900" x-show="g.online">
+                    <p class="flex justify-between gap-2 font-bold"><span><x-icon name="online" class="inline size-4" /> Onlayn ödəniş gözlənilir</span><span x-text="money(g.online?.amount)"></span></p>
+                    <p class="text-xs text-sky-800" x-text="g.online?.opened ? 'Müştəri bank səhifəsini açıb · ' + g.online?.bank_status : 'QR hələ skan edilməyib'"></p>
+                    <div class="mt-1.5 flex gap-2">
+                        <button class="btn-secondary btn-sm" @click="api(@js(route('orders.online.show', '__ID__')).replace('__ID__', g.online.id)).then(r => toast(r.message, r.payment.note ? 'error' : 'success')).catch(e => toast(e.message, 'error')).finally(() => load())"><x-icon name="refresh" class="size-3.5" /> Yoxla</button>
+                        <button class="btn-ghost btn-sm text-red-600" x-show="$store.terminal.canPay" @click="confirm('Onlayn ödəniş sorğusu ləğv edilsin?') && post(@js(route('orders.online.cancel', '__ID__')).replace('__ID__', g.online.id), {})">Ləğv et</button>
+                    </div>
+                </div>
+                <div class="grid gap-2 border-t border-zinc-100 p-3" x-show="g.unpaid_ids.length && $store.terminal.canPay">
+                    @if ($onlinePayments)
+                        <button class="btn-secondary w-full border-sky-300 text-sky-800" x-show="g.is_table" @click="post(@js(route('orders.online.store')), { store_table_id: Number(g.key.slice(1)) })"><x-icon name="online" class="size-4" /> <span x-text="g.online ? 'Onlayn ödənişə yenidən göndər' : 'Onlayn ödənişə göndər (QR)'"></span></button>
+                    @endif
                     <button class="btn-primary w-full" @click="pay = g"><x-icon name="cash" class="size-4" /> Hesabı bağla · <span x-text="money(g.due)"></span></button>
                 </div>
             </div>

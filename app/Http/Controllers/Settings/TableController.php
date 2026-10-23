@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Settings;
 
 use App\Http\Controllers\Controller;
+use App\Models\Branch;
 use App\Models\StoreTable;
 use App\Support\Tenancy;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class TableController extends Controller
 {
@@ -13,7 +15,7 @@ class TableController extends Controller
     {
         return view('settings.tables', [
             'tables' => StoreTable::with('branch:id,name')->orderBy('floor')->orderBy('title')->get(),
-            'branches' => \App\Models\Branch::orderBy('id')->get(['id', 'name']),
+            'branches' => Branch::orderBy('id')->get(['id', 'name']),
             'tenant' => $tenancy->tenant(),
         ]);
     }
@@ -75,14 +77,19 @@ class TableController extends Controller
     }
 
     /** Masanın üstünə qoymaq üçün çap ediləcək QR kart. */
-    public function qr(StoreTable $table, Tenancy $tenancy)
+    /** Masa üçün QR: menyu (?kind=menu, defolt) və ya onlayn ödəniş (?kind=pay — kassir hesabı göndərəndən sonra skan edilir). */
+    public function qr(Request $request, StoreTable $table, Tenancy $tenancy)
     {
         $tenant = $tenancy->tenant();
+        $pay = $request->query('kind') === 'pay';
 
         return view('print.table-qr', [
             'table' => $table,
             'tenant' => $tenant,
-            'url' => route('qr.show', ['code' => $tenant->qr_code, 't' => $table->qr_token]),
+            'caption' => $pay ? 'Hesabı kartla ödəmək üçün skan edin' : 'Menyu və sifariş üçün skan edin',
+            'url' => $pay
+                ? route('pay.show', [$tenant->qr_code, $table->qr_token])
+                : route('qr.show', ['code' => $tenant->qr_code, 't' => $table->qr_token]),
         ]);
     }
 
@@ -93,7 +100,7 @@ class TableController extends Controller
             'floor' => ['nullable', 'string', 'max:60'],
             'seating_capacity' => ['required', 'integer', 'min:1', 'max:100'],
             'deposit' => ['nullable', 'numeric', 'min:0', 'max:999999'],
-            'branch_id' => ['nullable', \Illuminate\Validation\Rule::exists('branches', 'id')->where('tenant_id', app(Tenancy::class)->id())],
+            'branch_id' => ['nullable', Rule::exists('branches', 'id')->where('tenant_id', app(Tenancy::class)->id())],
         ]);
 
         return ['deposit' => (float) ($data['deposit'] ?? 0)] + $data;

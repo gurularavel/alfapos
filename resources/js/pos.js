@@ -1,4 +1,5 @@
 import { chairs, floorOf, withPositions } from './floorplan';
+import { matchesSearch } from './search';
 
 /**
  * POS ekranı. Məlumat serverdən bir dəfə (window.POS_DATA) gəlir; qiymətlər burada yalnız göstərmək üçün
@@ -205,6 +206,42 @@ export default (data) => ({
         }
     },
 
+    // ---- onlayn ödəniş (Kapital Bank): müştəri masadakı ödəniş QR-ı ilə ödəyir ----
+    async sendOnline() {
+        const sheet = this.tableSheet;
+        try {
+            const r = await api(this.routes.onlineStore, { method: 'POST', body: { store_table_id: sheet.table.id } });
+            toast(r.message);
+            await this.loadBoard();
+        } catch (e) {
+            toast(e.message, 'error');
+        }
+    },
+
+    async checkOnline() {
+        const payment = this.tableSheet?.group?.online;
+        if (!payment) return;
+        try {
+            const r = await api(this.routes.onlineShow.replace('__ID__', payment.id));
+            toast(r.message, r.payment.status === 'paid' && !r.payment.note ? 'success' : r.payment.note ? 'error' : 'success');
+            if (r.payment.status === 'paid') this.tableSheet = null;
+            await this.loadBoard();
+        } catch (e) {
+            toast(e.message, 'error');
+        }
+    },
+
+    async cancelOnline() {
+        const payment = this.tableSheet?.group?.online;
+        if (!payment || !confirm('Onlayn ödəniş sorğusu ləğv edilsin? Müştəri QR ilə ödəyə bilməyəcək.')) return;
+        try {
+            toast((await api(this.routes.onlineCancel.replace('__ID__', payment.id), { method: 'POST' })).message);
+            await this.loadBoard();
+        } catch (e) {
+            toast(e.message, 'error');
+        }
+    },
+
     /** Əvvəlki sifarişlər + yeni səbət; depozit (varsa) ümumi məbləğə tətbiq olunur — server ilə eyni qayda. */
     get tableTotalWithNew() {
         const g = this.tableOpenOrders;
@@ -298,8 +335,8 @@ export default (data) => ({
     },
 
     get filtered() {
-        const q = this.search.trim().toLowerCase();
-        return this.items.filter((i) => (!this.category || i.category_id === this.category) && (!q || i.title.toLowerCase().includes(q)));
+        // "cay" / "chay" da "Çay"-ı tapır (search.js)
+        return this.items.filter((i) => (!this.category || i.category_id === this.category) && matchesSearch(i.title, this.search));
     },
 
     // ---- səbət ----

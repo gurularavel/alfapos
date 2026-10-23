@@ -10,6 +10,7 @@ use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\KitchenController;
+use App\Http\Controllers\OnlinePaymentController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PosController;
 use App\Http\Controllers\ProfileController;
@@ -22,6 +23,7 @@ use App\Http\Controllers\Settings;
 use App\Http\Controllers\StaffMealController;
 use App\Http\Controllers\StockAlertController;
 use App\Http\Controllers\SubscriptionController;
+use App\Http\Controllers\TablePaymentController;
 use App\Http\Controllers\TerminalController;
 use App\Http\Controllers\UserController;
 use App\Models\SitePage;
@@ -47,6 +49,11 @@ Route::get('/m/{code}', [QrMenuController::class, 'show'])->name('qr.show');
 Route::get('/m/{code}/credits', [QrMenuController::class, 'credits'])->name('qr.credits');
 Route::post('/m/{code}/order', [QrMenuController::class, 'order'])->middleware('throttle:10,1')->name('qr.order');
 Route::post('/m/{code}/feedback', [QrMenuController::class, 'feedback'])->middleware('throttle:5,1')->name('qr.feedback');
+
+// Masanın onlayn ödənişi (Kapital Bank): masadakı ödəniş QR-ı → hesab → bankın ödəniş səhifəsi → nəticə
+Route::get('/p/{code}/{token}', [TablePaymentController::class, 'show'])->name('pay.show');
+Route::post('/p/{code}/{token}', [TablePaymentController::class, 'checkout'])->middleware('throttle:20,1')->name('pay.checkout');
+Route::match(['get', 'post'], '/odenis/{token}', [TablePaymentController::class, 'return'])->middleware('throttle:60,1')->name('pay.return');
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
@@ -117,6 +124,9 @@ Route::middleware('auth')->group(function () {
             Route::get('/orders/returns/{itemReturn}/slip', [ReturnController::class, 'slip'])->name('orders.returns.slip');
             Route::get('/orders/returns/{itemReturn}/receipt', [ReturnController::class, 'receipt'])->name('orders.returns.receipt');
             Route::get('/orders/{order}/token', [OrderController::class, 'token'])->name('orders.token');
+            Route::post('/orders/online-payments', [OnlinePaymentController::class, 'store'])->name('orders.online.store');
+            Route::get('/orders/online-payments/{onlinePayment}', [OnlinePaymentController::class, 'show'])->name('orders.online.show');
+            Route::post('/orders/online-payments/{onlinePayment}/cancel', [OnlinePaymentController::class, 'cancel'])->name('orders.online.cancel');
         });
 
         Route::middleware('scope:KITCHEN')->group(function () {
@@ -181,6 +191,9 @@ Route::middleware('auth')->group(function () {
             Route::put('/print', [Settings\StoreController::class, 'updatePrint'])->name('print.update');
             Route::get('/print/preview', [Settings\StoreController::class, 'printPreview'])->name('print.preview');
             Route::get('/print/launcher', [Settings\StoreController::class, 'printLauncher'])->name('print.launcher');
+            Route::get('/online-payment', [Settings\OnlinePaymentController::class, 'edit'])->name('online-payment');
+            Route::put('/online-payment', [Settings\OnlinePaymentController::class, 'update'])->name('online-payment.update');
+            Route::post('/online-payment/test', [Settings\OnlinePaymentController::class, 'test'])->middleware('throttle:10,1')->name('online-payment.test');
             Route::get('/terminal', [Settings\TerminalController::class, 'edit'])->name('terminal');
             Route::put('/terminal', [Settings\TerminalController::class, 'update'])->name('terminal.update');
             Route::delete('/terminal/images/{index}', [Settings\TerminalController::class, 'destroyImage'])->whereNumber('index')->name('terminal.images.destroy');

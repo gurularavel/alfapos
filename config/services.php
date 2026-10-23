@@ -35,6 +35,15 @@ return [
         ],
     ],
 
+    // Kapital Bank e-commerce (masa hesabının onlayn ödənişi). Merchant login/parol hər biznesin öz ayarlarındadır;
+    // test rejimində login boşdursa bankın sənədlərdəki ümumi test hesabı işlədilir.
+    'kapitalbank' => [
+        'test_url' => env('KAPITALBANK_TEST_URL', 'https://txpgtst.kapitalbank.az/api'),
+        'prod_url' => env('KAPITALBANK_PROD_URL', 'https://e-commerce.kapitalbank.az/api'),
+        'test_login' => env('KAPITALBANK_TEST_LOGIN', 'TerminalSys/kapital'),
+        'test_password' => env('KAPITALBANK_TEST_PASSWORD', 'kapital123'),
+    ],
+
     // Cloudflare Turnstile (giriş və qeydiyyat captcha-sı). Açarlar boşdursa yoxlama söndürülür.
     'turnstile' => [
         'site_key' => env('TURNSTILE_SITE_KEY'),

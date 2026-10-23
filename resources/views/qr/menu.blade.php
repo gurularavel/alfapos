@@ -165,6 +165,6 @@
         <template x-for="t in items" :key="t.id"><div class="rounded-xl px-4 py-3 text-sm font-semibold text-white shadow-lg" :class="t.type === 'error' ? 'bg-red-600' : 'bg-ink'" x-text="t.message"></div></template>
     </div>
 </div>
-<x-cookie-banner />
+<x-cookie-banner position="top" />
 </body>
 </html>

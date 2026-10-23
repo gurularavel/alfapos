@@ -5,11 +5,16 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class Tenant extends Model
 {
     protected $guarded = ['id'];
+
+    /** Bank giriş məlumatları heç vaxt JSON-a (frontend-ə) düşməsin. */
+    protected $hidden = ['kapitalbank_settings'];
 
     protected function casts(): array
     {
@@ -24,6 +29,7 @@ class Tenant extends Model
             'service_charge_dinein_only' => 'boolean',
             'print_settings' => 'array',
             'terminal_settings' => 'array',
+            'kapitalbank_settings' => 'encrypted:array',
             'service_charge' => 'decimal:2',
             'daily_sales_goal' => 'decimal:2',
         ];
@@ -61,7 +67,7 @@ class Tenant extends Model
         };
     }
 
-    public function expiresAt(): ?\Illuminate\Support\Carbon
+    public function expiresAt(): ?Carbon
     {
         return $this->status === 'trial' ? $this->trial_ends_at : $this->subscription_ends_at;
     }
@@ -100,9 +106,27 @@ class Tenant extends Model
         return data_get($this->terminal_settings, $key, self::TERMINAL_DEFAULTS[$key] ?? null);
     }
 
+    /**
+     * Kapital Bank onlayn ödəniş ayarları: enabled, mode (test | live), login, password.
+     *
+     * @return array{enabled: bool, mode: string, login: ?string, password: ?string}
+     */
+    public function kapitalbank(): array
+    {
+        return array_merge(['enabled' => false, 'mode' => 'test', 'login' => null, 'password' => null], $this->kapitalbank_settings ?? []);
+    }
+
+    /** Masa hesabı onlayn ödənişə göndərilə bilərmi (canlı rejimdə merchant login/parol mütləqdir). */
+    public function onlinePaymentsEnabled(): bool
+    {
+        $settings = $this->kapitalbank();
+
+        return $settings['enabled'] && ($settings['mode'] === 'test' || (filled($settings['login']) && filled($settings['password'])));
+    }
+
     /** @return list<string> ekran qoruyucu şəkillərinin public URL-ləri */
     public function screensaverUrls(): array
     {
-        return array_map(fn ($p) => \Illuminate\Support\Facades\Storage::disk('public')->url($p), $this->terminalSetting('images'));
+        return array_map(fn ($p) => Storage::disk('public')->url($p), $this->terminalSetting('images'));
     }
 }

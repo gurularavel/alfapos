@@ -190,24 +190,36 @@ class OrderService
     /**
      * Bir və ya bir neçə sifarişi (məs. eyni masanın) ödəyib faktura yaradır.
      */
+    /**
+     * Sifarişlərin birgə hesabı (çekin cəmləri). Onlayn ödənişdə banka göndərilən məbləğ də buradan gəlir — çek ilə eyni olsun.
+     *
+     * @return array{sub_total: float, discount_total: float, tax_total: float, service_charge_total: float, total: float, deposit_amount: float, deposit_topup: float}
+     */
+    public function billSums(Collection $orders, Tenant $tenant): array
+    {
+        $sum = ['sub_total' => 0, 'discount_total' => 0, 'tax_total' => 0, 'service_charge_total' => 0, 'total' => 0];
+        foreach ($orders as $order) {
+            $lines = $order->items->where('status', '!=', 'cancelled');
+            foreach ($this->orderTotals($order, $lines, $tenant) as $k => $v) {
+                $sum[$k] += $v;
+            }
+        }
+
+        // Kabinet/VIP depoziti: hesab masanın minimum məbləğindən azdırsa fərq əlavə olunur
+        $deposit = (float) ($this->depositTable($orders)?->deposit ?? 0);
+        $sum['deposit_amount'] = $deposit;
+        $sum['deposit_topup'] = StoreTable::depositTopup($sum['total'], $deposit);
+        $sum['total'] = round($sum['total'] + $sum['deposit_topup'], 2);
+
+        return $sum;
+    }
+
     public function pay(Collection $orders, int $paymentTypeId, ?int $customerId = null, bool $complete = true): Invoice
     {
         $tenant = $this->tenancy->tenant();
 
         return DB::transaction(function () use ($orders, $paymentTypeId, $customerId, $complete, $tenant) {
-            $sum = ['sub_total' => 0, 'discount_total' => 0, 'tax_total' => 0, 'service_charge_total' => 0, 'total' => 0];
-            foreach ($orders as $order) {
-                $lines = $order->items->where('status', '!=', 'cancelled');
-                foreach ($this->orderTotals($order, $lines, $tenant) as $k => $v) {
-                    $sum[$k] += $v;
-                }
-            }
-
-            // Kabinet/VIP depoziti: hesab masanın minimum məbləğindən azdırsa fərq əlavə olunur
-            $deposit = (float) ($this->depositTable($orders)?->deposit ?? 0);
-            $sum['deposit_amount'] = $deposit;
-            $sum['deposit_topup'] = StoreTable::depositTopup($sum['total'], $deposit);
-            $sum['total'] = round($sum['total'] + $sum['deposit_topup'], 2);
+            $sum = $this->billSums($orders, $tenant);
 
             $invoice = Invoice::create($sum + [
                 'number' => $this->nextInvoiceNumber(),

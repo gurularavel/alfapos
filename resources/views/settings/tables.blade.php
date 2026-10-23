@@ -16,7 +16,8 @@
                     <p class="text-xs text-zinc-500">{{ $t->seating_capacity }} nəfər @if ($branches->count() > 1 && $t->branch) · {{ $t->branch->name }} @endif</p>
                     @if ($t->hasDeposit())<p class="mt-1"><span class="badge-amber">Depozit {{ money($t->deposit) }}</span></p>@endif
                     <div class="mt-3 flex justify-center gap-1">
-                        <a href="{{ route('settings.tables.qr', $t) }}" target="_blank" class="btn-ghost btn-sm" title="QR kod"><x-icon name="qr" class="size-4" /></a>
+                        <a href="{{ route('settings.tables.qr', $t) }}" target="_blank" class="btn-ghost btn-sm" title="Menyu QR kodu"><x-icon name="qr" class="size-4" /></a>
+                        <a href="{{ route('settings.tables.qr', [$t, 'kind' => 'pay']) }}" target="_blank" class="btn-ghost btn-sm" title="Onlayn ödəniş QR kodu"><x-icon name="card" class="size-4" /></a>
                         <button class="btn-ghost btn-sm" @click="edit = @js(['id' => $t->id, 'title' => $t->title, 'floor' => $t->floor, 'seating_capacity' => $t->seating_capacity, 'deposit' => (float) $t->deposit, 'branch_id' => $t->branch_id])"><x-icon name="edit" class="size-4" /></button>
                         <form method="POST" action="{{ route('settings.tables.destroy', $t) }}" onsubmit="return confirm('Silinsin?')">@csrf @method('DELETE')<button class="btn-ghost btn-sm text-red-600"><x-icon name="trash" class="size-4" /></button></form>
                     </div>

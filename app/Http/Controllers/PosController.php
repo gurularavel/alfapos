@@ -58,6 +58,8 @@ class PosController extends Controller
                 'autoPrintKot' => (bool) $tenant->printSetting('print_token', true),
                 'autoPrintReceipt' => (bool) $tenant->printSetting('auto_print', true),
                 'currency' => $tenant->currency,
+                // Kapital Bank: masa hesabını onlayn ödənişə göndərmək (Ayarlar → Onlayn ödəniş)
+                'onlinePayments' => $tenant->onlinePaymentsEnabled(),
                 'deliveryTypes' => Order::DELIVERY_TYPES,
                 'terminal' => $terminal->state(),
                 'displays' => CustomerDisplay::orderBy('name')->get()->map(fn (CustomerDisplay $d) => [
@@ -79,6 +81,9 @@ class PosController extends Controller
                     'pay' => route('orders.pay'),
                     'bill' => route('orders.bill'),
                     'transfer' => route('orders.transfer'),
+                    'onlineStore' => route('orders.online.store'),
+                    'onlineShow' => route('orders.online.show', '__ID__'),
+                    'onlineCancel' => route('orders.online.cancel', '__ID__'),
                 ],
             ],
         ]);

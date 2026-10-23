@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Support\Realtime;
 use App\Models\AuditLog;
 use App\Models\ItemReturn;
+use App\Models\OnlinePayment;
 use App\Models\Order;
 use App\Models\PaymentType;
 use App\Models\StoreTable;
@@ -12,6 +12,7 @@ use App\Services\ApprovalService;
 use App\Services\OrderService;
 use App\Services\ReturnService;
 use App\Support\PosTerminal;
+use App\Support\Realtime;
 use App\Support\Tenancy;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -27,6 +28,7 @@ class OrderController extends Controller
             'tables' => StoreTable::orderBy('floor')->orderByRaw('LENGTH(title)')->orderBy('title')->get(['id', 'title', 'floor']),
             'autoPrintKot' => (bool) $tenancy->tenant()->printSetting('print_token', true),
             'autoPrintReceipt' => (bool) $tenancy->tenant()->printSetting('auto_print', true),
+            'onlinePayments' => $tenancy->tenant()->onlinePaymentsEnabled(),
         ]);
     }
 
@@ -40,8 +42,12 @@ class OrderController extends Controller
             ->where('status', '!=', 'cancelled')
             ->orderBy('created_at')->get();
 
+        // Masaya göndərilmiş, hələ ödənilməmiş onlayn ödəniş sorğuları (kassir statusu görür / yoxlayır / ləğv edir)
+        $online = OnlinePayment::pending()->whereIn('store_table_id', $orders->pluck('store_table_id')->filter()->unique())
+            ->latest('id')->get()->unique('store_table_id')->keyBy('store_table_id');
+
         return $orders->groupBy(fn (Order $o) => $o->store_table_id ? 't'.$o->store_table_id : 'o'.$o->id)
-            ->map(function ($group) use ($service, $tenant) {
+            ->map(function ($group) use ($service, $tenant, $online) {
                 $first = $group->first();
                 $unpaid = $group->where('payment_status', 'pending');
                 $due = $unpaid->sum(fn ($o) => $service->orderTotals($o, $o->items->where('status', '!=', 'cancelled'), $tenant)['total']);
@@ -59,6 +65,7 @@ class OrderController extends Controller
                     'deposit' => $deposit ?: (float) ($first->table?->deposit ?? 0),
                     'deposit_topup' => $topup,
                     'due' => round($due + $topup, 2),
+                    'online' => ($payment = $online[$first->store_table_id] ?? null) ? OnlinePaymentController::summary($payment) : null,
                     'orders' => $group->map(fn (Order $o) => [
                         'id' => $o->id,
                         'token_no' => $o->token_no,

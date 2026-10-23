@@ -417,10 +417,25 @@
                             <p class="flex justify-between text-sm text-amber-700" x-show="tableSheet.group.deposit_topup > 0"><span>Depozitə qədər fərq</span><span x-text="money(tableSheet.group.deposit_topup)"></span></p>
                             <p class="flex justify-between text-2xl font-black"><span>Ödəniləcək</span><span x-text="money(tableSheet.group.due)"></span></p>
                         </div>
+                        <template x-if="tableSheet.group.online">
+                            <div class="mt-3 rounded-2xl border border-sky-200 bg-sky-50 p-4">
+                                <p class="flex items-center justify-between gap-2 font-bold text-sky-900">
+                                    <span><x-icon name="online" class="inline size-5" /> Onlayn ödəniş gözlənilir</span>
+                                    <span x-text="money(tableSheet.group.online.amount)"></span>
+                                </p>
+                                <p class="mt-1 text-sm text-sky-800" x-text="tableSheet.group.online.opened ? 'Müştəri bank səhifəsini açıb · ' + tableSheet.group.online.bank_status : 'Müştəri masadakı ödəniş QR-ını hələ skan etməyib'"></p>
+                                <p class="mt-1 text-sm font-bold text-amber-700" x-show="Math.abs(tableSheet.group.online.amount - tableSheet.group.due) > 0.009">Hesab dəyişib — müştəri skan edəndə yeni məbləğ göstəriləcək.</p>
+                                <div class="mt-3 flex gap-2">
+                                    <button type="button" class="btn-secondary btn-sm" @click="checkOnline()"><x-icon name="refresh" class="size-4" /> Yoxla</button>
+                                    <button type="button" class="btn-ghost btn-sm text-red-600" x-show="$store.terminal.canPay" @click="cancelOnline()">Ləğv et</button>
+                                </div>
+                            </div>
+                        </template>
                     </div>
                     <div x-show="!tableSheet.paying" class="grid grid-cols-2 gap-3 border-t border-zinc-100 p-4">
                         <button type="button" class="btn-secondary py-4 text-base" @click="pickTable(tableSheet.table)"><x-icon name="plus" class="size-5" /> Əlavə sifariş</button>
                         <button type="button" class="btn-secondary py-4 text-base" @click="printBill()"><x-icon name="printer" class="size-5" /> Hesab çeki</button>
+                        <button type="button" x-show="onlinePayments && $store.terminal.canPay" class="btn-secondary col-span-2 border-sky-300 py-4 text-base text-sky-800" @click="sendOnline()"><x-icon name="online" class="size-5" /> <span x-text="tableSheet.group.online ? 'Onlayn ödənişə yenidən göndər' : 'Onlayn ödənişə göndər (QR)'"></span></button>
                         <button type="button" class="btn-secondary col-span-2 py-4 text-base" @click="startTransfer()"><x-icon name="arrow-right" class="size-5" /> Masanı köçür / birləşdir</button>
                         <button type="button" x-show="$store.terminal.canPay" class="btn-primary col-span-2 py-5 text-lg" @click="tableSheet.paying = true"><x-icon name="cash" class="size-6" /> Hesabı bağla · <span x-text="money(tableSheet.group.due)"></span></button>
                         <p x-show="!$store.terminal.canPay" class="col-span-2 text-center text-sm text-zinc-500">Hesabı kassir bağlayır — "Hesab çeki"ni müştəriyə aparın.</p>
