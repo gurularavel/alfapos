@@ -2,6 +2,8 @@
  * Hesabı bağlama ekranı (Alpine store "checkout") — PIN pəncərəsi kimi tam ekran.
  * Bölünmüş ödəniş: məbləği rəqəm klaviaturasında yazıb ödəniş növünə toxunun (məs. 20 → Nağd, qalanı → Kart).
  * Məbləğ yazılmayıbsa qalan məbləğin hamısı götürülür. Nağdda artıq verilən pul qalıq kimi göstərilir.
+ * Nağd qalıq: "Müştəri verir" düymələri (hesab 22 → 25, 30, 50, 100 ...) bir toxunuşla nağd ödənişi və qaytarılacaq
+ * məbləği hesablayır; təsdiqdən sonra ekran qalığı iri göstərir ki, kassir pulu sayarkən unutmasın.
  *
  * checkout.open({ title, subtitle, due, types, submit: async (payments) => bool })
  * payments: [{ payment_type_id, amount, tendered? }]
@@ -19,10 +21,16 @@ export default () => ({
     busy: false,
     error: '',
     submitFn: null,
+    // Təsdiqdən sonra qalıq ekranı: { change, tendered, due }
+    done: null,
 
     init() {
         document.addEventListener('keydown', (e) => {
             if (!this.open || this.busy) return;
+            if (this.done) {
+                if (e.key === 'Enter' || e.key === 'Escape') this.finish();
+                return e.preventDefault();
+            }
             if (/^[0-9]$/.test(e.key) || e.key === '.' || e.key === ',') this.press(e.key === ',' ? '.' : e.key);
             else if (e.key === 'Backspace') this.back();
             else if (e.key === 'Escape') this.close();
@@ -33,11 +41,51 @@ export default () => ({
     },
 
     show({ title = '', subtitle = '', due, types, submit }) {
-        Object.assign(this, { open: true, title, subtitle, due: round(Number(due) || 0), types, lines: [], entry: '', busy: false, error: '', submitFn: submit });
+        Object.assign(this, { open: true, title, subtitle, due: round(Number(due) || 0), types, lines: [], entry: '', busy: false, error: '', submitFn: submit, done: null });
     },
 
     close() {
         if (!this.busy) this.open = false;
+    },
+
+    /** Qalıq ekranında "Hazır". */
+    finish() {
+        this.done = null;
+        this.open = false;
+    },
+
+    get cashType() {
+        return this.types.find((t) => t.icon === 'cash') ?? null;
+    },
+
+    /** Müştərinin verə biləcəyi məbləğlər: qalanı yuxarı yuvarlaqlaşdırıb (5, 10, 20, 50 ...) və iri əskinaslar. */
+    get suggestions() {
+        const r = this.remaining;
+        if (r <= 0.004 || !this.cashType) return [];
+        const values = new Set();
+        for (const step of [1, 5, 10, 20, 50, 100]) {
+            const v = Math.ceil(r / step) * step;
+            if (v > r + 0.004) values.add(v);
+        }
+        for (const note of [50, 100, 200]) if (note > r + 0.004) values.add(note);
+        return [...values].sort((a, b) => a - b).slice(0, 6);
+    },
+
+    /** Klaviaturada yazılan məbləğ qalandan çoxdursa — nağd veriləndə qaytarılacaq (önizləmə). */
+    get preview() {
+        return this.cashType && this.entry !== '' && this.entryValue > this.remaining + 0.004 && this.remaining > 0.004 ? round(this.entryValue - this.remaining) : 0;
+    },
+
+    /** "Müştəri verir" düyməsi: nağd ödəniş + qalıq bir toxunuşla. */
+    cashGiven(value) {
+        this.entry = String(value);
+        this.add(this.cashType);
+    },
+
+    /** Nağd, dəqiq məbləğ (qalıqsız). */
+    cashExact() {
+        this.entry = '';
+        this.add(this.cashType);
     },
 
     get paid() {
@@ -72,11 +120,6 @@ export default () => ({
         this.entry = this.entry.slice(0, -1);
     },
 
-    /** Əskinas düymələri: məbləğ sahəsinə yazılır (sonra "Nağd" basılır). */
-    note(value) {
-        this.error = '';
-        this.entry = String(round(this.entryValue + value));
-    },
 
     isCash(type) {
         return type.icon === 'cash';
@@ -111,7 +154,14 @@ export default () => ({
         this.error = '';
         try {
             const ok = await this.submitFn(this.lines.map(({ payment_type_id, amount, tendered }) => ({ payment_type_id, amount, tendered })));
-            if (ok !== false) this.open = false;
+            if (ok === false) return;
+            // Qalıq varsa ekran bağlanmır — kassir qaytarılacaq məbləği iri görür, "Hazır" basır
+            if (this.change > 0) {
+                const tendered = round(this.lines.reduce((s, l) => s + (l.tendered ?? 0), 0));
+                this.done = { change: this.change, tendered, due: this.due };
+            } else {
+                this.open = false;
+            }
         } catch (e) {
             this.error = e.message;
         } finally {

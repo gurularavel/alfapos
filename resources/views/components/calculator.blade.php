@@ -1,5 +1,5 @@
 {{-- Kassir kalkulyatoru (POS alətlər panelindən açılır). Store: resources/js/calculator.js --}}
-<div x-data x-cloak x-show="$store.calc.open" x-transition.opacity.duration.150ms class="no-print fixed inset-0 z-[65] flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-6" @click.self="$store.calc.open = false" role="dialog" aria-label="Kalkulyator">
+<div x-data x-cloak x-show="$store.calc.open" x-transition.opacity.duration.150ms class="no-print fixed inset-0 z-[65] flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-6" @click.self="$store.calc.open = false" @click.stop role="dialog" aria-label="Kalkulyator">
     <div class="w-full max-w-sm rounded-t-3xl bg-ink p-4 text-white shadow-2xl [touch-action:manipulation] sm:rounded-3xl">
         <div class="mb-3 flex items-center justify-between">
             <p class="font-bold text-white/70">Kalkulyator</p>
