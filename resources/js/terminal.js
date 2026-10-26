@@ -1,13 +1,12 @@
 /**
  * POS terminal rejimi (Alpine store "terminal").
- * Kilidli ekranda ekran qoruyucu göstərilir; toxunanda PIN soruşulur. Hərəkətsizlikdən
+ * Kilidli ekranda solda restoranın fonu, sağda PIN paneli göstərilir. Hərəkətsizlikdən
  * (lockTimeout saniyə) sonra ekran yenidən kilidlənir. Server tərəfi də eyni qaydanı yoxlayır.
  */
 const WARN_SECONDS = 5;
 
 export default (state) => ({
     ...state,
-    mode: 'saver', // saver | pin
     purpose: 'unlock', // unlock | exit
     pin: '',
     error: '',
@@ -24,10 +23,10 @@ export default (state) => ({
         ['pointerdown', 'keydown', 'touchstart', 'wheel'].forEach((e) => document.addEventListener(e, activity, { passive: true }));
         window.addEventListener('terminal-locked', () => this.markLocked());
         document.addEventListener('keydown', (e) => {
-            if (!this.active || !this.locked || this.mode !== 'pin') return;
+            if (!this.active || !this.locked) return;
             if (/^\d$/.test(e.key)) this.press(e.key);
             else if (e.key === 'Backspace') this.back();
-            else if (e.key === 'Escape') this.mode = 'saver';
+            else if (e.key === 'Escape') this.openPin('unlock');
         });
         setInterval(() => this.tick(), 1000);
         setInterval(() => this.images.length > 1 && (this.slide = (this.slide + 1) % this.images.length), 7000);
@@ -83,7 +82,7 @@ export default (state) => ({
         this.warning = false;
         this.locked = true;
         this.operator = null;
-        this.mode = 'saver';
+        this.purpose = 'unlock';
         this.pin = '';
         // POS səbəti təmizləsin: növbəti işçi əvvəlkinin yarımçıq sifarişini görməməlidir
         window.dispatchEvent(new CustomEvent('terminal-lock'));
@@ -108,7 +107,6 @@ export default (state) => ({
 
     openPin(purpose = 'unlock') {
         this.purpose = purpose;
-        this.mode = 'pin';
         this.pin = '';
         this.error = '';
     },
@@ -135,7 +133,6 @@ export default (state) => ({
             const r = await api(this.routes.unlock, { method: 'POST', body: { pin: this.pin } });
             this.apply(r.state);
             this.lastActivity = this.lastPing = Date.now();
-            this.mode = 'saver';
             // POS ekranı PIN-dən sonra "POS / Masalar" seçimini göstərir
             window.dispatchEvent(new CustomEvent('terminal-unlocked', { detail: r.state.operator }));
         } catch (e) {
