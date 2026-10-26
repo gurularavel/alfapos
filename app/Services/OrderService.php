@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\AuditLog;
+use App\Models\Department;
 use App\Models\Invoice;
 use App\Models\MenuItem;
 use App\Models\Order;
@@ -25,7 +26,7 @@ class OrderService
      */
     public function buildLines(array $cart): array
     {
-        $items = MenuItem::with(['variants', 'addons', 'tax'])
+        $items = MenuItem::with(['variants', 'addons', 'tax', 'category:id,department_id'])
             ->whereIn('id', collect($cart)->pluck('menu_item_id'))
             ->where('is_enabled', true)
             ->get()
@@ -33,6 +34,7 @@ class OrderService
 
         // Vergi biznes səviyyəsində söndürülübsə sətirlər vergisiz yazılır (qiymət dəyişmir)
         $taxEnabled = $this->tenancy->tenant()?->is_tax_enabled ?? true;
+        $defaultDepartment = Department::defaultId();
 
         $lines = [];
         foreach ($cart as $row) {
@@ -59,6 +61,8 @@ class OrderService
                 'tax_rate' => $taxEnabled ? (float) ($item->tax?->rate ?? 0) : 0.0,
                 'tax_type' => $item->tax?->type ?? 'exclusive',
                 'notes' => isset($row['notes']) ? mb_substr($row['notes'], 0, 100) : null,
+                // Şöbə sifariş anında yazılır: hansı çekə (bar / mətbəx) düşəcəyi
+                'department_id' => Department::forItem($item, $defaultDepartment),
             ];
         }
 

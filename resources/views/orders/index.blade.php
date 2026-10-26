@@ -95,6 +95,10 @@
                     <span x-text="'Depozit (min.) ' + money(g.deposit) + ' · sifariş ' + money(g.orders_total)"></span>
                     <span class="font-bold" x-text="g.deposit_topup > 0 ? '+' + money(g.deposit_topup) : 'qarşılanıb'"></span>
                 </div>
+                {{-- Hesab çeki: müştəriyə aparmaq üçün (ödəniş icazəsi olmayan ofisiant / barmen də çap edə bilər) --}}
+                <div class="border-t border-zinc-100 px-3 pt-3" x-show="g.unpaid_ids.length">
+                    <button class="btn-secondary w-full" @click="printUrl(@js(route('orders.bill')) + '?ids=' + g.unpaid_ids.join(','))"><x-icon name="printer" class="size-4" /> Hesab çeki · <span x-text="money(g.due)"></span></button>
+                </div>
                 {{-- Onlayn ödəniş (Kapital Bank): müştəri masadakı ödəniş QR-ı ilə ödəyir --}}
                 <div class="border-t border-sky-100 bg-sky-50 px-4 py-2 text-sm text-sky-900" x-show="g.online">
                     <p class="flex justify-between gap-2 font-bold"><span><x-icon name="online" class="inline size-4" /> Onlayn ödəniş gözlənilir</span><span x-text="money(g.online?.amount)"></span></p>

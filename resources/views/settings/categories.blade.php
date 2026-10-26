@@ -2,26 +2,27 @@
 <div x-data="{ edit: null }">
     <x-page-header title="Kateqoriyalar">
         <a href="{{ route('settings.index') }}" class="btn-secondary">← Ayarlar</a>
-        <button class="btn-primary" @click="edit = { id: null, title: '', sort: {{ $categories->count() }}, is_enabled: true }"><x-icon name="plus" class="size-4" /> Yeni kateqoriya</button>
+        <button class="btn-primary" @click="edit = { id: null, title: '', sort: {{ $categories->count() }}, is_enabled: true, department_id: '' }"><x-icon name="plus" class="size-4" /> Yeni kateqoriya</button>
     </x-page-header>
 
     <div class="card overflow-x-auto">
         <table class="table-base">
-            <thead><tr><th>Sıra</th><th>Ad</th><th>Məhsul</th><th>Status</th><th></th></tr></thead>
+            <thead><tr><th>Sıra</th><th>Ad</th><th>Şöbə</th><th>Məhsul</th><th>Status</th><th></th></tr></thead>
             <tbody>
             @forelse ($categories as $c)
                 <tr>
                     <td class="w-16 text-zinc-500">{{ $c->sort }}</td>
                     <td class="font-bold">{{ $c->title }}</td>
+                    <td class="text-sm text-zinc-600">{{ $c->department?->name ?? ($departments->firstWhere('is_default', true)?->name ?? '—').' (əsas)' }}</td>
                     <td><a href="{{ route('settings.menu-items.index', ['category' => $c->id]) }}" class="text-brand-600 hover:underline">{{ $c->menu_items_count }}</a></td>
                     <td>{!! $c->is_enabled ? '<span class="badge-green">Görünür</span>' : '<span class="badge-gray">Gizli</span>' !!}</td>
                     <td class="text-right whitespace-nowrap">
-                        <button class="btn-ghost btn-sm" @click="edit = @js($c->only(['id', 'title', 'sort', 'is_enabled']))"><x-icon name="edit" class="size-4" /></button>
+                        <button class="btn-ghost btn-sm" @click="edit = @js($c->only(['id', 'title', 'sort', 'is_enabled']) + ['department_id' => $c->department_id ?? ''])"><x-icon name="edit" class="size-4" /></button>
                         <form method="POST" action="{{ route('settings.categories.destroy', $c) }}" class="inline" onsubmit="return confirm('Silinsin? Məhsullar kateqoriyasız qalacaq.')">@csrf @method('DELETE')<button class="btn-ghost btn-sm text-red-600"><x-icon name="trash" class="size-4" /></button></form>
                     </td>
                 </tr>
             @empty
-                <tr><td colspan="5"><x-empty icon="tag" title="Kateqoriya yoxdur" /></td></tr>
+                <tr><td colspan="6"><x-empty icon="tag" title="Kateqoriya yoxdur" /></td></tr>
             @endforelse
             </tbody>
         </table>
@@ -33,6 +34,12 @@
             <template x-if="edit.id"><input type="hidden" name="_method" value="PUT"></template>
             <div><label class="label">Ad *</label><input name="title" x-model="edit.title" class="input" required></div>
             <div><label class="label">Sıra</label><input type="number" min="0" name="sort" x-model="edit.sort" class="input"></div>
+            <div class="sm:col-span-2"><label class="label">Şöbə (çek hara çıxsın)</label>
+                <select name="department_id" x-model="edit.department_id" class="input">
+                    <option value="">Əsas şöbə</option>
+                    @foreach ($departments as $d)<option value="{{ $d->id }}">{{ $d->name }}</option>@endforeach
+                </select>
+            </div>
             <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="is_enabled" value="1" x-model="edit.is_enabled" class="rounded text-brand-500"> POS və QR menyuda görünsün</label>
         </form></template>
         <x-slot:footer><button class="btn-secondary" @click="edit = null">Bağla</button><button class="btn-primary" form="cat-form">Saxla</button></x-slot:footer>

@@ -6,6 +6,7 @@ use App\Models\AuditLog;
 use App\Models\Category;
 use App\Models\Customer;
 use App\Models\CustomerDisplay;
+use App\Models\Department;
 use App\Models\MenuItem;
 use App\Models\Order;
 use App\Models\PaymentType;
@@ -82,6 +83,22 @@ class PosController extends Controller
     }
 
     protected const ITEM_RELATIONS = ['variants:id,menu_item_id,title,price', 'addons:id,menu_item_id,title,price', 'tax:id,rate,type', 'category:id,title'];
+
+    /**
+     * Sifarişdə məhsulu olan və çeki kassada çap olunan şöbələr.
+     *
+     * @return list<array{id: ?int, name: string}>
+     */
+    public static function posPrintDepartments(Order $order): array
+    {
+        $ids = $order->items()->where('status', '!=', 'cancelled')->distinct()->pluck('department_id');
+        $departments = Department::whereIn('id', $ids->filter())->get()->keyBy('id');
+
+        return $ids->map(fn ($id) => $departments[$id] ?? null)
+            ->filter(fn (?Department $d) => $d === null || $d->print_at === 'pos')
+            ->map(fn (?Department $d) => ['id' => $d?->id, 'name' => $d?->name ?? 'Mətbəx'])
+            ->values()->all();
+    }
 
     /** POS kartı üçün məhsul məlumatı. */
     protected function itemData(MenuItem $m, Tenant $tenant): array
@@ -186,6 +203,8 @@ class PosController extends Controller
                 'pay' => 'Ödəniş qəbul edildi, sifariş mətbəxə göndərildi.',
             },
             'order' => ['id' => $order->id, 'token_no' => $order->token_no],
+            // Kassada çap olunan şöbələr (öz cihazı olan şöbələrin çekini həmin cihaz çap edir)
+            'print_departments' => $data['action'] === 'draft' ? [] : self::posPrintDepartments($order),
             'invoice_id' => $invoice?->id,
             // Satılan hazır yeməklərin yeni qalığı (POS kartlarında yenilənir)
             'stock' => MenuItem::whereIn('id', collect($data['cart'])->pluck('menu_item_id'))->where('track_stock', true)->pluck('stock_quantity', 'id')->map(fn ($q) => (float) $q),

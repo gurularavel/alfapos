@@ -9,6 +9,7 @@ import staffMeal from './staff-meal';
 import stockAlerts from './stock-alerts';
 import checkout from './checkout';
 import calculator from './calculator';
+import kitchenStation from './kitchen-station';
 import { approvalStore, returnsStore, withApproval } from './returns';
 
 Alpine.plugin(collapse);
@@ -165,6 +166,8 @@ const poller = (url, interval = 8000) => ({
     },
 });
 window.poller = poller;
+// Mətbəx ekranının şöbə rejimi və çap stansiyası (kitchen/index.blade.php)
+window.kitchenStation = kitchenStation;
 Alpine.data('poller', poller);
 
 Alpine.data('pos', pos);

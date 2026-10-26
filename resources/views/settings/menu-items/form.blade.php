@@ -51,6 +51,9 @@
                 <div><label class="label">Kateqoriya</label>
                     <select name="category_id" class="input"><option value="">—</option>@foreach ($categories as $c)<option value="{{ $c->id }}" @selected(old('category_id', $item->category_id) == $c->id)>{{ $c->title }}</option>@endforeach</select>
                 </div>
+                <div><label class="label">Şöbə (çek hara çıxsın)</label>
+                    <select name="department_id" class="input"><option value="">Kateqoriyaya görə</option>@foreach ($departments as $d)<option value="{{ $d->id }}" @selected(old('department_id', $item->department_id) == $d->id)>{{ $d->name }}</option>@endforeach</select>
+                </div>
                 <div><label class="label">Vergi</label>
                     <select name="tax_id" class="input"><option value="">Vergisiz</option>@foreach ($taxes as $t)<option value="{{ $t->id }}" @selected(old('tax_id', $item->tax_id) == $t->id)>{{ $t->title }} ({{ $t->type === 'inclusive' ? 'daxil' : 'üstə' }})</option>@endforeach</select>
                 </div>

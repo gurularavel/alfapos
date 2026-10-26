@@ -2,10 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Support\Realtime;
+use App\Models\Department;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Support\PosTerminal;
+use App\Support\Realtime;
 use App\Support\Tenancy;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -14,11 +15,17 @@ class KitchenController extends Controller
 {
     public function index(Tenancy $tenancy)
     {
-        return view('kitchen.index', ['soundNewOrder' => (bool) $tenancy->tenant()->terminalSetting('sound_new_order')]);
+        return view('kitchen.index', [
+            'soundNewOrder' => (bool) $tenancy->tenant()->terminalSetting('sound_new_order'),
+            // Şöbə ekranı: cihaz öz şöbəsini seçir (bar, mətbəx); "çap stansiyası" olan şöbənin çekini bu cihaz çap edir
+            'departments' => Department::orderBy('sort')->orderBy('id')->get(['id', 'name', 'print_at', 'is_default']),
+        ]);
     }
 
     public function feed()
     {
+        $defaultDepartment = Department::defaultId();
+
         return Order::with(['items' => fn ($q) => $q->whereIn('status', ['created', 'preparing', 'ready']), 'table', 'customer:id,name', 'creator:id,name'])
             ->tap(fn ($q) => app(PosTerminal::class)->scopeToBranch($q))
             ->whereIn('status', ['created', 'preparing'])
@@ -35,7 +42,7 @@ class KitchenController extends Controller
                 'minutes' => (int) $o->created_at->diffInMinutes(now()),
                 'notes' => $o->notes,
                 'items' => $o->items->map(fn (OrderItem $i) => [
-                    'id' => $i->id, 'title' => $i->title, 'variant' => $i->variant_title, 'qty' => $i->quantity,
+                    'id' => $i->id, 'department_id' => $i->department_id ?? $defaultDepartment, 'title' => $i->title, 'variant' => $i->variant_title, 'qty' => $i->quantity,
                     'addons' => collect($i->addons)->pluck('title')->implode(', '), 'notes' => $i->notes, 'status' => $i->status,
                 ]),
             ]);
@@ -54,9 +61,14 @@ class KitchenController extends Controller
         return response()->json(['message' => 'Yeniləndi.']);
     }
 
-    public function markAll(Order $order)
+    /** "Hamısı hazırdır": şöbə ekranından — yalnız həmin şöbənin məhsulları. */
+    public function markAll(Request $request, Order $order)
     {
-        $order->items()->whereIn('status', ['created', 'preparing'])->update(['status' => 'ready']);
+        $department = $request->integer('department_id') ?: null;
+        $isDefault = $department && $department === Department::defaultId();
+        $order->items()->whereIn('status', ['created', 'preparing'])
+            ->when($department, fn ($q) => $q->where(fn ($w) => $w->where('department_id', $department)->when($isDefault, fn ($d) => $d->orWhereNull('department_id'))))
+            ->update(['status' => 'ready']);
         $this->syncOrderStatus($order);
         Realtime::order($order, 'kitchen');
 

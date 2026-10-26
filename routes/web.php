@@ -212,6 +212,7 @@ Route::middleware('auth')->group(function () {
             Route::resource('displays', Settings\DisplayController::class)->only(['index', 'store', 'update', 'destroy']);
             Route::get('/tables/{table}/qr', [Settings\TableController::class, 'qr'])->name('tables.qr');
             Route::resource('categories', Settings\CategoryController::class)->only(['index', 'store', 'update', 'destroy']);
+            Route::resource('departments', Settings\DepartmentController::class)->only(['index', 'store', 'update', 'destroy']);
             Route::resource('taxes', Settings\TaxController::class)->only(['index', 'store', 'update', 'destroy']);
             Route::put('/charges', [Settings\TaxController::class, 'updateCharges'])->name('charges.update');
             Route::resource('payment-types', Settings\PaymentTypeController::class)->only(['index', 'store', 'update', 'destroy']);

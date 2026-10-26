@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
+use App\Models\Department;
 use App\Models\ItemReturn;
 use App\Models\OnlinePayment;
 use App\Models\Order;
@@ -241,8 +242,26 @@ class OrderController extends Controller
     }
 
     /** Mətbəx üçün token / KOT çapı. */
-    public function token(Order $order, Tenancy $tenancy)
+    /** Mətbəx çeki (KOT). ?department=ID — yalnız həmin şöbənin məhsulları (bar çeki, mətbəx çeki). */
+    public function token(Request $request, Order $order, Tenancy $tenancy)
     {
-        return view('print.token', ['order' => $order->load('items', 'table', 'creator'), 'tenant' => $tenancy->tenant()]);
+        $order->load('items', 'table', 'creator');
+        $departments = Department::orderBy('sort')->orderBy('id')->get()->keyBy('id');
+        $defaultId = $departments->firstWhere('is_default', true)?->id ?? $departments->keys()->first();
+        $only = $request->integer('department') ?: null;
+
+        // Şöbəsiz (köhnə) sətirlər əsas şöbəyə aiddir
+        $groups = $order->items->where('status', '!=', 'cancelled')
+            ->groupBy(fn ($item) => $item->department_id ?? $defaultId)->toBase() // Eloquent only() model açarı ilə süzür
+            ->when($only, fn ($g) => $g->only([$only]))
+            ->sortBy(fn ($items, $id) => $departments[$id]->sort ?? PHP_INT_MAX);
+
+        return view('print.token', [
+            'order' => $order,
+            'tenant' => $tenancy->tenant(),
+            'groups' => $groups,
+            'departments' => $departments,
+            'title' => $only ? mb_strtoupper($departments[$only]->name ?? 'Mətbəx', 'UTF-8').' ÇEKİ' : 'MƏTBƏX ÇEKİ (KOT)',
+        ]);
     }
 }

@@ -4,13 +4,19 @@ namespace App\Http\Controllers\Settings;
 
 use App\Http\Controllers\Controller;
 use App\Models\Category;
+use App\Models\Department;
+use App\Support\Tenancy;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class CategoryController extends Controller
 {
     public function index()
     {
-        return view('settings.categories', ['categories' => Category::withCount('menuItems')->orderBy('sort')->get()]);
+        return view('settings.categories', [
+            'categories' => Category::with('department:id,name')->withCount('menuItems')->orderBy('sort')->get(),
+            'departments' => Department::orderBy('sort')->orderBy('id')->get(['id', 'name', 'is_default']),
+        ]);
     }
 
     public function store(Request $request)
@@ -39,6 +45,7 @@ class CategoryController extends Controller
         $data = $request->validate([
             'title' => ['required', 'string', 'max:60'],
             'sort' => ['nullable', 'integer', 'min:0'],
+            'department_id' => ['nullable', Rule::exists('departments', 'id')->where('tenant_id', app(Tenancy::class)->id())],
         ]);
 
         return $data + ['is_enabled' => $request->boolean('is_enabled'), 'sort' => $data['sort'] ?? 0];

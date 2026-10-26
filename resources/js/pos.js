@@ -574,7 +574,10 @@ export default (data) => ({
                 const item = this.items.find((i) => i.id === Number(id));
                 if (item) item.stock = stock;
             }
-            if (action !== 'draft' && this.autoPrintKot) printUrl(this.routes.token.replace('__ID__', r.order.id));
+            // Hər şöbəyə öz çeki (bar / mətbəx); öz cihazı olan şöbənin çekini həmin cihaz çap edir
+            if (action !== 'draft' && this.autoPrintKot) {
+                for (const d of r.print_departments ?? []) printUrl(this.routes.token.replace('__ID__', r.order.id) + (d.id ? `?department=${d.id}` : ''));
+            }
             // Ödənişdən sonra qəbz dərhal çap olunur — əlavə "Qəbz" düyməsi gözlənilmir
             if (action === 'pay' && r.invoice_id && this.autoPrintReceipt) printUrl(this.routes.receipt.replace('__ID__', r.invoice_id));
             if (action === 'draft') {

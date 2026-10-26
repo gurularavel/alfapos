@@ -10,6 +10,7 @@
             ['settings.tables.index', 'table', 'Masalar', 'Masalar, mərtəbələr, tutum və hər masanın QR kodu.'],
             ['settings.menu-items.index', 'orders', 'Menyu', 'Məhsullar, variantlar, əlavələr, şəkillər və reseptlər.'],
             ['settings.categories.index', 'tag', 'Kateqoriyalar', 'Menyu kateqoriyaları və sıralama.'],
+            ['settings.departments.index', 'kitchen', 'Şöbələr', 'Mətbəx, bar və s.: hər şöbəyə öz çeki, çap yeri (kassa və ya şöbənin cihazı).'],
             ['settings.taxes.index', 'percent', 'Vergi və servis haqqı', 'Vergini və servis haqqını aç/söndür, faiz, "yalnız zalda" qaydası, vergi dərəcələri.'],
             ['settings.payment-types.index', 'card', 'Ödəniş növləri', 'Nağd, kart, onlayn və digər ödəniş üsulları.'],
             ['settings.online-payment', 'online', 'Onlayn ödəniş', 'Kapital Bank: müştəri masanın ödəniş QR-ı ilə hesabı kartla ödəyir.'],

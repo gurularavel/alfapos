@@ -1,14 +1,33 @@
 <x-layouts.app title="Mətbəx">
-<div x-data="{ ...poller(@js(route('kitchen.feed')), 5000), realtime(e) { if (e.type === 'created') { if (@js($soundNewOrder)) playSound('alert'); toast('Yeni sifariş #' + e.token_no) } } }">
+<div x-data="{
+    ...poller(@js(route('kitchen.feed')), 5000),
+    ...kitchenStation(@js($departments), @js(route('orders.token', '__ID__'))),
+    realtime(e) { if (e.type === 'created') { if (@js($soundNewOrder)) playSound('alert'); toast('Yeni sifariş #' + e.token_no) } },
+}" x-effect="autoPrint(rows)">
     <x-page-header title="Mətbəx" subtitle="Hazırlanacaq sifarişlər. Yeni sifariş gələndə səs siqnalı verilir.">
         <x-live-badge />
         <button class="btn-secondary" @click="load()"><x-icon name="refresh" class="size-4" /> Yenilə</button>
     </x-page-header>
 
-    <div x-show="!loading && !rows.length" class="card"><x-empty icon="chef" title="Növbədə sifariş yoxdur">Yeni sifariş gələndə burada görünəcək.</x-empty></div>
+    {{-- Şöbə seçimi (bu cihaz üçün yadda qalır) və çap stansiyası --}}
+    <div class="mb-4 flex flex-wrap items-center gap-2" x-show="departments.length > 1">
+        <button class="chip" :class="!department && 'active'" @click="setDepartment(null)">Hamısı</button>
+        <template x-for="d in departments" :key="d.id">
+            <button class="chip" :class="department === d.id && 'active'" @click="setDepartment(d.id)" x-text="d.name"></button>
+        </template>
+        <label x-show="department" class="ml-auto flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold" :class="station ? 'border-brand-400 bg-brand-50 text-brand-800' : 'border-zinc-200 text-zinc-600'">
+            <input type="checkbox" class="rounded text-brand-500" :checked="station" @change="setStation($event.target.checked)">
+            <span>Bu cihaz <b x-text="currentDepartment()?.name"></b> çeklərini çap edir</span>
+        </label>
+    </div>
+    <p x-show="station && currentDepartment()?.print_at !== 'station'" x-cloak class="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800">
+        Diqqət: Ayarlar → Şöbələr-də <b x-text="currentDepartment()?.name"></b> şöbəsinin çap yeri "Kassada"dır — çek həm kassada, həm burada çıxacaq. "Şöbənin öz cihazında" seçin.
+    </p>
+
+    <div x-show="!loading && !visible().length" class="card"><x-empty icon="chef" title="Növbədə sifariş yoxdur">Yeni sifariş gələndə burada görünəcək.</x-empty></div>
 
     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-        <template x-for="o in rows" :key="o.id">
+        <template x-for="o in visible()" :key="o.id">
             <div class="card flex flex-col overflow-hidden" :class="o.minutes >= 20 ? 'ring-2 ring-red-400' : (o.minutes >= 10 ? 'ring-2 ring-amber-300' : '')">
                 <div class="flex items-center justify-between bg-zinc-50 px-4 py-3">
                     <div>
@@ -37,7 +56,7 @@
                 </ul>
                 <p class="px-4 pb-2 text-xs font-semibold text-amber-700" x-show="o.notes" x-text="'Qeyd: ' + o.notes"></p>
                 <div class="border-t border-zinc-100 p-3">
-                    <button class="btn-primary w-full" @click="post(@js(route('kitchen.ready', '__ID__')).replace('__ID__', o.id), {})"><x-icon name="check" class="size-4" /> Hamısı hazırdır</button>
+                    <button class="btn-primary w-full" @click="post(@js(route('kitchen.ready', '__ID__')).replace('__ID__', o.id), { department_id: department })"><x-icon name="check" class="size-4" /> Hamısı hazırdır</button>
                 </div>
             </div>
         </template>

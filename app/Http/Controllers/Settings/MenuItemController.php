@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Settings;
 
 use App\Http\Controllers\Controller;
 use App\Models\Category;
+use App\Models\Department;
 use App\Models\InventoryItem;
 use App\Models\MenuItem;
 use App\Models\Tax;
@@ -27,6 +28,7 @@ class MenuItemController extends Controller
         return view('settings.menu-items.index', [
             'items' => $items,
             'categories' => Category::orderBy('sort')->get(['id', 'title']),
+            'departments' => Department::orderBy('sort')->orderBy('id')->get(['id', 'name']),
         ]);
     }
 
@@ -74,6 +76,7 @@ class MenuItemController extends Controller
         return view('settings.menu-items.form', [
             'item' => $item,
             'categories' => Category::orderBy('sort')->get(['id', 'title']),
+            'departments' => Department::orderBy('sort')->orderBy('id')->get(['id', 'name']),
             'taxes' => Tax::orderBy('title')->get(),
             'inventory' => InventoryItem::orderBy('title')->get(['id', 'title', 'unit', 'cost_price']),
         ]);
@@ -91,6 +94,7 @@ class MenuItemController extends Controller
             'description' => ['nullable', 'string', 'max:500'],
             'price' => ['required', 'numeric', 'min:0'],
             'category_id' => ['nullable', Rule::exists('categories', 'id')->where('tenant_id', $tid)],
+            'department_id' => ['nullable', Rule::exists('departments', 'id')->where('tenant_id', $tid)],
             'tax_id' => ['nullable', Rule::exists('taxes', 'id')->where('tenant_id', $tid)],
             'image' => ['nullable', 'image', 'max:2048'],
             'image_credit' => ['nullable', 'string', 'max:500'],
@@ -108,7 +112,7 @@ class MenuItemController extends Controller
             'recipe.*.target' => ['nullable', 'string', 'max:40'], // "", "v:<idx>", "a:<idx>"
         ]);
 
-        $item->fill(collect($data)->only(['title', 'description', 'price', 'category_id', 'tax_id', 'image_credit'])->all());
+        $item->fill(collect($data)->only(['title', 'description', 'price', 'category_id', 'department_id', 'tax_id', 'image_credit'])->all());
         $item->is_enabled = $request->boolean('is_enabled');
         if ($request->boolean('remove_image') && $item->image) {
             Storage::disk('public')->delete($item->image);

@@ -43,6 +43,8 @@ class User extends Authenticatable
         'cashier' => ['Kassir', ['POS', 'ORDERS', 'PAYMENTS', 'INVOICES', 'CUSTOMERS', 'RESERVATIONS']],
         'waiter' => ['Ofisiant', ['POS', 'ORDERS', 'RESERVATIONS']],
         'chef' => ['Aşpaz', ['KITCHEN']],
+        // Bar şöbəsi: öz ekranı (Mətbəx → Bar) və Sifarişlər; hesab çekini müştəriyə çap edir, ödəniş qəbul etmir
+        'bartender' => ['Barmen', ['KITCHEN', 'ORDERS']],
         'user' => ['Digər', []],
     ];
 
@@ -147,6 +149,9 @@ class User extends Authenticatable
     {
         if ($this->isSuperAdmin()) {
             return route('admin.tenants.index');
+        }
+        if ($this->role === 'bartender' && $this->hasScope('KITCHEN')) {
+            return route('kitchen'); // bar ekranı (Mətbəx → Bar)
         }
 
         foreach (['DASHBOARD' => 'dashboard', 'POS' => 'pos', 'ORDERS' => 'orders.index', 'KITCHEN' => 'kitchen'] as $scope => $route) {

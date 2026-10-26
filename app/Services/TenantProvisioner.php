@@ -4,11 +4,12 @@ namespace App\Services;
 
 use App\Models\Branch;
 use App\Models\Category;
-use App\Models\Terminal;
+use App\Models\Department;
 use App\Models\PaymentType;
 use App\Models\Plan;
 use App\Models\Tax;
 use App\Models\Tenant;
+use App\Models\Terminal;
 use App\Models\User;
 use App\Support\Tenancy;
 use Illuminate\Support\Facades\DB;
@@ -60,8 +61,11 @@ class TenantProvisioner
             Tax::create(['title' => 'ƏDV 18%', 'rate' => 18, 'type' => 'inclusive']);
             $branch = Branch::create(['name' => 'Əsas filial', 'phone' => $phone]);
             Terminal::create(['branch_id' => $branch->id, 'name' => 'Kassa 1']);
+            // Şöbələr: hər şöbəyə öz çeki çıxır (içkilər — bar, yeməklər — mətbəx)
+            Department::create(['name' => 'Mətbəx', 'is_default' => true, 'sort' => 1]);
+            $bar = Department::create(['name' => 'Bar', 'sort' => 2]);
             foreach (['İsti içkilər', 'Soyuq içkilər', 'Əsas yeməklər', 'Desertlər'] as $i => $title) {
-                Category::create(['title' => $title, 'sort' => $i]);
+                Category::create(['title' => $title, 'sort' => $i, 'department_id' => str_contains($title, 'içki') ? $bar->id : null]);
             }
 
             $tenancy->set($previous);
